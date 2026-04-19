@@ -5,30 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VE天赋雷达 | 发现你的电竞潜能</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0A0E1A;
-    --bg2: #0D1220;
-    --cyan: #00D4FF;
-    --cyan-dim: rgba(0,212,255,0.15);
-    --purple: #7C3AED;
-    --purple-dim: rgba(124,58,237,0.2);
-    --text: #FFFFFF;
-    --text-sub: #94A3B8;
-    --border: rgba(0,212,255,0.2);
-    --card: rgba(255,255,255,0.04);
+    --bg: #000000;
+    --bg2: #0a0a0a;
+    --card: #111111;
+    --border: #2a2a2a;
+    --green: #76b900;
+    --green-hover: #bff230;
+    --text: #ffffff;
+    --sub: #a7a7a7;
+    --danger: #F87171;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
   html { scroll-behavior: smooth; }
-  body { background: var(--bg); color: var(--text); font-family: 'Noto Sans SC', sans-serif; overflow-x: hidden; }
-
-  /* ── 噪点背景 ── */
-  body::before {
-    content:''; position:fixed; inset:0;
-    background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0,212,255,0.08) 0%, transparent 70%),
-                radial-gradient(ellipse 60% 40% at 80% 80%, rgba(124,58,237,0.08) 0%, transparent 60%);
-    pointer-events:none; z-index:0;
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', 'Noto Sans SC', sans-serif;
+    overflow-x: hidden;
   }
 
   /* ── 导航 ── */
@@ -36,17 +32,22 @@
     position: fixed; top:0; left:0; right:0; z-index:100;
     padding: 16px 48px;
     display: flex; align-items:center; justify-content:space-between;
-    background: rgba(10,14,26,0.8);
-    backdrop-filter: blur(12px);
+    background: #000000;
     border-bottom: 1px solid var(--border);
   }
   .logo { display:flex; align-items:center; gap:12px; text-decoration:none; }
   .logo-icon { width:40px; height:40px; }
-  .logo-text { font-family:'Orbitron',sans-serif; font-size:18px; font-weight:700; color:var(--cyan); letter-spacing:2px; }
-  .logo-sub { font-size:11px; color:var(--text-sub); letter-spacing:3px; margin-top:-2px; }
+  .logo-text {
+    font-family:'Orbitron',sans-serif; font-size:18px; font-weight:700;
+    color: var(--green); letter-spacing:2px;
+  }
+  .logo-sub { font-size:11px; color:var(--sub); letter-spacing:3px; margin-top:-2px; }
   .nav-links { display:flex; gap:32px; }
-  .nav-links a { color:var(--text-sub); text-decoration:none; font-size:14px; transition:color .2s; }
-  .nav-links a:hover { color:var(--cyan); }
+  .nav-links a {
+    color:var(--sub); text-decoration:none; font-size:14px;
+    font-weight:500; transition:color .2s;
+  }
+  .nav-links a:hover { color:var(--green); }
 
   /* ── 英雄区 ── */
   .hero {
@@ -55,31 +56,39 @@
     padding: 120px 24px 80px;
     position:relative; z-index:1; text-align:center;
   }
+
+  /* thin horizontal rule accent above h1 */
+  .hero-rule {
+    width: 48px; height: 2px; background: var(--green);
+    margin: 0 auto 32px;
+  }
+
   .hero-badge {
     display:inline-flex; align-items:center; gap:8px;
-    padding:6px 16px; border-radius:20px;
-    background: var(--purple-dim); border:1px solid rgba(124,58,237,0.4);
-    font-size:13px; color: #A78BFA; margin-bottom:32px;
+    padding:6px 16px; border-radius:4px;
+    background: transparent; border:1px solid var(--border);
+    font-size:13px; color: var(--sub); margin-bottom:32px;
     letter-spacing:1px;
   }
-  .hero-badge span { width:6px; height:6px; border-radius:50%; background:#A78BFA; animation:pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .hero-badge-dot {
+    width:6px; height:6px; border-radius:50%; background: var(--green);
+    flex-shrink:0;
+  }
 
   h1 {
     font-family:'Orbitron',sans-serif;
     font-size: clamp(36px,7vw,80px);
     font-weight:900; line-height:1.1;
-    background: linear-gradient(135deg, #fff 30%, var(--cyan) 100%);
-    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    color: #ffffff;
     margin-bottom:8px;
   }
   .hero-sub-title {
-    font-size: clamp(18px,3vw,28px);
-    color: var(--cyan); font-family:'Orbitron',sans-serif;
-    font-weight:400; letter-spacing:4px; margin-bottom:24px;
+    font-size: clamp(14px,2vw,18px);
+    color: var(--green); font-family:'Orbitron',sans-serif;
+    font-weight:400; letter-spacing:6px; margin-bottom:24px;
   }
   .hero-desc {
-    max-width:600px; color:var(--text-sub); font-size:16px;
+    max-width:560px; color:var(--sub); font-size:15px;
     line-height:1.8; margin-bottom:56px;
   }
 
@@ -88,129 +97,192 @@
     width:100%; max-width:480px;
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius:16px; padding:36px;
-    backdrop-filter:blur(8px);
-    box-shadow: 0 0 60px rgba(0,212,255,0.06);
+    border-radius:4px; padding:36px;
   }
   .invite-card h2 {
-    font-size:18px; font-family:'Orbitron',sans-serif;
-    color:var(--cyan); margin-bottom:8px; letter-spacing:2px;
+    font-size:16px; font-family:'Orbitron',sans-serif;
+    color: var(--text); margin-bottom:8px; letter-spacing:2px;
+    border-left: 3px solid var(--green); padding-left:12px;
   }
-  .invite-card p { font-size:13px; color:var(--text-sub); margin-bottom:24px; }
+  .invite-card p { font-size:13px; color:var(--sub); margin-bottom:24px; }
 
   /* 设备选择 */
   .device-select { display:flex; gap:12px; margin-bottom:20px; }
   .device-btn {
-    flex:1; padding:14px; border-radius:10px; cursor:pointer;
+    flex:1; padding:12px; border-radius:4px; cursor:pointer;
     border: 1px solid var(--border);
-    background: transparent; color:var(--text-sub);
-    font-family:'Noto Sans SC',sans-serif; font-size:14px;
-    transition: all .2s; display:flex; align-items:center; justify-content:center; gap:8px;
+    background: transparent; color:var(--sub);
+    font-family:'Inter','Noto Sans SC',sans-serif; font-size:14px;
+    font-weight:500; transition: all .2s;
+    display:flex; align-items:center; justify-content:center; gap:8px;
   }
   .device-btn.active {
-    border-color:var(--cyan); background:var(--cyan-dim); color:var(--cyan);
+    border-color: var(--green); color: var(--green);
   }
+  .device-btn:hover:not(.active) { border-color: #444; color: var(--text); }
   .device-btn svg { width:20px; height:20px; }
 
   .input-wrap { position:relative; margin-bottom:16px; }
   .input-wrap input {
     width:100%; padding:14px 48px 14px 16px;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid var(--border); border-radius:10px;
+    background: #000000;
+    border: 1px solid var(--border); border-radius:4px;
     color:var(--text); font-size:16px; font-family:'Orbitron',sans-serif;
     letter-spacing:3px; text-transform:uppercase;
     outline:none; transition:border-color .2s;
   }
-  .input-wrap input:focus { border-color:var(--cyan); }
-  .input-wrap input::placeholder { color:var(--text-sub); letter-spacing:1px; font-family:'Noto Sans SC',sans-serif; font-size:13px; }
+  .input-wrap input:focus { border-color: var(--green); }
+  .input-wrap input::placeholder {
+    color:var(--sub); letter-spacing:1px;
+    font-family:'Inter','Noto Sans SC',sans-serif; font-size:13px;
+  }
 
   .btn-primary {
-    width:100%; padding:16px; border-radius:10px;
-    background: linear-gradient(135deg, var(--cyan) 0%, #0099CC 100%);
-    border:none; color:#0A0E1A; font-size:16px; font-weight:700;
-    font-family:'Noto Sans SC',sans-serif; cursor:pointer;
-    transition:all .2s; letter-spacing:1px;
+    width:100%; padding:14px; border-radius:4px;
+    background: transparent;
+    border: 2px solid var(--green);
+    color: #ffffff; font-size:15px; font-weight:600;
+    font-family:'Inter','Noto Sans SC',sans-serif;
+    cursor:pointer; transition:all .2s; letter-spacing:1px;
   }
-  .btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(0,212,255,0.4); }
-  .btn-primary:active { transform:translateY(0); }
-  .btn-primary:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+  .btn-primary:hover {
+    background: #1eaedb;
+    border-color: #1eaedb;
+  }
+  .btn-primary:active { opacity:.85; }
+  .btn-primary:disabled { opacity:.4; cursor:not-allowed; }
 
-  .error-msg { color:#F87171; font-size:13px; margin-top:10px; display:none; }
+  .btn-secondary {
+    width:100%; padding:14px; border-radius:4px;
+    background: transparent;
+    border: 2px solid #444;
+    color: #ffffff; font-size:15px; font-weight:600;
+    font-family:'Inter','Noto Sans SC',sans-serif;
+    cursor:pointer; transition:all .2s; letter-spacing:1px;
+  }
+  .btn-secondary:hover { border-color: var(--green); color: var(--green); }
+
+  .error-msg { color: var(--danger); font-size:13px; margin-top:10px; display:none; }
 
   /* ── 统计区 ── */
-  .stats { display:flex; gap:0; max-width:700px; width:100%; margin:64px auto 0; }
-  .stat-item { flex:1; text-align:center; padding:24px 16px; border:1px solid var(--border); }
-  .stat-item:first-child { border-radius:12px 0 0 12px; }
-  .stat-item:last-child { border-radius:0 12px 12px 0; }
-  .stat-item + .stat-item { border-left:none; }
-  .stat-num { font-family:'Orbitron',sans-serif; font-size:28px; color:var(--cyan); font-weight:700; }
-  .stat-label { font-size:12px; color:var(--text-sub); margin-top:4px; }
+  .stats {
+    display:flex; gap:0; max-width:700px; width:100%; margin:64px auto 0;
+  }
+  .stat-item {
+    flex:1; text-align:center; padding:24px 16px;
+    background: var(--card);
+    border:1px solid var(--border);
+    border-left: 3px solid var(--green);
+  }
+  .stat-item + .stat-item { border-left: 1px solid var(--border); }
+  .stat-item:first-child { border-radius:4px 0 0 4px; border-left: 3px solid var(--green); }
+  .stat-item:last-child { border-radius:0 4px 4px 0; }
+  .stat-num {
+    font-family:'Orbitron',sans-serif; font-size:28px;
+    color: var(--green); font-weight:700;
+  }
+  .stat-label { font-size:12px; color:var(--sub); margin-top:4px; }
 
-  /* ── 合作区 ── */
+  /* ── Section ── */
   .section { padding:96px 24px; position:relative; z-index:1; }
   .section-title {
     text-align:center; font-family:'Orbitron',sans-serif;
-    font-size: clamp(20px,4vw,32px); color:var(--text);
-    margin-bottom:12px;
+    font-size: clamp(20px,4vw,28px); color:var(--text);
+    margin-bottom:12px; letter-spacing:1px;
   }
-  .section-sub { text-align:center; color:var(--text-sub); font-size:15px; margin-bottom:56px; }
+  .section-accent {
+    width:32px; height:2px; background: var(--green);
+    margin:0 auto 16px;
+  }
+  .section-sub { text-align:center; color:var(--sub); font-size:15px; margin-bottom:56px; }
 
+  /* ── 合作区 ── */
   .partner-banner {
-    max-width:900px; margin:0 auto;
-    background: linear-gradient(135deg, rgba(124,58,237,0.15) 0%, rgba(0,212,255,0.08) 100%);
-    border:1px solid rgba(124,58,237,0.3); border-radius:20px;
-    padding:48px; display:flex; gap:40px; align-items:center;
+    max-width:860px; margin:0 auto;
+    background: var(--card);
+    border:1px solid var(--border);
+    border-top: 2px solid var(--green);
+    border-radius:4px;
+    padding:48px; display:flex; gap:40px; align-items:flex-start;
   }
-  .partner-icon { font-size:64px; flex-shrink:0; }
-  .partner-text h3 { font-family:'Orbitron',sans-serif; font-size:20px; color:var(--cyan); margin-bottom:12px; }
-  .partner-text p { color:var(--text-sub); line-height:1.8; font-size:15px; }
-  .partner-highlight { color:var(--cyan); font-weight:500; }
+  .partner-icon { font-size:56px; flex-shrink:0; line-height:1; }
+  .partner-text h3 {
+    font-family:'Orbitron',sans-serif; font-size:18px;
+    color: var(--text); margin-bottom:16px; letter-spacing:1px;
+  }
+  .partner-text p { color:var(--sub); line-height:1.8; font-size:15px; }
+  .partner-highlight { color: var(--green); font-weight:600; }
 
   /* ── 测试维度展示 ── */
-  .dims-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:20px; max-width:900px; margin:0 auto; }
-  .dim-card {
-    background:var(--card); border:1px solid var(--border);
-    border-radius:12px; padding:24px;
-    transition:all .3s;
+  .dims-grid {
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+    gap:1px; max-width:900px; margin:0 auto;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius:4px; overflow:hidden;
   }
-  .dim-card:hover { border-color:var(--cyan); transform:translateY(-4px); box-shadow:0 12px 40px rgba(0,212,255,0.1); }
-  .dim-icon { font-size:28px; margin-bottom:12px; }
-  .dim-name { font-family:'Orbitron',sans-serif; font-size:14px; color:var(--cyan); margin-bottom:8px; letter-spacing:1px; }
-  .dim-desc { font-size:13px; color:var(--text-sub); line-height:1.6; }
+  .dim-card {
+    background: var(--card); padding:28px 24px;
+    transition: background .2s;
+  }
+  .dim-card:hover { background: #1a1a1a; }
+  .dim-icon { font-size:24px; margin-bottom:12px; }
+  .dim-name {
+    font-family:'Inter',sans-serif; font-size:13px; font-weight:600;
+    color: var(--green); margin-bottom:8px; letter-spacing:1px;
+    text-transform:uppercase;
+  }
+  .dim-desc { font-size:13px; color:var(--sub); line-height:1.6; }
 
   /* ── 评级展示 ── */
-  .ratings-grid { display:flex; gap:16px; max-width:900px; margin:0 auto; flex-wrap:wrap; justify-content:center; }
-  .rating-card { padding:20px 28px; border-radius:12px; border:1px solid; text-align:center; min-width:180px; }
-  .rating-card.r1 { border-color:rgba(251,191,36,0.4); background:rgba(251,191,36,0.05); }
-  .rating-card.r2 { border-color:rgba(0,212,255,0.4); background:rgba(0,212,255,0.05); }
-  .rating-card.r3 { border-color:rgba(124,58,237,0.4); background:rgba(124,58,237,0.05); }
-  .rating-card.r4 { border-color:rgba(148,163,184,0.4); background:rgba(148,163,184,0.05); }
-  .rating-emoji { font-size:32px; margin-bottom:8px; }
-  .rating-name { font-family:'Orbitron',sans-serif; font-size:11px; letter-spacing:1px; margin-bottom:4px; }
+  .ratings-grid {
+    display:flex; gap:16px; max-width:900px; margin:0 auto;
+    flex-wrap:wrap; justify-content:center;
+  }
+  .rating-card {
+    padding:24px 28px; border-radius:4px;
+    border:1px solid var(--border);
+    background: var(--card);
+    text-align:center; min-width:180px;
+    transition: border-color .2s;
+  }
+  .rating-card:hover { border-color: var(--green); }
+  .rating-card.r1 { border-top: 2px solid #FCD34D; }
+  .rating-card.r2 { border-top: 2px solid var(--green); }
+  .rating-card.r3 { border-top: 2px solid #555; }
+  .rating-card.r4 { border-top: 2px solid #333; }
+  .rating-emoji { font-size:28px; margin-bottom:12px; }
+  .rating-name {
+    font-family:'Inter',sans-serif; font-size:12px;
+    font-weight:600; letter-spacing:1px; margin-bottom:8px;
+    text-transform:uppercase;
+  }
   .rating-card.r1 .rating-name { color:#FCD34D; }
-  .rating-card.r2 .rating-name { color:var(--cyan); }
-  .rating-card.r3 .rating-name { color:#A78BFA; }
-  .rating-card.r4 .rating-name { color:var(--text-sub); }
-  .rating-desc { font-size:12px; color:var(--text-sub); }
+  .rating-card.r2 .rating-name { color: var(--green); }
+  .rating-card.r3 .rating-name { color:#888; }
+  .rating-card.r4 .rating-name { color:#666; }
+  .rating-desc { font-size:12px; color:var(--sub); line-height:1.6; }
 
   /* ── Footer ── */
-  footer { text-align:center; padding:32px; color:var(--text-sub); font-size:13px; border-top:1px solid var(--border); position:relative; z-index:1; }
-
-  /* ── 网格线背景 ── */
-  .grid-bg {
-    position:absolute; inset:0; z-index:0; pointer-events:none; overflow:hidden;
-    background-image:
-      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
-    background-size: 60px 60px;
+  footer {
+    text-align:center; padding:32px; color:var(--sub); font-size:13px;
+    border-top:1px solid var(--border); position:relative; z-index:1;
   }
+
+  /* ── Partner section bg ── */
+  .section-alt { background: #080808; }
 
   @media(max-width:600px) {
     nav { padding:12px 20px; }
     .nav-links { display:none; }
-    .partner-banner { flex-direction:column; padding:28px; }
+    .partner-banner { flex-direction:column; padding:28px; gap:24px; }
     .stats { flex-wrap:wrap; }
-    .stat-item { flex:0 0 50%; border-radius:0 !important; border:1px solid var(--border) !important; margin:-1px; }
+    .stat-item {
+      flex:0 0 50%; border-radius:0 !important;
+      border:1px solid var(--border) !important;
+      border-left: 3px solid var(--green) !important;
+      margin:-1px;
+    }
   }
 </style>
 </head>
@@ -220,15 +292,15 @@
 <nav>
   <a class="logo" href="#">
     <svg class="logo-icon" viewBox="0 0 40 40" fill="none">
-      <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="#00D4FF" stroke-width="1.5"/>
-      <polygon points="20,8 30,13.5 30,24.5 20,30 10,24.5 10,13.5" fill="rgba(0,212,255,0.08)" stroke="#00D4FF" stroke-width="1" stroke-dasharray="3,2"/>
-      <circle cx="20" cy="20" r="3" fill="#00D4FF"/>
-      <line x1="20" y1="2" x2="20" y2="8" stroke="#00D4FF" stroke-width="1.5"/>
-      <line x1="36" y1="11" x2="30" y2="13.5" stroke="#00D4FF" stroke-width="1.5"/>
-      <line x1="36" y1="29" x2="30" y2="24.5" stroke="#00D4FF" stroke-width="1.5"/>
-      <line x1="20" y1="38" x2="20" y2="30" stroke="#00D4FF" stroke-width="1.5"/>
-      <line x1="4" y1="29" x2="10" y2="24.5" stroke="#00D4FF" stroke-width="1.5"/>
-      <line x1="4" y1="11" x2="10" y2="13.5" stroke="#00D4FF" stroke-width="1.5"/>
+      <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="#76b900" stroke-width="1.5"/>
+      <polygon points="20,8 30,13.5 30,24.5 20,30 10,24.5 10,13.5" fill="rgba(118,185,0,0.08)" stroke="#76b900" stroke-width="1" stroke-dasharray="3,2"/>
+      <circle cx="20" cy="20" r="3" fill="#76b900"/>
+      <line x1="20" y1="2" x2="20" y2="8" stroke="#76b900" stroke-width="1.5"/>
+      <line x1="36" y1="11" x2="30" y2="13.5" stroke="#76b900" stroke-width="1.5"/>
+      <line x1="36" y1="29" x2="30" y2="24.5" stroke="#76b900" stroke-width="1.5"/>
+      <line x1="20" y1="38" x2="20" y2="30" stroke="#76b900" stroke-width="1.5"/>
+      <line x1="4" y1="29" x2="10" y2="24.5" stroke="#76b900" stroke-width="1.5"/>
+      <line x1="4" y1="11" x2="10" y2="13.5" stroke="#76b900" stroke-width="1.5"/>
     </svg>
     <div>
       <div class="logo-text">VE天赋雷达</div>
@@ -244,8 +316,8 @@
 
 <!-- 英雄区 -->
 <section class="hero">
-  <div class="grid-bg"></div>
-  <div class="hero-badge"><span></span> 与顶级电竞俱乐部深度合作 · 官方选材通道</div>
+  <div class="hero-rule"></div>
+  <div class="hero-badge"><span class="hero-badge-dot"></span> 与顶级电竞俱乐部深度合作 · 官方选材通道</div>
   <h1>发现你的电竞天赋</h1>
   <div class="hero-sub-title">ESPORTS TALENT RADAR</div>
   <p class="hero-desc">
@@ -274,7 +346,7 @@
 
     <!-- 邀请码折叠区 -->
     <div id="code-toggle" style="text-align:center;margin-bottom:4px;">
-      <button onclick="toggleCodeInput()" style="background:none;border:none;color:var(--text-sub);font-size:13px;cursor:pointer;text-decoration:underline;font-family:'Noto Sans SC',sans-serif;">
+      <button onclick="toggleCodeInput()" style="background:none;border:none;color:var(--sub);font-size:13px;cursor:pointer;font-family:'Inter','Noto Sans SC',sans-serif;text-decoration:underline;text-underline-offset:3px;">
         有邀请码？点击输入可解锁专属权益
       </button>
     </div>
@@ -282,7 +354,7 @@
       <div class="input-wrap" style="margin-bottom:10px;">
         <input type="text" id="code-input" placeholder="输入邀请码，例：VE-ABCD1234" maxlength="12" autocomplete="off" oninput="this.value=this.value.toUpperCase()">
       </div>
-      <button class="btn-primary" id="code-btn" onclick="startTestWithCode()" style="background:linear-gradient(135deg,#7C3AED,#5B21B6);box-shadow:0 4px 20px rgba(124,58,237,0.3);">使用邀请码开始 →</button>
+      <button class="btn-secondary" id="code-btn" onclick="startTestWithCode()">使用邀请码开始 →</button>
     </div>
     <div class="error-msg" id="error-msg"></div>
   </div>
@@ -297,8 +369,9 @@
 </section>
 
 <!-- 测试维度 -->
-<section class="section" id="how">
+<section class="section section-alt" id="how">
   <h2 class="section-title">七大核心维度</h2>
+  <div class="section-accent"></div>
   <p class="section-sub">基于顶级电竞认知科学研究，精准量化电竞天赋</p>
   <div class="dims-grid">
     <div class="dim-card"><div class="dim-icon">⚡</div><div class="dim-name">反应速度</div><div class="dim-desc">视觉刺激到操作执行的神经传导时间。职业FPS选手均值160-180ms，普通人约260ms。</div></div>
@@ -312,8 +385,9 @@
 </section>
 
 <!-- 俱乐部合作 -->
-<section class="section" id="partner" style="background:rgba(124,58,237,0.03);">
+<section class="section" id="partner">
   <h2 class="section-title">俱乐部直达合作</h2>
+  <div class="section-accent"></div>
   <p class="section-sub">优秀测评者将获得职业电竞试训机会</p>
   <div class="partner-banner">
     <div class="partner-icon">🏆</div>
@@ -332,8 +406,9 @@
 </section>
 
 <!-- 评级标准 -->
-<section class="section" id="ratings">
+<section class="section section-alt" id="ratings">
   <h2 class="section-title">评级标准</h2>
+  <div class="section-accent"></div>
   <p class="section-sub">基于全球电竞运动员数据建模，四级精准评定</p>
   <div class="ratings-grid">
     <div class="rating-card r1">

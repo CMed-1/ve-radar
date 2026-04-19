@@ -4,57 +4,136 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VE天赋雷达 · 测评报告</title>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
-  :root{--bg:#0A0E1A;--bg2:#0D1220;--cyan:#00D4FF;--cyan-dim:rgba(0,212,255,0.12);--purple:#7C3AED;--text:#FFF;--sub:#94A3B8;--border:rgba(0,212,255,0.2);--card:rgba(255,255,255,0.04);--green:#10B981;--red:#EF4444;--yellow:#F59E0B;--gold:#FCD34D;}
+  :root{
+    --bg:#000000;
+    --bg2:#111111;
+    --green:#76b900;
+    --green-hover:#bff230;
+    --text:#ffffff;
+    --sub:#a7a7a7;
+    --muted:#757575;
+    --border:#2a2a2a;
+    --card:#111111;
+    --gold:#FCD34D;
+    --purple:#a78bfa;
+    --red:#EF4444;
+    --green-sys:#10B981;
+  }
   *{margin:0;padding:0;box-sizing:border-box;}
-  body{background:var(--bg);color:var(--text);font-family:'Noto Sans SC',sans-serif;min-height:100vh;}
-  body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 50% at 50% -10%,rgba(0,212,255,0.07) 0%,transparent 70%),radial-gradient(ellipse 50% 40% at 90% 80%,rgba(124,58,237,0.07) 0%,transparent 60%);pointer-events:none;z-index:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',sans-serif;min-height:100vh;}
 
   /* ── 加载屏 ── */
   #loading-screen{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;}
-  .spinner{width:60px;height:60px;border:3px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite;}
+  .spinner{width:48px;height:48px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin 1s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg)}}
-  .loading-text{font-family:'Orbitron',sans-serif;font-size:14px;color:var(--sub);letter-spacing:2px;}
+  .loading-text{font-family:'Inter',sans-serif;font-size:12px;color:var(--sub);letter-spacing:3px;text-transform:uppercase;}
 
   /* ── 主内容 ── */
   .container{max-width:860px;margin:0 auto;padding:40px 24px 80px;position:relative;z-index:1;}
 
   /* ── 顶部 ── */
   .report-header{text-align:center;margin-bottom:48px;}
-  .report-logo{font-family:'Orbitron',sans-serif;font-size:13px;color:var(--cyan);letter-spacing:4px;margin-bottom:16px;}
-  .report-title{font-family:'Orbitron',sans-serif;font-size:clamp(24px,5vw,40px);font-weight:900;background:linear-gradient(135deg,#fff 30%,var(--cyan) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px;}
-  .report-date{font-size:13px;color:var(--sub);}
+  .report-logo{
+    font-family:'Orbitron',sans-serif;
+    font-size:11px;
+    color:var(--green);
+    letter-spacing:5px;
+    text-transform:uppercase;
+    margin-bottom:16px;
+    display:inline-block;
+    padding-bottom:12px;
+    border-bottom:2px solid var(--green);
+  }
+  .report-title{
+    font-family:'Inter',sans-serif;
+    font-size:clamp(22px,5vw,36px);
+    font-weight:700;
+    color:var(--text);
+    margin-bottom:8px;
+    letter-spacing:-.5px;
+  }
+  .report-date{font-size:13px;color:var(--muted);font-family:'Inter',sans-serif;}
 
-  /* ── 评级徽章 ── */
+  /* ── 评级徽章 — sharp rectangle ── */
   .rating-section{display:flex;flex-direction:column;align-items:center;margin-bottom:48px;}
-  .rating-badge{padding:16px 40px;border-radius:50px;font-family:'Orbitron',sans-serif;font-size:clamp(14px,3vw,20px);font-weight:700;letter-spacing:2px;text-align:center;margin-bottom:12px;}
-  .rating-badge.genius{background:linear-gradient(135deg,rgba(251,191,36,0.2),rgba(251,191,36,0.05));border:2px solid var(--gold);color:var(--gold);box-shadow:0 0 40px rgba(251,191,36,0.2);}
-  .rating-badge.pro{background:linear-gradient(135deg,rgba(0,212,255,0.15),rgba(0,212,255,0.03));border:2px solid var(--cyan);color:var(--cyan);box-shadow:0 0 40px rgba(0,212,255,0.15);}
-  .rating-badge.normal{background:rgba(124,58,237,0.1);border:2px solid rgba(124,58,237,0.4);color:#A78BFA;}
-  .rating-badge.below{background:rgba(148,163,184,0.08);border:2px solid rgba(148,163,184,0.3);color:var(--sub);}
-  .rating-subtitle{font-size:14px;color:var(--sub);}
+  .rating-badge{
+    padding:14px 36px;
+    border-radius:4px;
+    font-family:'Orbitron',sans-serif;
+    font-size:clamp(13px,2.5vw,18px);
+    font-weight:700;
+    letter-spacing:2px;
+    text-align:center;
+    margin-bottom:12px;
+    background:transparent;
+  }
+  .rating-badge.genius{border:2px solid var(--gold);color:var(--gold);}
+  .rating-badge.pro{border:2px solid var(--green);color:var(--green);}
+  .rating-badge.normal{border:2px solid rgba(167,139,250,.6);color:var(--purple);}
+  .rating-badge.below{border:2px solid #444;color:var(--sub);}
+  .rating-subtitle{font-size:14px;color:var(--sub);font-family:'Inter',sans-serif;}
 
   /* ── 百分位排名 ── */
   .percentile-section{text-align:center;margin-bottom:40px;}
-  .percentile-label{font-size:13px;color:var(--sub);margin-bottom:10px;letter-spacing:1px;}
+  .percentile-label{font-size:12px;color:var(--sub);margin-bottom:10px;letter-spacing:1px;text-transform:uppercase;font-family:'Inter',sans-serif;}
   .percentile-main{font-family:'Orbitron',sans-serif;font-size:clamp(32px,7vw,52px);font-weight:900;color:var(--text);line-height:1;margin-bottom:4px;}
-  .percentile-main span{color:var(--cyan);}
-  .percentile-sub{font-size:13px;color:var(--sub);margin-bottom:20px;}
-  .percentile-bar-wrap{position:relative;height:8px;background:linear-gradient(90deg,rgba(100,116,139,0.3) 0%,rgba(0,212,255,0.5) 50%,rgba(124,58,237,0.7) 80%,rgba(251,191,36,0.9) 100%);border-radius:4px;max-width:480px;margin:0 auto 8px;}
-  .percentile-marker{position:absolute;top:-7px;width:4px;height:22px;background:#fff;border-radius:2px;transform:translateX(-50%);box-shadow:0 0 10px rgba(255,255,255,0.7),0 0 20px rgba(0,212,255,0.4);}
-  .percentile-axis{display:flex;justify-content:space-between;max-width:480px;margin:0 auto;font-size:10px;color:var(--sub);letter-spacing:.5px;}
+  .percentile-main span{color:var(--green);}
+  .percentile-sub{font-size:13px;color:var(--sub);margin-bottom:20px;font-family:'Inter',sans-serif;}
+  /* Percentile bar — green fill */
+  .percentile-bar-wrap{
+    position:relative;
+    height:6px;
+    background:rgba(255,255,255,.08);
+    border-radius:4px;
+    max-width:480px;
+    margin:0 auto 8px;
+    overflow:visible;
+  }
+  .percentile-bar-fill{
+    position:absolute;
+    left:0;top:0;height:100%;
+    background:linear-gradient(90deg,rgba(118,185,0,.4) 0%,var(--green) 100%);
+    border-radius:4px;
+    transition:width 1s ease;
+  }
+  .percentile-marker{
+    position:absolute;
+    top:-6px;
+    width:3px;
+    height:18px;
+    background:#fff;
+    border-radius:2px;
+    transform:translateX(-50%);
+  }
+  .percentile-axis{display:flex;justify-content:space-between;max-width:480px;margin:0 auto;font-size:10px;color:var(--muted);letter-spacing:.5px;font-family:'Inter',sans-serif;}
 
   /* ── 两栏布局 ── */
-  .report-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;}
+  .report-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
   @media(max-width:620px){.report-grid{grid-template-columns:1fr;}}
 
-  /* ── 卡片 ── */
-  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;}
-  .card-title{font-family:'Orbitron',sans-serif;font-size:12px;color:var(--cyan);letter-spacing:2px;margin-bottom:20px;}
+  /* ── 卡片 — solid, no blur ── */
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:4px;
+    padding:24px;
+  }
+  .card-title{
+    font-family:'Inter',sans-serif;
+    font-size:11px;
+    font-weight:600;
+    color:var(--green);
+    letter-spacing:2px;
+    text-transform:uppercase;
+    margin-bottom:20px;
+    padding-bottom:10px;
+    border-bottom:1px solid var(--border);
+  }
 
   /* ── 雷达图 ── */
   .chart-wrap{position:relative;width:100%;aspect-ratio:1;max-width:320px;margin:0 auto;}
@@ -63,99 +142,287 @@
   .dim-list{display:flex;flex-direction:column;gap:16px;}
   .dim-row{display:flex;flex-direction:column;gap:5px;}
   .dim-row-top{display:flex;align-items:center;gap:10px;}
-  .dim-label{font-size:12px;color:var(--sub);flex:1;}
-  .dim-score{font-family:'Orbitron',sans-serif;font-size:14px;color:var(--text);width:28px;text-align:right;flex-shrink:0;}
-  .dim-bar-wrap{position:relative;height:7px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:visible;}
-  .dim-bar{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--cyan),var(--purple));transition:width 1s ease;position:relative;}
+  .dim-label{font-size:12px;color:var(--sub);flex:1;font-family:'Inter',sans-serif;}
+  .dim-score{font-family:'Orbitron',sans-serif;font-size:13px;color:var(--text);width:28px;text-align:right;flex-shrink:0;}
+  .dim-bar-wrap{position:relative;height:6px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:visible;}
+  /* Green progress bar with left-border accent feel */
+  .dim-bar{
+    height:100%;
+    border-radius:4px;
+    background:linear-gradient(90deg,var(--green),rgba(118,185,0,.5));
+    transition:width 1s ease;
+    position:relative;
+  }
   /* 基准线：普通人均值标记 */
-  .dim-benchmark{position:absolute;top:-3px;width:2px;height:13px;background:rgba(248,183,60,0.7);border-radius:1px;transform:translateX(-50%);z-index:2;}
+  .dim-benchmark{position:absolute;top:-3px;width:2px;height:12px;background:rgba(248,183,60,0.7);border-radius:1px;transform:translateX(-50%);z-index:2;}
   .dim-benchmark::after{content:'avg';position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:9px;color:rgba(248,183,60,0.7);white-space:nowrap;font-family:'Orbitron',sans-serif;}
-  .dim-compare{font-size:11px;color:var(--sub);display:flex;justify-content:space-between;}
+  .dim-compare{font-size:11px;color:var(--muted);display:flex;justify-content:space-between;font-family:'Inter',sans-serif;}
   .dim-compare .better{color:var(--green);}
   .dim-compare .worse{color:var(--red);}
+
   /* 数据详情卡 */
-  .data-detail-card{margin-bottom:24px;}
-  .data-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;}
-  .data-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 12px;text-align:center;}
-  .data-num{font-family:'Orbitron',sans-serif;font-size:20px;color:var(--cyan);font-weight:700;}
-  .data-label{font-size:11px;color:var(--sub);margin-top:3px;}
-  .data-bench{font-size:10px;color:rgba(248,183,60,0.7);margin-top:2px;}
+  .data-detail-card{margin-bottom:16px;}
+  .data-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;}
+  .data-item{
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-left:3px solid var(--green);
+    border-radius:4px;
+    padding:14px 12px;
+    text-align:center;
+  }
+  .data-num{font-family:'Orbitron',sans-serif;font-size:20px;color:var(--green);font-weight:700;}
+  .data-label{font-size:11px;color:var(--sub);margin-top:3px;font-family:'Inter',sans-serif;}
+  .data-bench{font-size:10px;color:rgba(248,183,60,0.7);margin-top:2px;font-family:'Inter',sans-serif;}
 
   /* ── AI报告文字 ── */
-  .report-text-card{margin-bottom:24px;}
-  .report-text{font-size:15px;line-height:2;color:var(--sub);white-space:pre-wrap;}
-  .report-text .loading-inline{color:var(--cyan);animation:blink .8s infinite;}
+  .report-text-card{margin-bottom:16px;}
+  .report-text{font-size:15px;line-height:2;color:var(--sub);white-space:pre-wrap;font-family:'Inter',sans-serif;}
+  .report-text .loading-inline{color:var(--green);animation:blink .8s infinite;}
   @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 
   /* ── 游戏推荐 ── */
   .game-tags{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
-  .game-tag{padding:6px 14px;border-radius:20px;font-size:13px;border:1px solid var(--border);color:var(--sub);}
-  .game-tag.highlight{border-color:var(--cyan);color:var(--cyan);background:var(--cyan-dim);}
+  .game-tag{
+    padding:5px 12px;
+    border-radius:4px;
+    font-size:12px;
+    border:1px solid var(--border);
+    color:var(--sub);
+    font-family:'Inter',sans-serif;
+  }
+  .game-tag.highlight{border-color:var(--green);color:var(--green);}
 
   /* ── 评分细则 ── */
-  .criteria-trigger{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;border:1px solid rgba(0,212,255,0.3);background:rgba(0,212,255,0.06);color:var(--sub);font-size:12px;cursor:pointer;transition:all .2s;letter-spacing:.5px;position:relative;}
-  .criteria-trigger:hover{border-color:var(--cyan);color:var(--cyan);}
-  .criteria-trigger .badge{width:16px;height:16px;border-radius:50%;background:rgba(0,212,255,0.2);color:var(--cyan);font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:700;}
-  .criteria-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;align-items:center;justify-content:center;padding:20px;}
+  .criteria-trigger{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:6px 14px;
+    border-radius:4px;
+    border:1px solid rgba(118,185,0,.35);
+    background:transparent;
+    color:var(--sub);
+    font-size:12px;
+    cursor:pointer;
+    transition:border-color .15s,color .15s;
+    letter-spacing:.5px;
+    position:relative;
+    font-family:'Inter',sans-serif;
+  }
+  .criteria-trigger:hover{border-color:var(--green);color:var(--green);}
+  .criteria-trigger .badge{
+    width:16px;height:16px;
+    border-radius:50%;
+    background:rgba(118,185,0,.2);
+    color:var(--green);
+    font-size:10px;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;
+  }
+
+  /* ── 评分细则浮层 ── */
+  .criteria-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100;align-items:center;justify-content:center;padding:20px;}
   .criteria-overlay.open{display:flex;}
-  .criteria-panel{background:#0D1220;border:1px solid rgba(0,212,255,0.25);border-radius:20px;padding:28px;max-width:660px;width:100%;max-height:85vh;overflow-y:auto;position:relative;}
+  .criteria-panel{
+    background:#111111;
+    border:1px solid var(--border);
+    border-top:2px solid var(--green);
+    border-radius:4px;
+    padding:28px;
+    max-width:660px;
+    width:100%;
+    max-height:85vh;
+    overflow-y:auto;
+    position:relative;
+  }
   .criteria-close{position:absolute;top:16px;right:20px;background:none;border:none;color:var(--sub);font-size:20px;cursor:pointer;line-height:1;}
   .criteria-close:hover{color:var(--text);}
-  .criteria-h1{font-family:'Orbitron',sans-serif;font-size:13px;color:var(--cyan);letter-spacing:2px;margin-bottom:20px;}
-  .criteria-h2{font-size:11px;color:var(--cyan);letter-spacing:1.5px;margin:20px 0 10px;opacity:.7;}
+  .criteria-h1{
+    font-family:'Inter',sans-serif;
+    font-size:12px;
+    font-weight:700;
+    color:var(--green);
+    letter-spacing:2px;
+    text-transform:uppercase;
+    margin-bottom:20px;
+    padding-bottom:10px;
+    border-bottom:1px solid var(--border);
+  }
+  .criteria-h2{
+    font-size:10px;
+    font-weight:600;
+    color:var(--green);
+    letter-spacing:2px;
+    text-transform:uppercase;
+    margin:20px 0 10px;
+    font-family:'Inter',sans-serif;
+  }
   .criteria-table{width:100%;border-collapse:collapse;font-size:12px;}
-  .criteria-table th{text-align:left;padding:6px 10px;color:var(--sub);font-weight:400;border-bottom:1px solid rgba(255,255,255,0.06);white-space:nowrap;}
-  .criteria-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.04);color:var(--text);vertical-align:top;}
+  .criteria-table th{
+    text-align:left;
+    padding:7px 10px;
+    color:var(--muted);
+    font-weight:500;
+    border-bottom:1px solid var(--border);
+    white-space:nowrap;
+    font-family:'Inter',sans-serif;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+    font-size:10px;
+  }
+  .criteria-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.04);color:var(--text);vertical-align:top;font-family:'Inter',sans-serif;}
   .criteria-table td:first-child{color:var(--sub);white-space:nowrap;}
-  .criteria-table .tag-genius{color:#FCD34D;}
-  .criteria-table .tag-pro{color:var(--cyan);}
-  .criteria-table .tag-normal{color:#A78BFA;}
-  .criteria-table .tag-yours{color:#10B981;font-weight:700;}
-  .criteria-note{font-size:11px;color:rgba(148,163,184,0.6);margin-top:16px;line-height:1.7;border-top:1px solid rgba(255,255,255,0.06);padding-top:14px;}
+  .criteria-table tr:hover td{background:rgba(255,255,255,.02);}
+  .criteria-table .tag-genius{color:var(--gold);}
+  .criteria-table .tag-pro{color:var(--green);}
+  .criteria-table .tag-normal{color:var(--purple);}
+  .criteria-table .tag-yours{color:var(--green-sys);font-weight:700;}
+  .criteria-note{font-size:11px;color:var(--muted);margin-top:16px;line-height:1.8;border-top:1px solid var(--border);padding-top:14px;font-family:'Inter',sans-serif;}
 
   /* ── 下载按钮 ── */
   .action-bar{display:flex;gap:12px;margin-bottom:48px;flex-wrap:wrap;}
-  .btn-dl{flex:1;min-width:160px;padding:16px;border-radius:10px;background:linear-gradient(135deg,var(--cyan),#0099CC);border:none;color:#0A0E1A;font-size:15px;font-weight:700;font-family:'Noto Sans SC',sans-serif;cursor:pointer;transition:all .2s;letter-spacing:1px;}
-  .btn-dl:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,212,255,0.35);}
-  .btn-dl:disabled{opacity:.5;cursor:not-allowed;transform:none;}
-  .btn-outline{flex:1;min-width:160px;padding:16px;border-radius:10px;background:transparent;border:1px solid var(--border);color:var(--text);font-size:15px;font-family:'Noto Sans SC',sans-serif;cursor:pointer;transition:all .2s;}
-  .btn-outline:hover{border-color:var(--cyan);color:var(--cyan);}
+  .btn-dl{
+    flex:1;min-width:160px;
+    padding:15px;
+    border-radius:4px;
+    background:transparent;
+    border:2px solid var(--green);
+    color:var(--text);
+    font-size:14px;
+    font-weight:600;
+    font-family:'Inter','Noto Sans SC',sans-serif;
+    cursor:pointer;
+    transition:background .15s,border-color .15s;
+    letter-spacing:.5px;
+  }
+  .btn-dl:hover{background:#1eaedb;border-color:#1eaedb;}
+  .btn-dl:disabled{opacity:.4;cursor:not-allowed;}
+  .btn-outline{
+    flex:1;min-width:160px;
+    padding:15px;
+    border-radius:4px;
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--sub);
+    font-size:14px;
+    font-family:'Inter','Noto Sans SC',sans-serif;
+    cursor:pointer;
+    transition:border-color .15s,color .15s;
+  }
+  .btn-outline:hover{border-color:var(--green);color:var(--green);}
 
   /* ── 联系方式表单 ── */
-  #contact-section{background:linear-gradient(135deg,rgba(251,191,36,0.06),rgba(0,212,255,0.04));border:1px solid rgba(251,191,36,0.25);border-radius:20px;padding:40px;margin-bottom:48px;display:none;}
+  #contact-section{
+    background:var(--card);
+    border:1px solid rgba(251,191,36,.25);
+    border-left:3px solid var(--gold);
+    border-radius:4px;
+    padding:36px;
+    margin-bottom:48px;
+    display:none;
+  }
   .contact-header{text-align:center;margin-bottom:28px;}
-  .contact-badge{display:inline-block;padding:4px 16px;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.4);border-radius:20px;font-size:12px;color:var(--gold);letter-spacing:2px;margin-bottom:12px;}
-  .contact-title{font-family:'Orbitron',sans-serif;font-size:clamp(16px,3vw,22px);color:var(--text);margin-bottom:8px;}
-  .contact-desc{font-size:14px;color:var(--sub);line-height:1.8;}
+  .contact-badge{
+    display:inline-block;
+    padding:3px 14px;
+    background:transparent;
+    border:1px solid rgba(251,191,36,.4);
+    border-radius:4px;
+    font-size:11px;
+    color:var(--gold);
+    letter-spacing:2px;
+    text-transform:uppercase;
+    margin-bottom:12px;
+    font-family:'Inter',sans-serif;
+  }
+  .contact-title{
+    font-family:'Inter',sans-serif;
+    font-size:clamp(16px,3vw,20px);
+    font-weight:700;
+    color:var(--text);
+    margin-bottom:8px;
+  }
+  .contact-desc{font-size:14px;color:var(--sub);line-height:1.8;font-family:'Inter',sans-serif;}
   .form-group{margin-bottom:16px;}
-  .form-label{font-size:13px;color:var(--sub);margin-bottom:8px;display:block;}
-  .form-input{width:100%;padding:14px 16px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;font-family:'Noto Sans SC',sans-serif;outline:none;transition:border-color .2s;}
-  .form-input:focus{border-color:var(--cyan);}
-  .contact-type-row{display:flex;gap:10px;margin-bottom:16px;}
-  .ct-btn{flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--sub);font-family:'Noto Sans SC',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;}
-  .ct-btn.active{border-color:var(--cyan);background:var(--cyan-dim);color:var(--cyan);}
-  .btn-submit{width:100%;padding:16px;border-radius:10px;background:linear-gradient(135deg,var(--gold),#D97706);border:none;color:#1A1000;font-size:16px;font-weight:700;font-family:'Noto Sans SC',sans-serif;cursor:pointer;transition:all .2s;letter-spacing:1px;}
-  .btn-submit:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(251,191,36,0.35);}
+  .form-label{font-size:12px;color:var(--sub);margin-bottom:8px;display:block;text-transform:uppercase;letter-spacing:.5px;font-family:'Inter',sans-serif;}
+  .form-input{
+    width:100%;
+    padding:12px 14px;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:4px;
+    color:var(--text);
+    font-size:14px;
+    font-family:'Inter','Noto Sans SC',sans-serif;
+    outline:none;
+    transition:border-color .15s;
+  }
+  .form-input:focus{border-color:var(--green);}
+  .contact-type-row{display:flex;gap:8px;margin-bottom:16px;}
+  .ct-btn{
+    flex:1;padding:9px;
+    border-radius:4px;
+    border:1px solid var(--border);
+    background:transparent;
+    color:var(--sub);
+    font-family:'Inter','Noto Sans SC',sans-serif;
+    font-size:13px;
+    cursor:pointer;
+    transition:border-color .15s,color .15s;
+  }
+  .ct-btn.active{border-color:var(--green);color:var(--green);}
+  .btn-submit{
+    width:100%;
+    padding:15px;
+    border-radius:4px;
+    background:transparent;
+    border:2px solid var(--gold);
+    color:var(--gold);
+    font-size:15px;
+    font-weight:700;
+    font-family:'Inter','Noto Sans SC',sans-serif;
+    cursor:pointer;
+    transition:background .15s,color .15s;
+    letter-spacing:.5px;
+  }
+  .btn-submit:hover{background:var(--gold);color:#000;}
 
   /* ── 提交成功 ── */
   #contact-success{display:none;text-align:center;padding:32px;}
-  .success-icon{font-size:56px;margin-bottom:16px;}
-  .success-title{font-family:'Orbitron',sans-serif;font-size:20px;color:var(--green);margin-bottom:12px;}
-  .success-desc{font-size:14px;color:var(--sub);line-height:1.8;}
+  .success-icon{font-size:48px;margin-bottom:16px;}
+  .success-title{
+    font-family:'Inter',sans-serif;
+    font-size:20px;
+    font-weight:700;
+    color:var(--green-sys);
+    margin-bottom:12px;
+  }
+  .success-desc{font-size:14px;color:var(--sub);line-height:1.8;font-family:'Inter',sans-serif;}
 
-  /* ── 版本标签 ── */
-  .version-tag{display:inline-block;padding:3px 12px;border-radius:20px;font-size:11px;letter-spacing:1.5px;font-family:'Orbitron',sans-serif;margin-left:8px;vertical-align:middle;}
-  .version-tag.basic{background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.4);color:#A78BFA;}
-  .version-tag.advanced{background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);color:var(--cyan);}
+  /* ── 版本标签 — sharp, no pill ── */
+  .version-tag{
+    display:inline-block;
+    padding:3px 10px;
+    border-radius:4px;
+    font-size:10px;
+    letter-spacing:2px;
+    font-family:'Orbitron',sans-serif;
+    text-transform:uppercase;
+    margin-left:10px;
+    vertical-align:middle;
+  }
+  .version-tag.basic{background:transparent;border:1px solid rgba(167,139,250,.5);color:var(--purple);}
+  .version-tag.advanced{background:transparent;border:1px solid var(--green);color:var(--green);}
 
   /* ── PDF目标（隐藏，用于截图） ── */
-  #pdf-target{position:absolute;left:-9999px;top:0;width:800px;background:#0A0E1A;padding:40px;font-family:'Noto Sans SC',sans-serif;color:#fff;}
+  #pdf-target{position:absolute;left:-9999px;top:0;width:800px;background:#000000;padding:40px;font-family:'Inter','Noto Sans SC',sans-serif;color:#fff;}
 </style>
 </head>
 <body>
 
 <div id="loading-screen">
-  <svg width="48" height="48" viewBox="0 0 40 40" fill="none"><polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="#00D4FF" stroke-width="1.5"/><circle cx="20" cy="20" r="3" fill="#00D4FF"/></svg>
+  <svg width="40" height="40" viewBox="0 0 40 40" fill="none"><polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="#76b900" stroke-width="1.5"/><circle cx="20" cy="20" r="3" fill="#76b900"/></svg>
   <div class="spinner"></div>
   <div class="loading-text">正在生成你的专属报告...</div>
 </div>
@@ -164,7 +431,7 @@
 
   <!-- 顶部 -->
   <div class="report-header">
-    <div class="report-logo">VE ESPORTS TALENT RADAR</div>
+    <div><span class="report-logo">VE ESPORTS TALENT RADAR</span></div>
     <div class="report-title">电竞天赋测评报告 <span class="version-tag" id="version-tag" style="display:none;"></span></div>
     <div class="report-date" id="report-date"></div>
   </div>
@@ -186,6 +453,7 @@
     <div class="percentile-main">超越了 <span id="pct-num">—</span>%</div>
     <div class="percentile-sub" id="pct-sub">的测评者</div>
     <div class="percentile-bar-wrap">
+      <div class="percentile-bar-fill" id="pct-bar-fill" style="width:50%"></div>
       <div class="percentile-marker" id="pct-marker" style="left:50%"></div>
     </div>
     <div class="percentile-axis">
@@ -397,7 +665,7 @@ function buildCriteriaContent() {
         <tr>
           <td class="tag-normal">🎮 普通玩家水平</td>
           <td>均分 ≥45</td>
-          <td style="color:#A78BFA;">30%-95%</td>
+          <td style="color:#a78bfa;">30%-95%</td>
           <td>45-75</td>
         </tr>
         <tr>
@@ -406,7 +674,7 @@ function buildCriteriaContent() {
           <td style="color:var(--sub);">bottom 30%</td>
           <td>0-44</td>
         </tr>
-        <tr style="border-top:1px solid rgba(0,212,255,0.2);">
+        <tr style="border-top:1px solid rgba(118,185,0,0.25);">
           <td style="color:var(--sub);">本次综合均分</td>
           <td colspan="3" class="tag-yours">${avg} 分 · ${RATING_CONFIG[ratingKey].label}</td>
         </tr>
@@ -420,7 +688,7 @@ function buildCriteriaContent() {
         <th>测试项目</th>
         <th class="tag-genius">天才级 (90+)</th>
         <th class="tag-pro">职业级 (80+)</th>
-        <th style="color:#A78BFA;">普通人 (~50)</th>
+        <th style="color:#a78bfa;">普通人 (~50)</th>
         <th class="tag-yours">你的成绩</th>
       </tr></thead>
       <tbody>
@@ -428,49 +696,49 @@ function buildCriteriaContent() {
           <td>⚡ 反应速度</td>
           <td class="tag-genius">&lt;210ms</td>
           <td class="tag-pro">&lt;230ms</td>
-          <td style="color:#A78BFA;">~260ms</td>
+          <td style="color:#a78bfa;">~260ms</td>
           <td class="tag-yours">${myRT}</td>
         </tr>
         <tr>
           <td>🛡 冲动抑制</td>
           <td class="tag-genius">0误触 0漏触</td>
           <td class="tag-pro">≤1误触</td>
-          <td style="color:#A78BFA;">~1-2误触</td>
+          <td style="color:#a78bfa;">~1-2误触</td>
           <td class="tag-yours">${myFA}</td>
         </tr>
         <tr>
           <td>👁 动态视力</td>
           <td class="tag-genius">6/6 全对</td>
           <td class="tag-pro">5/6</td>
-          <td style="color:#A78BFA;">3/6</td>
+          <td style="color:#a78bfa;">3/6</td>
           <td class="tag-yours">${myVis}</td>
         </tr>
         <tr>
           <td>🧠 认知处理</td>
           <td class="tag-genius">3×3极速 4×4快速 5×5完成</td>
           <td class="tag-pro">各级快速完成少错</td>
-          <td style="color:#A78BFA;">基准时间内完成</td>
+          <td style="color:#a78bfa;">基准时间内完成</td>
           <td class="tag-yours">${scores.cognition}分</td>
         </tr>
         <tr>
           <td>🎯 手眼协调</td>
           <td class="tag-genius">KPM≥100 准确≥90%</td>
           <td class="tag-pro">KPM≥60 准确≥75%</td>
-          <td style="color:#A78BFA;">KPM~44 准确~65%</td>
+          <td style="color:#a78bfa;">KPM~44 准确~65%</td>
           <td class="tag-yours">${myKpm}</td>
         </tr>
         <tr>
           <td>🔋 专注稳定</td>
           <td class="tag-genius">RT方差&lt;10ms 无衰退</td>
           <td class="tag-pro">方差&lt;25ms 轻微衰退</td>
-          <td style="color:#A78BFA;">方差~30ms</td>
+          <td style="color:#a78bfa;">方差~30ms</td>
           <td class="tag-yours">${myFocusDesc}</td>
         </tr>
         <tr>
           <td>🎨 色觉感知</td>
           <td class="tag-genius">P1: 0误触 极速<br>P2: 全轮快速找齐</td>
           <td class="tag-pro">P1: ≤1误触<br>P2: 高命中率</td>
-          <td style="color:#A78BFA;">P1: ~2误触<br>P2: 中等速度</td>
+          <td style="color:#a78bfa;">P1: ~2误触<br>P2: 中等速度</td>
           <td class="tag-yours">${myColor}</td>
         </tr>
       </tbody>
@@ -522,6 +790,9 @@ function renderPercentile() {
   // 位置：百分位直接映射到bar宽度（留2%边距）
   const markerLeft = Math.min(97, Math.max(3, pct));
   document.getElementById('pct-marker').style.left = markerLeft + '%';
+  // Green fill bar
+  const fillEl = document.getElementById('pct-bar-fill');
+  if (fillEl) fillEl.style.width = markerLeft + '%';
   // 子标题：加描述
   const desc = pct >= 99 ? '· 顶尖天赋，极为罕见' : pct >= 90 ? '· 远超大多数人' : pct >= 70 ? '· 高于平均水平' : pct >= 45 ? '· 接近平均水平' : '· 仍有提升空间';
   document.getElementById('pct-sub').textContent = '的测评者 ' + desc;
@@ -581,11 +852,11 @@ function renderChart() {
       labels: DIM_KEYS.map(k => DIM_NAMES[k]),
       datasets: [{
         data: DIM_KEYS.map(k => scores[k] || 0),
-        backgroundColor: 'rgba(0,212,255,0.1)',
-        borderColor: '#00D4FF',
+        backgroundColor: 'rgba(118,185,0,0.1)',
+        borderColor: '#76b900',
         borderWidth: 2,
-        pointBackgroundColor: '#00D4FF',
-        pointBorderColor: '#0A0E1A',
+        pointBackgroundColor: '#76b900',
+        pointBorderColor: '#000000',
         pointRadius: 5,
         pointHoverRadius: 7
       }]
@@ -596,7 +867,7 @@ function renderChart() {
         min:0,max:100,
         grid:{color:'rgba(255,255,255,0.06)'},
         angleLines:{color:'rgba(255,255,255,0.06)'},
-        pointLabels:{color:'#94A3B8',font:{size:11,family:"'Noto Sans SC'"}},
+        pointLabels:{color:'#a7a7a7',font:{size:11,family:"'Inter','Noto Sans SC'"}},
         ticks:{display:false,stepSize:20}
       }},
       plugins:{legend:{display:false}}
@@ -777,7 +1048,7 @@ async function submitContact() {
   document.getElementById('contact-success').style.display = 'block';
   const desc = ratingKey === 'genius'
     ? `<strong>${name}</strong>，你的完整测评报告已成功推送至合作俱乐部青训团队。<br><br>以你「职业级天才少年」的评级，<strong style="color:#10B981">极大概率</strong>会在近期收到俱乐部的试训邀请。请保持联系方式畅通，期待你在职业赛场上发光！`
-    : `<strong>${name}</strong>，你的报告已纳入俱乐部人才储备库。<br><br>以你目前的潜力，若持续训练提升，<strong style="color:#00D4FF">有可能</strong>收到俱乐部的关注和邀请。继续加油！`;
+    : `<strong>${name}</strong>，你的报告已纳入俱乐部人才储备库。<br><br>以你目前的潜力，若持续训练提升，<strong style="color:#76b900">有可能</strong>收到俱乐部的关注和邀请。继续加油！`;
   document.getElementById('success-desc').innerHTML = desc;
 }
 
@@ -809,7 +1080,7 @@ async function downloadPDF() {
     await new Promise(r => setTimeout(r, 600));
 
     const canvas = await html2canvas(target, {
-      backgroundColor: '#0A0E1A', scale: 2, useCORS: true, logging: false,
+      backgroundColor: '#000000', scale: 2, useCORS: true, logging: false,
       width: 800, windowWidth: 800
     });
 
@@ -841,7 +1112,7 @@ async function renderBarChartImage() {
   cvs.width = 720; cvs.height = 300;
   const ctx = cvs.getContext('2d');
   // 深色背景
-  ctx.fillStyle = '#111827';
+  ctx.fillStyle = '#111111';
   ctx.fillRect(0, 0, cvs.width, cvs.height);
 
   new Chart(ctx, {
@@ -852,10 +1123,10 @@ async function renderBarChartImage() {
         {
           label: '你的得分',
           data: DIM_KEYS.map(k => scores[k] || 0),
-          backgroundColor: 'rgba(0,212,255,0.75)',
-          borderColor: '#00D4FF',
+          backgroundColor: 'rgba(118,185,0,0.75)',
+          borderColor: '#76b900',
           borderWidth: 1,
-          borderRadius: 5
+          borderRadius: 2
         },
         {
           label: '普通人均分',
@@ -863,7 +1134,7 @@ async function renderBarChartImage() {
           backgroundColor: 'rgba(248,183,60,0.55)',
           borderColor: '#F8B73C',
           borderWidth: 1,
-          borderRadius: 5
+          borderRadius: 2
         }
       ]
     },
@@ -874,15 +1145,15 @@ async function renderBarChartImage() {
         y: {
           min: 0, max: 100,
           grid: { color: 'rgba(255,255,255,0.08)' },
-          ticks: { color: '#94A3B8', font: { size: 11 } }
+          ticks: { color: '#a7a7a7', font: { size: 11 } }
         },
         x: {
           grid: { display: false },
-          ticks: { color: '#94A3B8', font: { size: 11 } }
+          ticks: { color: '#a7a7a7', font: { size: 11 } }
         }
       },
       plugins: {
-        legend: { labels: { color: '#CBD5E1', font: { size: 11 }, boxWidth: 12 } }
+        legend: { labels: { color: '#a7a7a7', font: { size: 11 }, boxWidth: 12 } }
       }
     }
   });
@@ -896,7 +1167,7 @@ async function renderLineChartImage(reactionTimes) {
   const cvs = document.createElement('canvas');
   cvs.width = 720; cvs.height = 240;
   const ctx = cvs.getContext('2d');
-  ctx.fillStyle = '#111827';
+  ctx.fillStyle = '#111111';
   ctx.fillRect(0, 0, cvs.width, cvs.height);
 
   const avgBench = 260;
@@ -911,13 +1182,13 @@ async function renderLineChartImage(reactionTimes) {
         {
           label: '你的反应时间 (ms)',
           data: reactionTimes,
-          borderColor: '#00D4FF',
-          backgroundColor: 'rgba(0,212,255,0.12)',
+          borderColor: '#76b900',
+          backgroundColor: 'rgba(118,185,0,0.12)',
           tension: 0.35,
           fill: true,
           pointRadius: 4,
-          pointBackgroundColor: '#00D4FF',
-          pointBorderColor: '#0A0E1A',
+          pointBackgroundColor: '#76b900',
+          pointBorderColor: '#000000',
           pointBorderWidth: 2
         },
         {
@@ -939,15 +1210,15 @@ async function renderLineChartImage(reactionTimes) {
         y: {
           min: minY, max: maxY,
           grid: { color: 'rgba(255,255,255,0.08)' },
-          ticks: { color: '#94A3B8', font: { size: 11 }, callback: v => v + 'ms' }
+          ticks: { color: '#a7a7a7', font: { size: 11 }, callback: v => v + 'ms' }
         },
         x: {
           grid: { display: false },
-          ticks: { color: '#94A3B8', font: { size: 10 } }
+          ticks: { color: '#a7a7a7', font: { size: 10 } }
         }
       },
       plugins: {
-        legend: { labels: { color: '#CBD5E1', font: { size: 11 }, boxWidth: 12 } }
+        legend: { labels: { color: '#a7a7a7', font: { size: 11 }, boxWidth: 12 } }
       }
     }
   });
@@ -959,7 +1230,7 @@ async function renderLineChartImage(reactionTimes) {
 function buildPDFContent(radarImg, barImg, lineImg) {
   const cfg = RATING_CONFIG[ratingKey];
   const avg = (DIM_KEYS.reduce((a,k)=>a+(scores[k]||0),0)/7).toFixed(1);
-  const accentColor = ratingKey==='genius' ? '#FCD34D' : ratingKey==='pro' ? '#00D4FF' : '#A78BFA';
+  const accentColor = ratingKey==='genius' ? '#FCD34D' : ratingKey==='pro' ? '#76b900' : '#a78bfa';
   const raw = JSON.parse(sessionStorage.getItem('ve_rawdata') || '{}');
   const dateStr = new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
 
@@ -989,14 +1260,14 @@ function buildPDFContent(radarImg, barImg, lineImg) {
     const bench = BENCHMARKS[k];
     const diff = s - bench;
     const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
-    const diffColor = diff > 0 ? '#10B981' : diff < 0 ? '#EF4444' : '#94A3B8';
+    const diffColor = diff > 0 ? '#76b900' : diff < 0 ? '#EF4444' : '#a7a7a7';
     return `
       <tr>
-        <td style="padding:7px 12px;color:#CBD5E1;font-size:13px;">${DIM_NAMES[k]}</td>
+        <td style="padding:7px 12px;color:#a7a7a7;font-size:13px;">${DIM_NAMES[k]}</td>
         <td style="padding:7px 12px;text-align:center;">
-          <div style="background:rgba(255,255,255,0.06);border-radius:4px;height:10px;position:relative;">
-            <div style="position:absolute;left:0;top:0;height:10px;width:${s}%;background:linear-gradient(90deg,#00D4FF,#7C3AED);border-radius:4px;"></div>
-            <div style="position:absolute;top:-3px;left:${bench}%;width:2px;height:16px;background:#F8B73C;border-radius:1px;transform:translateX(-50%);"></div>
+          <div style="background:rgba(255,255,255,0.06);border-radius:4px;height:8px;position:relative;">
+            <div style="position:absolute;left:0;top:0;height:8px;width:${s}%;background:linear-gradient(90deg,#76b900,rgba(118,185,0,.5));border-radius:4px;"></div>
+            <div style="position:absolute;top:-3px;left:${bench}%;width:2px;height:14px;background:#F8B73C;border-radius:1px;transform:translateX(-50%);"></div>
           </div>
         </td>
         <td style="padding:7px 12px;text-align:center;font-family:monospace;color:#fff;font-size:14px;font-weight:700;">${s}</td>
@@ -1005,36 +1276,36 @@ function buildPDFContent(radarImg, barImg, lineImg) {
   }).join('');
 
   return `
-    <div style="background:#0A0E1A;color:#fff;padding:48px 48px 60px;font-family:sans-serif;width:800px;">
+    <div style="background:#000000;color:#fff;padding:48px 48px 60px;font-family:sans-serif;width:800px;">
 
       <!-- 页头 -->
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:36px;padding-bottom:20px;border-bottom:1px solid rgba(0,212,255,0.2);">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:36px;padding-bottom:20px;border-bottom:2px solid #76b900;">
         <div>
-          <div style="font-size:10px;color:#00D4FF;letter-spacing:4px;margin-bottom:6px;">VE ESPORTS TALENT RADAR</div>
-          <div style="font-size:28px;font-weight:900;color:#fff;letter-spacing:1px;">电竞天赋测评报告</div>
-          <div style="font-size:12px;color:#94A3B8;margin-top:4px;">${dateStr}</div>
+          <div style="font-size:10px;color:#76b900;letter-spacing:4px;margin-bottom:6px;text-transform:uppercase;">VE ESPORTS TALENT RADAR</div>
+          <div style="font-size:28px;font-weight:700;color:#fff;letter-spacing:.5px;">电竞天赋测评报告</div>
+          <div style="font-size:12px;color:#a7a7a7;margin-top:4px;">${dateStr}</div>
         </div>
         <div style="text-align:right;">
-          <div style="padding:10px 24px;border:2px solid ${accentColor};border-radius:30px;font-size:14px;font-weight:700;color:${accentColor};display:inline-block;">${cfg.label}</div>
-          <div style="font-size:12px;color:#94A3B8;margin-top:6px;">综合均分 <span style="color:#fff;font-weight:700;">${avg}</span> / 100</div>
+          <div style="padding:10px 24px;border:2px solid ${accentColor};border-radius:4px;font-size:14px;font-weight:700;color:${accentColor};display:inline-block;">${cfg.label}</div>
+          <div style="font-size:12px;color:#a7a7a7;margin-top:6px;">综合均分 <span style="color:#fff;font-weight:700;">${avg}</span> / 100</div>
         </div>
       </div>
 
       <!-- 雷达图 + 维度表格 -->
       <div style="display:flex;gap:32px;margin-bottom:32px;align-items:flex-start;">
         <div style="flex:0 0 240px;">
-          <div style="font-size:10px;color:#00D4FF;letter-spacing:2px;margin-bottom:12px;">天赋雷达图</div>
+          <div style="font-size:10px;color:#76b900;letter-spacing:2px;margin-bottom:12px;text-transform:uppercase;">天赋雷达图</div>
           <img src="${radarImg}" style="width:240px;height:240px;object-fit:contain;" />
         </div>
         <div style="flex:1;">
-          <div style="font-size:10px;color:#00D4FF;letter-spacing:2px;margin-bottom:12px;">七维度评分详情 <span style="color:#F8B73C;font-size:9px;">▌ = 普通人均分</span></div>
+          <div style="font-size:10px;color:#76b900;letter-spacing:2px;margin-bottom:12px;text-transform:uppercase;">七维度评分详情 <span style="color:#F8B73C;font-size:9px;">▌ = 普通人均分</span></div>
           <table style="width:100%;border-collapse:collapse;">
             <thead>
-              <tr style="border-bottom:1px solid rgba(255,255,255,0.08);">
-                <th style="padding:5px 12px;text-align:left;font-size:11px;color:#64748B;font-weight:400;">维度</th>
-                <th style="padding:5px 12px;font-size:11px;color:#64748B;font-weight:400;min-width:140px;">得分条</th>
-                <th style="padding:5px 12px;text-align:center;font-size:11px;color:#64748B;font-weight:400;">分数</th>
-                <th style="padding:5px 12px;text-align:center;font-size:11px;color:#64748B;font-weight:400;">vs均值</th>
+              <tr style="border-bottom:1px solid #2a2a2a;">
+                <th style="padding:5px 12px;text-align:left;font-size:11px;color:#757575;font-weight:500;text-transform:uppercase;letter-spacing:.5px;">维度</th>
+                <th style="padding:5px 12px;font-size:11px;color:#757575;font-weight:500;min-width:140px;text-transform:uppercase;letter-spacing:.5px;">得分条</th>
+                <th style="padding:5px 12px;text-align:center;font-size:11px;color:#757575;font-weight:500;text-transform:uppercase;letter-spacing:.5px;">分数</th>
+                <th style="padding:5px 12px;text-align:center;font-size:11px;color:#757575;font-weight:500;text-transform:uppercase;letter-spacing:.5px;">vs均值</th>
               </tr>
             </thead>
             <tbody>${dimRows}</tbody>
@@ -1044,8 +1315,8 @@ function buildPDFContent(radarImg, barImg, lineImg) {
 
       <!-- 维度对比柱状图 -->
       <div style="margin-bottom:32px;">
-        <div style="font-size:10px;color:#00D4FF;letter-spacing:2px;margin-bottom:12px;">维度得分对比（你 vs 普通人）</div>
-        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(0,212,255,0.15);border-radius:10px;padding:16px;">
+        <div style="font-size:10px;color:#76b900;letter-spacing:2px;margin-bottom:12px;text-transform:uppercase;">维度得分对比（你 vs 普通人）</div>
+        <div style="background:#111111;border:1px solid #2a2a2a;border-radius:4px;padding:16px;">
           <img src="${barImg}" style="width:100%;height:auto;" />
         </div>
       </div>
@@ -1053,8 +1324,8 @@ function buildPDFContent(radarImg, barImg, lineImg) {
       ${lineImg ? `
       <!-- 反应时间折线图 -->
       <div style="margin-bottom:32px;">
-        <div style="font-size:10px;color:#00D4FF;letter-spacing:2px;margin-bottom:12px;">反应速度趋势（各轮次）</div>
-        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(0,212,255,0.15);border-radius:10px;padding:16px;">
+        <div style="font-size:10px;color:#76b900;letter-spacing:2px;margin-bottom:12px;text-transform:uppercase;">反应速度趋势（各轮次）</div>
+        <div style="background:#111111;border:1px solid #2a2a2a;border-radius:4px;padding:16px;">
           <img src="${lineImg}" style="width:100%;height:auto;" />
         </div>
       </div>` : ''}
@@ -1062,23 +1333,23 @@ function buildPDFContent(radarImg, barImg, lineImg) {
       <!-- 实测数据摘要 -->
       ${dataLines.length ? `
       <div style="margin-bottom:32px;">
-        <div style="font-size:10px;color:#00D4FF;letter-spacing:2px;margin-bottom:12px;">实测数据摘要</div>
-        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(0,212,255,0.15);border-radius:10px;padding:16px 20px;">
-          ${dataLines.map(l=>`<div style="font-size:13px;color:#94A3B8;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);">${l}</div>`).join('')}
+        <div style="font-size:10px;color:#76b900;letter-spacing:2px;margin-bottom:12px;text-transform:uppercase;">实测数据摘要</div>
+        <div style="background:#111111;border:1px solid #2a2a2a;border-left:3px solid #76b900;border-radius:4px;padding:16px 20px;">
+          ${dataLines.map(l=>`<div style="font-size:13px;color:#a7a7a7;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);">${l}</div>`).join('')}
         </div>
       </div>` : ''}
 
       <!-- 专业分析报告 -->
       <div style="margin-bottom:32px;">
-        <div style="font-size:10px;color:#00D4FF;letter-spacing:2px;margin-bottom:12px;">AI专业分析报告</div>
-        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(0,212,255,0.15);border-radius:10px;padding:24px;">
-          <div style="font-size:14px;color:#CBD5E1;line-height:2.1;white-space:pre-wrap;">${reportTextContent || fallbackText()}</div>
+        <div style="font-size:10px;color:#76b900;letter-spacing:2px;margin-bottom:12px;text-transform:uppercase;">AI专业分析报告</div>
+        <div style="background:#111111;border:1px solid #2a2a2a;border-radius:4px;padding:24px;">
+          <div style="font-size:14px;color:#a7a7a7;line-height:2.1;white-space:pre-wrap;">${reportTextContent || fallbackText()}</div>
         </div>
       </div>
 
       <!-- 页脚 -->
-      <div style="text-align:center;padding-top:20px;border-top:1px solid rgba(255,255,255,0.06);">
-        <div style="font-size:11px;color:rgba(255,255,255,0.25);">© ${new Date().getFullYear()} VE天赋雷达 · ESPORTS TALENT RADAR · 本报告由AI系统生成，仅供参考</div>
+      <div style="text-align:center;padding-top:20px;border-top:1px solid #2a2a2a;">
+        <div style="font-size:11px;color:#757575;">© ${new Date().getFullYear()} VE天赋雷达 · ESPORTS TALENT RADAR · 本报告由AI系统生成，仅供参考</div>
       </div>
 
     </div>`;

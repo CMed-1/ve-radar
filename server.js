@@ -14,61 +14,87 @@ initDB();
 
 // ─── 邀请码验证 ───────────────────────────────────────────────
 app.post('/api/verify-code', async (req, res) => {
-  const { code } = req.body;
-  if (!code) return res.json({ success: false, message: '请输入邀请码' });
-  res.json(await verifyCode(code.trim()));
+  try {
+    const { code } = req.body;
+    if (!code) return res.json({ success: false, message: '请输入邀请码' });
+    res.json(verifyCode(code.trim()));
+  } catch (err) {
+    console.error('[verify-code]', err.message);
+    res.status(500).json({ success: false, message: '服务器错误，请稍后重试' });
+  }
 });
 
 // ─── 管理员：生成邀请码 ───────────────────────────────────────
 app.post('/api/admin/generate-codes', async (req, res) => {
-  const { password, count = 1, note = '' } = req.body;
-  if (password !== process.env.ADMIN_PASSWORD) {
-    return res.json({ success: false, message: '管理员密码错误' });
+  try {
+    const { password, count = 1, note = '' } = req.body;
+    if (password !== process.env.ADMIN_PASSWORD) {
+      return res.json({ success: false, message: '管理员密码错误' });
+    }
+    const num = Math.min(Math.max(parseInt(count) || 1, 1), 200);
+    const codes = [];
+    for (let i = 0; i < num; i++) {
+      codes.push(generateCode(note));
+    }
+    res.json({ success: true, codes });
+  } catch (err) {
+    console.error('[generate-codes]', err.message);
+    res.status(500).json({ success: false, message: '服务器错误，请稍后重试' });
   }
-  const num = Math.min(Math.max(parseInt(count) || 1, 1), 200);
-  const codes = [];
-  for (let i = 0; i < num; i++) {
-    codes.push(await generateCode(note));
-  }
-  res.json({ success: true, codes });
 });
 
 // ─── 管理员：查看所有邀请码 ───────────────────────────────────
 app.post('/api/admin/codes', async (req, res) => {
-  const { password } = req.body;
-  if (password !== process.env.ADMIN_PASSWORD) {
-    return res.json({ success: false, message: '管理员密码错误' });
+  try {
+    const { password } = req.body;
+    if (password !== process.env.ADMIN_PASSWORD) {
+      return res.json({ success: false, message: '管理员密码错误' });
+    }
+    res.json({ success: true, codes: getAllCodes() });
+  } catch (err) {
+    console.error('[admin/codes]', err.message);
+    res.status(500).json({ success: false, message: '服务器错误，请稍后重试' });
   }
-  res.json({ success: true, codes: await getAllCodes() });
 });
 
 // ─── 管理员：查看所有联系方式 ─────────────────────────────────
 app.post('/api/admin/contacts', async (req, res) => {
-  const { password } = req.body;
-  if (password !== process.env.ADMIN_PASSWORD) {
-    return res.json({ success: false, message: '管理员密码错误' });
+  try {
+    const { password } = req.body;
+    if (password !== process.env.ADMIN_PASSWORD) {
+      return res.json({ success: false, message: '管理员密码错误' });
+    }
+    res.json({ success: true, contacts: getAllContacts() });
+  } catch (err) {
+    console.error('[admin/contacts]', err.message);
+    res.status(500).json({ success: false, message: '服务器错误，请稍后重试' });
   }
-  res.json({ success: true, contacts: await getAllContacts() });
 });
 
 // ─── 提交联系方式 ─────────────────────────────────────────────
 app.post('/api/submit-contact', async (req, res) => {
-  const { name, contact, contactType, rating, scores } = req.body;
-  if (!contact) return res.json({ success: false, message: '联系方式不能为空' });
-  await saveContact({ name, contact, contactType, rating, scores });
-  res.json({ success: true });
+  try {
+    const { name, contact, contactType, rating, scores } = req.body;
+    if (!contact) return res.json({ success: false, message: '联系方式不能为空' });
+    saveContact({ name, contact, contactType, rating, scores });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[submit-contact]', err.message);
+    res.status(500).json({ success: false, message: '服务器错误，请稍后重试' });
+  }
 });
 
 // ─── 生成 AI 报告文字 ─────────────────────────────────────────
 app.post('/api/generate-report', async (req, res) => {
-  const { scores, rating, device, rawData, mode = 'advanced' } = req.body;
   try {
+    const { scores, rating, device, rawData, mode = 'advanced' } = req.body;
     const text = mode === 'basic'
       ? await callMiniMaxBasic(scores, rating, rawData)
       : await callMiniMax(scores, rating, device, rawData);
     res.json({ success: true, text });
   } catch (err) {
     console.error('MiniMax API 错误:', err.message);
+    const { scores, rating, mode = 'advanced' } = req.body;
     res.json({ success: true, text: fallbackReport(scores, rating, mode) });
   }
 });
@@ -181,7 +207,7 @@ ${rating.includes('天才') ? '- 强调他的天赋在同龄人中的稀缺性�
       reply_constraints: { sender_type: 'BOT', sender_name: 'VE评估师' },
       bot_setting: [{
         bot_name: 'VE评估师',
-        content: '你是VE天赋雷达平台的资深电竞天赋评估专家，擅长从测评数据中发现选手的真实天赋特征，语言专业有温度，善用具体数字说话。'
+        content: '你是VE天赋雷达平台的资深电竞天才评估专家，擅长从测评数据中发现选手的真实天赋特征，语言专业有温度，善用具体数字说话。'
       }],
       messages: [{ sender_type: 'USER', sender_name: '用户', text: prompt }]
     },
