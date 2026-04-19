@@ -1,14 +1,12 @@
 const Database = require('better-sqlite3');
 const path = require('path');
-const fs = require('fs');
 const { nanoid } = require('nanoid');
 
-// Render 持久化磁盘挂载在 /var/data；本地开发回退到项目目录
-const DB_DIR  = process.env.RENDER ? '/var/data' : __dirname;
-const DB_PATH = path.join(DB_DIR, 've_radar.db');
-
-// 确保目录存在（磁盘首次挂载时需要）
-if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
+// Render 持久化磁盘挂载在 /var/data（由 Render 负责创建该目录）
+// 本地开发回退到项目目录
+const DB_PATH = process.env.RENDER
+  ? '/var/data/ve_radar.db'
+  : path.join(__dirname, 've_radar.db');
 
 const db = new Database(DB_PATH);
 
