@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>VE天赋雷达 · 测评进行中</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0A0E1A; --cyan:#00D4FF; --cyan-dim:rgba(0,212,255,0.15);
+    --purple:#7C3AED; --text:#FFF; --sub:#94A3B8;
+    --border:rgba(0,212,255,0.2); --card:rgba(255,255,255,0.04);
+    --green:#10B981; --red:#EF4444; --yellow:#F59E0B;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{background:var(--bg);color:var(--text);font-family:'Noto Sans SC',sans-serif;min-height:100vh;overflow-x:hidden;}
+
+  /* ── 顶部进度条 ── */
+  .top-bar{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,14,26,0.95);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;gap:16px;}
+  .logo-sm{font-family:'Orbitron',sans-serif;font-size:14px;color:var(--cyan);letter-spacing:2px;white-space:nowrap;}
+  .progress-wrap{flex:1;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden;}
+  .progress-bar{height:100%;background:linear-gradient(90deg,var(--cyan),var(--purple));border-radius:2px;transition:width .6s ease;}
+  .progress-text{font-family:'Orbitron',sans-serif;font-size:12px;color:var(--sub);white-space:nowrap;}
+
+  /* ── 主容器 ── */
+  .main{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:80px 20px 40px;}
+
+  /* ── 通用屏幕 ── */
+  .screen{display:none;width:100%;max-width:680px;text-align:center;animation:fadeIn .4s ease;}
+  .screen.active{display:flex;flex-direction:column;align-items:center;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+
+  /* ── 测试说明屏 ── */
+  .test-index{font-family:'Orbitron',sans-serif;font-size:11px;color:var(--cyan);letter-spacing:3px;margin-bottom:16px;}
+  .test-title{font-family:'Orbitron',sans-serif;font-size:clamp(22px,5vw,36px);font-weight:700;margin-bottom:12px;}
+  .test-desc{color:var(--sub);font-size:15px;line-height:1.8;max-width:520px;margin-bottom:32px;}
+  .tip-box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 24px;text-align:left;width:100%;margin-bottom:32px;}
+  .tip-box h4{color:var(--cyan);font-size:13px;margin-bottom:10px;letter-spacing:1px;}
+  .tip-box li{color:var(--sub);font-size:13px;line-height:2;padding-left:4px;}
+
+  /* ── 倒计时屏 ── */
+  .countdown-num{font-family:'Orbitron',sans-serif;font-size:120px;font-weight:900;color:var(--cyan);line-height:1;text-shadow:0 0 60px rgba(0,212,255,0.5);}
+  .countdown-label{font-size:16px;color:var(--sub);margin-top:16px;letter-spacing:2px;}
+
+  /* ── 按钮 ── */
+  .btn-start{padding:16px 48px;border-radius:10px;background:linear-gradient(135deg,var(--cyan),#0099CC);border:none;color:#0A0E1A;font-size:16px;font-weight:700;font-family:'Noto Sans SC',sans-serif;cursor:pointer;transition:all .2s;letter-spacing:1px;}
+  .btn-start:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,212,255,0.4);}
+
+  /* ── 反应速度测试 ── */
+  #reaction-arena{width:100%;max-width:640px;aspect-ratio:16/9;border-radius:16px;border:2px solid var(--border);background:#060B14;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;transition:background .15s;user-select:none;}
+  #reaction-arena.wait{background:#060B14;}
+  #reaction-arena.ready{background:#101A2E;}
+  #reaction-arena.go{background:rgba(0,212,255,0.08);border-color:var(--cyan);box-shadow:0 0 40px rgba(0,212,255,0.2);}
+  #reaction-arena.early{background:rgba(239,68,68,0.1);border-color:var(--red);}
+  .arena-text{font-family:'Orbitron',sans-serif;font-size:clamp(16px,3vw,24px);letter-spacing:2px;}
+  .arena-sub{font-size:14px;color:var(--sub);}
+  .reaction-results{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:16px;}
+  .rt-chip{padding:6px 14px;border-radius:20px;font-family:'Orbitron',sans-serif;font-size:13px;border:1px solid var(--border);background:var(--card);}
+  .rt-chip.good{border-color:var(--green);color:var(--green);}
+  .rt-chip.ok{border-color:var(--yellow);color:var(--yellow);}
+  .rt-chip.slow{border-color:var(--red);color:var(--red);}
+  .rt-chip.err{border-color:var(--sub);color:var(--sub);}
+
+  /* ── Go/No-Go 测试 ── */
+  #gng-arena{width:240px;height:240px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .1s,border-color .1s;border:3px solid var(--border);background:var(--card);font-family:'Orbitron',sans-serif;font-size:18px;letter-spacing:2px;user-select:none;}
+  #gng-arena.go-signal{background:rgba(16,185,129,0.15);border-color:var(--green);box-shadow:0 0 40px rgba(16,185,129,0.3);color:var(--green);}
+  #gng-arena.nogo-signal{background:rgba(239,68,68,0.15);border-color:var(--red);box-shadow:0 0 40px rgba(239,68,68,0.3);color:var(--red);}
+  #gng-arena.blank{background:var(--card);border-color:var(--border);color:var(--sub);}
+  .gng-stats{display:flex;gap:24px;margin-top:20px;}
+  .gng-stat{text-align:center;}
+  .gng-stat-num{font-family:'Orbitron',sans-serif;font-size:24px;color:var(--cyan);}
+  .gng-stat-label{font-size:12px;color:var(--sub);margin-top:2px;}
+
+  /* ── 动态视力测试 ── */
+  #vision-display{width:100%;max-width:600px;height:160px;background:#060B14;border-radius:12px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-size:clamp(40px,10vw,80px);letter-spacing:16px;color:var(--cyan);letter-spacing:20px;user-select:none;}
+  #vision-input{width:100%;max-width:400px;padding:16px;text-align:center;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'Orbitron',sans-serif;font-size:28px;letter-spacing:12px;outline:none;margin-top:20px;}
+  #vision-input:focus{border-color:var(--cyan);}
+  .vision-round-info{font-size:13px;color:var(--sub);margin-bottom:12px;}
+  .vision-feedback{height:24px;font-size:14px;margin-top:12px;font-family:'Orbitron',sans-serif;}
+  .vision-feedback.correct{color:var(--green);}
+  .vision-feedback.wrong{color:var(--red);}
+
+  /* ── 数字方格测试 ── */
+  #grid-container{display:grid;gap:8px;margin:0 auto;}
+  .grid-cell{aspect-ratio:1;border-radius:8px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Orbitron',sans-serif;font-size:clamp(14px,3vw,22px);cursor:pointer;transition:all .15s;user-select:none;font-weight:700;}
+  .grid-cell:hover{border-color:var(--cyan);background:var(--cyan-dim);}
+  .grid-cell.correct{background:rgba(16,185,129,0.2);border-color:var(--green);color:var(--green);}
+  .grid-cell.wrong{background:rgba(239,68,68,0.2);border-color:var(--red);color:var(--red);animation:shake .3s;}
+  .grid-cell.done{opacity:.3;cursor:default;}
+  @keyframes shake{0%,100%{transform:none}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+  .grid-timer{font-family:'Orbitron',sans-serif;font-size:32px;color:var(--cyan);margin-bottom:12px;}
+  .grid-info{font-size:13px;color:var(--sub);margin-bottom:16px;}
+  .grid-next-hint{font-size:14px;color:var(--cyan);margin-top:4px;}
+
+  /* ── Aim 测试 ── */
+  #aim-arena{width:100%;max-width:640px;aspect-ratio:16/9;background:#060B14;border-radius:16px;border:1px solid var(--border);position:relative;overflow:hidden;cursor:crosshair;user-select:none;touch-action:none;}
+  .aim-target{
+    position:absolute;border-radius:50%;cursor:crosshair;
+    transform:translate(-50%,-50%) scale(0);
+    transition:transform .12s cubic-bezier(.175,.885,.32,1.275), opacity .15s;
+    background:radial-gradient(circle at 38% 38%,
+      rgba(255,255,255,0.9) 0%, rgba(0,212,255,0.95) 18%,
+      rgba(0,212,255,0.4) 55%, transparent 100%);
+    border:2px solid var(--cyan);
+    box-shadow:0 0 12px rgba(0,212,255,0.5);
+  }
+  .aim-target.spawned{transform:translate(-50%,-50%) scale(1);}
+  .aim-target::after{
+    content:'';position:absolute;top:50%;left:50%;
+    width:30%;height:30%;border-radius:50%;
+    background:rgba(255,255,255,0.95);
+    transform:translate(-50%,-50%);
+    pointer-events:none;
+  }
+  .aim-target:active{transform:translate(-50%,-50%) scale(0.85);}
+  .aim-timer-bar{position:absolute;bottom:0;left:0;height:4px;background:linear-gradient(90deg,var(--green),var(--cyan));transition:width .1s linear;}
+  .aim-hud{display:flex;gap:12px;margin-top:12px;justify-content:center;flex-wrap:wrap;}
+  .aim-hud-item{text-align:center;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 16px;min-width:72px;}
+  .aim-hud-num{font-family:'Orbitron',sans-serif;font-size:22px;color:var(--cyan);}
+  .aim-hud-label{font-size:11px;color:var(--sub);margin-top:2px;}
+  .aim-miss-flash{position:absolute;inset:0;background:rgba(239,68,68,0.12);pointer-events:none;opacity:0;transition:opacity .1s;}
+  /* Aim 结果 */
+  .aim-result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:100%;max-width:560px;margin:20px 0 28px;}
+  .aim-result-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 12px;text-align:center;}
+  .aim-result-item.highlight{border-color:var(--cyan);background:var(--cyan-dim);}
+  .aim-result-num{font-family:'Orbitron',sans-serif;font-size:clamp(18px,4vw,28px);color:var(--cyan);font-weight:700;}
+  .aim-result-label{font-size:11px;color:var(--sub);margin-top:4px;}
+  .aim-score-badge{font-family:'Orbitron',sans-serif;font-size:64px;font-weight:900;color:var(--cyan);line-height:1;text-shadow:0 0 40px rgba(0,212,255,0.4);}
+
+  /* ── 结果屏 ── */
+  .result-icon{font-size:64px;margin-bottom:16px;}
+  .result-score{font-family:'Orbitron',sans-serif;font-size:72px;font-weight:900;color:var(--cyan);line-height:1;}
+  .result-label{font-size:14px;color:var(--sub);margin-top:8px;letter-spacing:2px;}
+  .result-detail{color:var(--sub);font-size:14px;margin:20px 0 32px;line-height:1.8;}
+
+  /* ── 颜色测试 ── */
+  #color-arena{
+    width:100%;max-width:560px;height:200px;border-radius:16px;
+    border:2px solid var(--border);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:10px;cursor:pointer;user-select:none;transition:background .08s,border-color .08s;
+    background:#060B14;
+  }
+  #color-arena-text{font-family:'Orbitron',sans-serif;font-size:24px;letter-spacing:3px;color:var(--sub);}
+  #color-arena-sub{font-size:13px;color:var(--sub);}
+  /* 阶段二：目标视觉搜索 */
+  #cp2-timer-wrap{width:100%;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;margin:12px 0;overflow:hidden;}
+  #cp2-timer-bar{height:100%;width:100%;border-radius:3px;background:#EF4444;}
+  #cp2-grid{display:grid;gap:10px;justify-content:center;margin:12px auto;}
+  .cp2-dot{width:52px;height:52px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:transform 0.1s,border-color 0.1s,opacity 0.15s;user-select:none;-webkit-tap-highlight-color:transparent;}
+  .cp2-dot.hit{border-color:#10B981 !important;transform:scale(1.15);}
+  .cp2-dot.wrong{border-color:#EF4444 !important;transform:scale(0.88);}
+  @media(max-width:500px){.cp2-dot{width:44px;height:44px;}#cp2-grid{gap:8px;}}
+  /* ── 最终计算屏 ── */
+  .calc-spinner{width:60px;height:60px;border:3px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:24px;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- 顶部进度条 -->
+<div class="top-bar">
+  <div class="logo-sm">VE天赋雷达</div>
+  <div class="progress-wrap"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
+  <div class="progress-text" id="progress-text">测试 1/5</div>
+</div>
+
+<div class="main">
+
+<!-- ═══════════════════════════════════════════
+     TEST 1: 反应速度 - 说明
+════════════════════════════════════════════ -->
+<div class="screen active" id="s-reaction-intro">
+  <div class="test-index">TEST 01 / 05</div>
+  <div class="test-title">反应速度测试</div>
+  <div class="test-desc">测量你从看到刺激到做出反应的神经传导时间，这是电竞最核心的生理天赋指标。</div>
+  <div class="tip-box">
+    <h4>📋 测试说明</h4>
+    <ul>
+      <li>屏幕会突然变亮（蓝光），立即点击/按鼠标</li>
+      <li>变亮前点击算「抢跑」，不计入成绩</li>
+      <li>共测试 8 轮，取平均值计算</li>
+      <li>等待时间随机，不要有规律地预判</li>
+    </ul>
+  </div>
+  <button class="btn-start" onclick="startReaction()">准备好了，开始</button>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TEST 1: 反应速度 - 测试
+════════════════════════════════════════════ -->
+<div class="screen" id="s-reaction-test">
+  <div class="test-index" style="margin-bottom:12px;">TEST 01 — 第 <span id="rt-round">1</span> / 8 轮</div>
+  <div id="reaction-arena" onclick="handleReactionClick()">
+    <div class="arena-text" id="arena-text">准备...</div>
+    <div class="arena-sub" id="arena-sub">等待信号</div>
+  </div>
+  <div class="reaction-results" id="reaction-results"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TEST 2: 冲动抑制 - 说明
+════════════════════════════════════════════ -->
+<div class="screen" id="s-gng-intro">
+  <div class="test-index">TEST 02 / 05</div>
+  <div class="test-title">冲动抑制测试</div>
+  <div class="test-desc">在高速刺激下控制自身冲动的能力——职业玩家与普通玩家的关键分水岭。</div>
+  <div class="tip-box">
+    <h4>📋 测试说明</h4>
+    <ul>
+      <li>圆圈变<span style="color:var(--green)">绿色</span>时，尽快点击（Go）</li>
+      <li>圆圈变<span style="color:var(--red)">红色</span>时，不能点击（No-Go）</li>
+      <li>错误点击红色会扣分，绿色未点击也会扣分</li>
+      <li>共 20 轮，需快速判断</li>
+    </ul>
+  </div>
+  <button class="btn-start" onclick="startGNG()">开始测试</button>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TEST 2: 冲动抑制 - 测试
+════════════════════════════════════════════ -->
+<div class="screen" id="s-gng-test">
+  <div class="test-index" style="margin-bottom:16px;">TEST 02 — 第 <span id="gng-round">1</span> / 20 轮</div>
+  <div id="gng-arena" class="blank" onclick="handleGNG()">等待...</div>
+  <div class="gng-stats">
+    <div class="gng-stat"><div class="gng-stat-num" id="gng-hits">0</div><div class="gng-stat-label">命中</div></div>
+    <div class="gng-stat"><div class="gng-stat-num" id="gng-false">0</div><div class="gng-stat-label">误触</div></div>
+    <div class="gng-stat"><div class="gng-stat-num" id="gng-miss">0</div><div class="gng-stat-label">漏触</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TEST 3: 动态视力 - 说明
+════════════════════════════════════════════ -->
+<div class="screen" id="s-vision-intro">
+  <div class="test-index">TEST 03 / 05</div>
+  <div class="test-title">动态视力测试</div>
+  <div class="test-desc">在极短的闪现中捕获数字序列，检测你处理瞬间视觉信息的能力。</div>
+  <div class="tip-box">
+    <h4>📋 测试说明</h4>
+    <ul>
+      <li>屏幕会闪现 4~6 个数字，持续约 300ms</li>
+      <li>看清后，在输入框中按顺序输入这些数字</li>
+      <li>共 6 轮，数字位数逐渐增加</li>
+      <li>输入完成后按回车确认</li>
+    </ul>
+  </div>
+  <button class="btn-start" onclick="startVision()">开始测试</button>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TEST 3: 动态视力 - 测试
+════════════════════════════════════════════ -->
+<div class="screen" id="s-vision-test">
+  <div class="test-index" style="margin-bottom:8px;">TEST 03 — 第 <span id="vision-round">1</span> / 6 轮</div>
+  <div class="vision-round-info" id="vision-info">准备好后点击下方按钮显示数字</div>
+  <div id="vision-display">···</div>
+  <input type="number" id="vision-input" placeholder="输入数字" disabled autocomplete="off">
+  <div class="vision-feedback" id="vision-feedback"></div>
+  <button class="btn-start" id="vision-btn" style="margin-top:20px;" onclick="showVisionDigits()">显示数字</button>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TEST 4: 数字方格 - 说明
+════════════════════════════════════════════ -->
+<div class="screen" id="s-grid-intro">
+  <div class="test-index">TEST 04 / 05</div>
+  <div class="test-title">认知处理速度测试</div>
+  <div class="test-desc">在随机排列的数字方格中，按从小到大顺序点击数字，测试你的信息处理与空间认知速度。</div>
+  <div class="tip-box">
+    <h4>📋 测试说明</h4>
+    <ul>
+      <li>方格中随机排列数字，从 1 开始，按顺序点击</li>
+      <li>点错会有提示，不扣时间但影响评分</li>
+      <li>分三轮：3×3 → 4×4 → 5×5，难度递增</li>
+      <li>用时越短、错误越少，分数越高</li>
+    </ul>
+  </div>
+  <button class="btn-start" onclick="startGrid()">开始测试</button>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TEST 4: 数字方格 - 测试
+════════════════════════════════════════════ -->
+<div class="screen" id="s-grid-test">
+  <div class="test-index" style="margin-bottom:4px;">TEST 04 — <span id="grid-level-label">3×3</span></div>
+  <div class="grid-timer" id="grid-timer">0.0</div>
+  <div class="grid-info" id="grid-info">下一个：<span id="grid-next" style="color:var(--cyan);font-family:'Orbitron',sans-serif;">1</span></div>
+  <div id="grid-container"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TEST 5: Aim - 说明
+════════════════════════════════════════════ -->
+<div class="screen" id="s-aim-intro">
+  <div class="test-index">TEST 05 / 05</div>
+  <div class="test-title">手眼协调测试</div>
+  <div class="test-desc">参考 Aim Lab Gridshot 模式，屏幕上同时出现 3 个目标，快速点击命中后立刻在新位置生成，持续 30 秒。</div>
+  <div class="tip-box">
+    <h4>📋 测试说明</h4>
+    <ul>
+      <li>屏幕始终保持 3 个目标同时出现</li>
+      <li>命中一个，立刻在新位置生成一个</li>
+      <li>点击空白区域算一次 miss，影响命中率</li>
+      <li>目标 3 秒未被命中自动消失（也算 miss）</li>
+      <li>评分综合：命中率 + 每分钟命中数 + 平均反应速度</li>
+    </ul>
+  </div>
+  <button class="btn-start" onclick="startAim()">开始测试</button>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TEST 5: Aim - 测试
+════════════════════════════════════════════ -->
+<div class="screen" id="s-aim-test">
+  <div class="test-index" style="margin-bottom:10px;">TEST 05 — GRIDSHOT · 3 目标同屏</div>
+  <div id="aim-arena">
+    <div class="aim-timer-bar" id="aim-timer-bar" style="width:100%"></div>
+    <div class="aim-miss-flash" id="aim-miss-flash"></div>
+  </div>
+  <div class="aim-hud">
+    <div class="aim-hud-item"><div class="aim-hud-num" id="aim-hits">0</div><div class="aim-hud-label">命中</div></div>
+    <div class="aim-hud-item"><div class="aim-hud-num" id="aim-accuracy">—</div><div class="aim-hud-label">命中率</div></div>
+    <div class="aim-hud-item"><div class="aim-hud-num" id="aim-kpm">—</div><div class="aim-hud-label">KPM</div></div>
+    <div class="aim-hud-item"><div class="aim-hud-num" id="aim-time">30</div><div class="aim-hud-label">剩余秒</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TEST 5: Aim - 结果
+════════════════════════════════════════════ -->
+<div class="screen" id="s-aim-result">
+  <div class="test-index">TEST 05 — 手眼协调 · 结果</div>
+  <div class="aim-score-badge" id="aim-final-score">—</div>
+  <div style="font-size:13px;color:var(--sub);margin:8px 0 4px;letter-spacing:2px;">综合得分 / 100</div>
+  <div class="aim-result-grid">
+    <div class="aim-result-item highlight">
+      <div class="aim-result-num" id="ar-hits">—</div>
+      <div class="aim-result-label">命中数 (Kills)</div>
+    </div>
+    <div class="aim-result-item highlight">
+      <div class="aim-result-num" id="ar-accuracy">—</div>
+      <div class="aim-result-label">命中率 (Accuracy)</div>
+    </div>
+    <div class="aim-result-item highlight">
+      <div class="aim-result-num" id="ar-kpm">—</div>
+      <div class="aim-result-label">每分钟命中 (KPM)</div>
+    </div>
+    <div class="aim-result-item">
+      <div class="aim-result-num" id="ar-avgtime">—</div>
+      <div class="aim-result-label">平均响应时间</div>
+    </div>
+    <div class="aim-result-item">
+      <div class="aim-result-num" id="ar-streak">—</div>
+      <div class="aim-result-label">最高连击 (Streak)</div>
+    </div>
+    <div class="aim-result-item">
+      <div class="aim-result-num" id="ar-misses">—</div>
+      <div class="aim-result-label">Miss 次数</div>
+    </div>
+  </div>
+  <button class="btn-start" onclick="showScreen('s-color-intro')">下一项测试 →</button>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TEST 6: 颜色感知 - 说明
+════════════════════════════════════════════ -->
+<div class="screen" id="s-color-intro">
+  <div class="test-index">TEST 06 / 06</div>
+  <div class="test-title">色觉感知测试</div>
+  <div class="test-desc">电竞俱乐部选材必测项目。测量你快速识别特定颜色的能力——在 FPS 中，0.1秒的敌我颜色辨别差距可以决定胜负。</div>
+  <div class="tip-box">
+    <h4>📋 测试分两阶段</h4>
+    <ul>
+      <li><strong style="color:var(--cyan)">阶段一：颜色反应</strong> — 屏幕变红时立即点击，其他颜色不要点，共 20 轮</li>
+      <li><strong style="color:var(--cyan)">阶段二：色调辨别</strong> — 判断两个颜色是否相同，共 10 轮，难度递增</li>
+      <li>不要等、不要猜——靠直觉反应</li>
+    </ul>
+  </div>
+  <button class="btn-start" onclick="startColor()">开始最后一项</button>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TEST 6: 颜色感知 - 阶段一
+════════════════════════════════════════════ -->
+<div class="screen" id="s-color-p1">
+  <div class="test-index" style="margin-bottom:10px;">TEST 06 — 阶段一：颜色反应 · 第 <span id="cp1-round">1</span>/20 轮</div>
+  <div id="color-arena" onclick="handleColorClick()">
+    <div id="color-arena-text">等待...</div>
+    <div id="color-arena-sub">屏幕变红时点击</div>
+  </div>
+  <div class="aim-hud" style="margin-top:14px;">
+    <div class="aim-hud-item"><div class="aim-hud-num" id="cp1-hits" style="color:var(--green)">0</div><div class="aim-hud-label">正确命中</div></div>
+    <div class="aim-hud-item"><div class="aim-hud-num" id="cp1-false" style="color:var(--red)">0</div><div class="aim-hud-label">误触</div></div>
+    <div class="aim-hud-item"><div class="aim-hud-num" id="cp1-avgrt">—</div><div class="aim-hud-label">平均反应</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TEST 6: 颜色感知 - 过渡
+════════════════════════════════════════════ -->
+<div class="screen" id="s-color-transition">
+  <div class="calc-spinner" style="width:40px;height:40px;margin-bottom:16px;"></div>
+  <div class="test-title" style="font-size:22px;">阶段一完成</div>
+  <div class="test-desc" style="margin-bottom:28px;">接下来：色调精度辨别</div>
+  <button class="btn-start" onclick="startColorP2()">继续</button>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TEST 6: 颜色感知 - 阶段二
+════════════════════════════════════════════ -->
+<div class="screen" id="s-color-p2">
+  <div class="test-index" style="margin-bottom:8px;">TEST 06 — 阶段二：目标识别 · 第 <span id="cp2-round">1</span>/8 轮</div>
+  <div class="vision-round-info">快速点击所有 <span style="color:#EF4444;font-weight:700;">红色</span> 目标，别误触其他颜色！</div>
+  <div id="cp2-timer-wrap"><div id="cp2-timer-bar"></div></div>
+  <div id="cp2-grid"></div>
+  <div class="vision-feedback" id="cp2-feedback"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     最终计算
+════════════════════════════════════════════ -->
+<div class="screen" id="s-final">
+  <div class="calc-spinner"></div>
+  <div class="test-title">正在分析你的天赋数据</div>
+  <div class="test-desc">VE雷达系统正在计算七维评分，生成专属报告...</div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+// ════════════════════════════════════════════
+// 全局状态
+// ════════════════════════════════════════════
+const device = sessionStorage.getItem('ve_device') || 'pc';
+const isMobile = device === 'mobile';
+
+const scores = { reaction:0, impulse:0, vision:0, cognition:0, aim:0, focus:0, color:0 };
+const rawData = { reactionTimes:[], gngFalseAlarms:0, gngMisses:0, gngHits:0, visionCorrect:0, visionTotal:0, gridTimes:[], gridErrors:0, aimHits:0, aimTotal:0 };
+
+const TESTS = ['reaction','gng','vision','grid','aim'];
+let currentTest = 0;
+
+function setProgress(step) {
+  const pct = (step / 6) * 100;
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = `测试 ${step}/6`;
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ════════════════════════════════════════════
+// TEST 1: 反应速度
+// ════════════════════════════════════════════
+const RT = {
+  round: 0, total: 8, times: [], state: 'idle',
+  timer: null, startTime: 0
+};
+
+function startReaction() {
+  setProgress(1);
+  showScreen('s-reaction-test');
+  RT.round = 0; RT.times = []; RT.state = 'idle';
+  nextReactionRound();
+}
+
+function nextReactionRound() {
+  if (RT.round >= RT.total) { finishReaction(); return; }
+  RT.round++;
+  document.getElementById('rt-round').textContent = RT.round;
+  const arena = document.getElementById('reaction-arena');
+  const text = document.getElementById('arena-text');
+  const sub = document.getElementById('arena-sub');
+  arena.className = 'wait';
+  text.textContent = '等待...';
+  sub.textContent = '不要点击';
+  RT.state = 'waiting';
+  const delay = 1500 + Math.random() * 3000;
+  RT.timer = setTimeout(() => {
+    if (RT.state !== 'waiting') return;
+    RT.state = 'go';
+    arena.className = 'go';
+    text.textContent = '现在！';
+    sub.textContent = '点击！';
+    text.style.color = 'var(--cyan)';
+    RT.startTime = performance.now();
+    RT.timer = setTimeout(() => {
+      if (RT.state === 'go') {
+        RT.times.push(null); // missed
+        addRTChip('超时', 'err');
+        RT.state = 'idle';
+        setTimeout(nextReactionRound, 800);
+      }
+    }, 2000);
+  }, delay);
+}
+
+function handleReactionClick() {
+  if (RT.state === 'waiting') {
+    clearTimeout(RT.timer);
+    const arena = document.getElementById('reaction-arena');
+    arena.className = 'early';
+    document.getElementById('arena-text').textContent = '抢跑！';
+    document.getElementById('arena-text').style.color = 'var(--red)';
+    document.getElementById('arena-sub').textContent = '请等待信号变亮';
+    addRTChip('抢跑', 'err');
+    RT.state = 'idle';
+    setTimeout(nextReactionRound, 1200);
+  } else if (RT.state === 'go') {
+    clearTimeout(RT.timer);
+    const t = Math.round(performance.now() - RT.startTime);
+    RT.times.push(t);
+    const quality = t < 200 ? 'good' : t < 280 ? 'ok' : 'slow';
+    addRTChip(t + 'ms', quality);
+    document.getElementById('reaction-arena').className = 'ready';
+    document.getElementById('arena-text').textContent = t + ' ms';
+    document.getElementById('arena-sub').textContent = t < 200 ? '极快！' : t < 280 ? '不错' : '继续加油';
+    RT.state = 'idle';
+    setTimeout(nextReactionRound, 900);
+  }
+}
+
+function addRTChip(text, cls) {
+  const wrap = document.getElementById('reaction-results');
+  const chip = document.createElement('div');
+  chip.className = 'rt-chip ' + cls;
+  chip.textContent = text;
+  wrap.appendChild(chip);
+}
+
+function finishReaction() {
+  const valid = RT.times.filter(t => t !== null);
+  rawData.reactionTimes = valid;
+  const avg = valid.length ? valid.reduce((a,b)=>a+b,0)/valid.length : 400;
+  // 评分：<190=100, 190-220=88-99, 220-260=70-87, 260-300=45-69, 300-360=20-44, >360=0-19
+  let s;
+  if (avg < 190) s = 100;
+  else if (avg < 220) s = Math.round(88 + (220-avg)/30*12);
+  else if (avg < 260) s = Math.round(70 + (260-avg)/40*17);
+  else if (avg < 300) s = Math.round(45 + (300-avg)/40*24);
+  else if (avg < 360) s = Math.round(20 + (360-avg)/60*24);
+  else s = Math.max(0, Math.round(20 - (avg-360)/40*10));
+  scores.reaction = Math.min(100, Math.max(0, s));
+  currentTest = 1;
+  showScreen('s-gng-intro');
+}
+
+// ════════════════════════════════════════════
+// TEST 2: 冲动抑制 (Go/No-Go)
+// ════════════════════════════════════════════
+const GNG = {
+  round:0, total:20, state:'idle',
+  hits:0, falseAlarms:0, misses:0,
+  isGo:false, timer:null, startTime:0,
+  rtTimes:[]
+};
+// 20轮中 14个Go, 6个No-Go，随机排列
+let gngSequence = [];
+
+function startGNG() {
+  setProgress(2);
+  gngSequence = shuffle([...Array(14).fill(true), ...Array(6).fill(false)]);
+  GNG.round=0; GNG.hits=0; GNG.falseAlarms=0; GNG.misses=0; GNG.rtTimes=[];
+  showScreen('s-gng-test');
+  setTimeout(nextGNGRound, 800);
+}
+
+function nextGNGRound() {
+  if (GNG.round >= GNG.total) { finishGNG(); return; }
+  const arena = document.getElementById('gng-arena');
+  GNG.isGo = gngSequence[GNG.round];
+  GNG.round++;
+  document.getElementById('gng-round').textContent = GNG.round;
+  // blank
+  arena.className = 'blank';
+  arena.textContent = '···';
+  GNG.state = 'blank';
+  setTimeout(() => {
+    arena.className = GNG.isGo ? 'go-signal' : 'nogo-signal';
+    arena.textContent = GNG.isGo ? 'GO!' : 'STOP';
+    GNG.state = 'active';
+    GNG.startTime = performance.now();
+    GNG.timer = setTimeout(() => {
+      if (GNG.state !== 'active') return;
+      GNG.state = 'idle';
+      if (GNG.isGo) { GNG.misses++; document.getElementById('gng-miss').textContent = GNG.misses; }
+      setTimeout(nextGNGRound, 300);
+    }, 800);
+  }, 400 + Math.random()*200);
+}
+
+function handleGNG() {
+  if (GNG.state !== 'active') return;
+  clearTimeout(GNG.timer);
+  const rt = performance.now() - GNG.startTime;
+  GNG.state = 'idle';
+  const arena = document.getElementById('gng-arena');
+  if (GNG.isGo) {
+    GNG.hits++; GNG.rtTimes.push(rt);
+    document.getElementById('gng-hits').textContent = GNG.hits;
+    arena.style.transform = 'scale(0.95)';
+    setTimeout(()=>arena.style.transform='',150);
+  } else {
+    GNG.falseAlarms++;
+    document.getElementById('gng-false').textContent = GNG.falseAlarms;
+    arena.style.boxShadow = '0 0 40px rgba(239,68,68,0.6)';
+    setTimeout(()=>arena.style.boxShadow='',300);
+  }
+  setTimeout(nextGNGRound, 350);
+}
+
+function finishGNG() {
+  rawData.gngHits = GNG.hits;
+  rawData.gngFalseAlarms = GNG.falseAlarms;
+  rawData.gngMisses = GNG.misses;
+  const faRate = GNG.falseAlarms / 6;
+  const missRate = GNG.misses / 14;
+  let s = 100 - faRate * 60 - missRate * 40;
+  // 反应时间加成
+  if (GNG.rtTimes.length) {
+    const avgRT = GNG.rtTimes.reduce((a,b)=>a+b,0)/GNG.rtTimes.length;
+    if (avgRT < 280) s = Math.min(100, s + 5);
+  }
+  scores.impulse = Math.min(100, Math.max(0, Math.round(s)));
+  currentTest = 2;
+  showScreen('s-vision-intro');
+}
+
+// ════════════════════════════════════════════
+// TEST 3: 动态视力
+// ════════════════════════════════════════════
+const VIS = {
+  round:0, total:6, correct:0, currentDigits:'', state:'idle'
+};
+// 轮次配置：[位数, 显示时间ms]
+const VIS_CONFIG = [[4,350],[4,300],[5,300],[5,250],[6,250],[6,220]];
+
+function startVision() {
+  setProgress(3);
+  VIS.round=0; VIS.correct=0; VIS.state='idle';
+  showScreen('s-vision-test');
+  updateVisionUI();
+}
+
+function updateVisionUI() {
+  document.getElementById('vision-round').textContent = VIS.round + 1;
+  document.getElementById('vision-info').textContent = `第 ${VIS.round+1} 轮，共 ${VIS_CONFIG[VIS.round][0]} 位数字`;
+  document.getElementById('vision-display').textContent = '···';
+  document.getElementById('vision-input').value = '';
+  document.getElementById('vision-input').disabled = true;
+  document.getElementById('vision-feedback').textContent = '';
+  document.getElementById('vision-btn').textContent = '显示数字';
+  document.getElementById('vision-btn').disabled = false;
+}
+
+function showVisionDigits() {
+  if (VIS.state !== 'idle') return;
+  VIS.state = 'showing';
+  const [digits, duration] = VIS_CONFIG[VIS.round];
+  const num = generateDigits(digits);
+  VIS.currentDigits = num;
+  document.getElementById('vision-btn').disabled = true;
+  document.getElementById('vision-btn').textContent = '观察中...';
+  document.getElementById('vision-display').textContent = num;
+  setTimeout(() => {
+    document.getElementById('vision-display').textContent = '?????'.slice(0, digits);
+    document.getElementById('vision-input').disabled = false;
+    document.getElementById('vision-input').focus();
+    VIS.state = 'answering';
+    document.getElementById('vision-btn').textContent = '确认答案';
+    document.getElementById('vision-btn').disabled = false;
+    document.getElementById('vision-btn').onclick = confirmVision;
+  }, duration);
+}
+
+function confirmVision() {
+  if (VIS.state !== 'answering') return;
+  const answer = document.getElementById('vision-input').value.trim();
+  const correct = answer === VIS.currentDigits;
+  if (correct) {
+    VIS.correct++;
+    document.getElementById('vision-feedback').textContent = '✓ 正确！';
+    document.getElementById('vision-feedback').className = 'vision-feedback correct';
+  } else {
+    document.getElementById('vision-feedback').textContent = `✗ 错误，正确答案是：${VIS.currentDigits}`;
+    document.getElementById('vision-feedback').className = 'vision-feedback wrong';
+  }
+  VIS.state = 'idle';
+  VIS.round++;
+  if (VIS.round >= VIS.total) {
+    setTimeout(finishVision, 1000);
+  } else {
+    document.getElementById('vision-btn').onclick = showVisionDigits;
+    setTimeout(updateVisionUI, 1200);
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && VIS.state === 'answering') confirmVision();
+});
+
+function generateDigits(n) {
+  let d = '';
+  for (let i=0;i<n;i++) d += Math.floor(Math.random()*10);
+  return d;
+}
+
+function finishVision() {
+  rawData.visionCorrect = VIS.correct;
+  rawData.visionTotal = VIS.total;
+  const rate = VIS.correct / VIS.total;
+  scores.vision = Math.round(rate * 100);
+  currentTest = 3;
+  showScreen('s-grid-intro');
+}
+
+// ════════════════════════════════════════════
+// TEST 4: 数字方格
+// ════════════════════════════════════════════
+const GRID = {
+  level: 0, levels: [3,4,5],
+  next: 1, errors: 0,
+  startTime: 0, times: [], allErrors: 0,
+  timer: null
+};
+
+function startGrid() {
+  setProgress(4);
+  GRID.level=0; GRID.times=[]; GRID.allErrors=0;
+  showScreen('s-grid-test');
+  renderGridLevel();
+}
+
+function renderGridLevel() {
+  const size = GRID.levels[GRID.level];
+  document.getElementById('grid-level-label').textContent = `${size}×${size}`;
+  document.getElementById('grid-next').textContent = '1';
+  GRID.next = 1; GRID.errors = 0;
+
+  const container = document.getElementById('grid-container');
+  const cellSize = Math.min(Math.floor((Math.min(window.innerWidth-48, 600) - (size-1)*8) / size), 90);
+  container.style.gridTemplateColumns = `repeat(${size}, ${cellSize}px)`;
+  container.style.width = (cellSize*size + (size-1)*8) + 'px';
+
+  const nums = shuffle([...Array(size*size)].map((_,i)=>i+1));
+  container.innerHTML = '';
+  nums.forEach(n => {
+    const cell = document.createElement('div');
+    cell.className = 'grid-cell';
+    cell.textContent = n;
+    cell.dataset.num = n;
+    cell.style.width = cell.style.height = cellSize + 'px';
+    cell.style.fontSize = Math.max(14, cellSize * 0.35) + 'px';
+    cell.onclick = () => handleGridClick(n, cell);
+    container.appendChild(cell);
+  });
+
+  GRID.startTime = performance.now();
+  updateGridTimer();
+}
+
+function updateGridTimer() {
+  GRID.timer = setInterval(() => {
+    const elapsed = (performance.now() - GRID.startTime) / 1000;
+    document.getElementById('grid-timer').textContent = elapsed.toFixed(1) + 's';
+  }, 100);
+}
+
+function handleGridClick(n, cell) {
+  if (n === GRID.next) {
+    cell.classList.add('correct', 'done');
+    cell.onclick = null;
+    GRID.next++;
+    document.getElementById('grid-next').textContent = GRID.next;
+    const size = GRID.levels[GRID.level];
+    if (GRID.next > size*size) {
+      clearInterval(GRID.timer);
+      const elapsed = (performance.now() - GRID.startTime) / 1000;
+      GRID.times.push({ size, time: elapsed, errors: GRID.errors });
+      GRID.allErrors += GRID.errors;
+      GRID.level++;
+      if (GRID.level < GRID.levels.length) {
+        setTimeout(() => { renderGridLevel(); }, 600);
+      } else {
+        setTimeout(finishGrid, 600);
+      }
+    }
+  } else {
+    GRID.errors++;
+    GRID.allErrors++;
+    cell.classList.add('wrong');
+    setTimeout(() => cell.classList.remove('wrong'), 300);
+  }
+}
+
+function finishGrid() {
+  rawData.gridTimes = GRID.times;
+  rawData.gridErrors = GRID.allErrors;
+  // 评分：基于各轮时间与基准对比
+  const benchmarks = { 3: 12, 4: 35, 5: 80 }; // 基准秒数
+  let totalScore = 0;
+  GRID.times.forEach(({ size, time, errors }) => {
+    const bench = benchmarks[size];
+    let s = Math.max(0, 100 - (time / bench - 1) * 80);
+    s -= errors * 3; // 每次错误-3分
+    totalScore += Math.max(0, s);
+  });
+  scores.cognition = Math.min(100, Math.max(0, Math.round(totalScore / GRID.times.length)));
+  currentTest = 4;
+  showScreen('s-aim-intro');
+}
+
+// ════════════════════════════════════════════
+// TEST 5: Aim 瞄准 (Gridshot 模式)
+// ════════════════════════════════════════════
+const SIMULTANEOUS = 3; // 始终保持3个目标在屏幕上
+const AIM = {
+  hits: 0, shots: 0, expired: 0,
+  hitTimes: [], streak: 0, bestStreak: 0,
+  duration: 30000, endTime: 0,
+  targetSize: isMobile ? 62 : 46,
+  timerInterval: null, finished: false,
+  activeTargets: 0 // 当前屏幕上的目标数
+};
+
+function startAim() {
+  setProgress(5);
+  Object.assign(AIM, {
+    hits:0, shots:0, expired:0,
+    hitTimes:[], streak:0, bestStreak:0,
+    finished:false, activeTargets:0
+  });
+  showScreen('s-aim-test');
+
+  const arena = document.getElementById('aim-arena');
+  // 重新绑定（避免重复绑定）
+  arena.onclick = handleAimArenaClick;
+  arena.ontouchstart = null;
+
+  AIM.endTime = Date.now() + AIM.duration;
+
+  // 同时生成3个目标
+  for (let i = 0; i < SIMULTANEOUS; i++) {
+    setTimeout(() => spawnOneTarget(), i * 80);
+  }
+
+  AIM.timerInterval = setInterval(updateAimTimer, 80);
+}
+
+function spawnOneTarget() {
+  if (AIM.finished || Date.now() >= AIM.endTime) return;
+
+  const arena = document.getElementById('aim-arena');
+  const rect = arena.getBoundingClientRect();
+  // 随机大小：±12px 变化，使目标有大有小
+  const size = AIM.targetSize + Math.round((Math.random() - 0.5) * 24);
+  const margin = size * 0.9;
+  const areaW = Math.max(margin * 2, rect.width);
+  const areaH = Math.max(margin * 2, rect.height);
+
+  const target = document.createElement('div');
+  target.className = 'aim-target';
+  target.style.width = target.style.height = size + 'px';
+  target.style.left = (margin + Math.random() * (areaW - 2 * margin)) + 'px';
+  target.style.top = (margin + Math.random() * (areaH - 2 * margin)) + 'px';
+
+  const spawnTime = Date.now();
+  AIM.activeTargets++;
+
+  // 3秒未击中自动消失
+  const expireTimer = setTimeout(() => {
+    if (!target.isConnected) return;
+    target.style.opacity = '0';
+    target.style.transform = 'translate(-50%,-50%) scale(0.5)';
+    setTimeout(() => { if (target.isConnected) target.remove(); }, 200);
+    AIM.expired++;
+    AIM.activeTargets--;
+    AIM.streak = 0;
+    updateAimHUD();
+    // 补充一个新目标
+    setTimeout(spawnOneTarget, 250);
+  }, 2800);
+
+  const onHit = (e) => {
+    e.stopPropagation();
+    if (!target.isConnected) return;
+    clearTimeout(expireTimer);
+    const dt = Date.now() - spawnTime;
+    AIM.hits++;
+    AIM.shots++;
+    AIM.hitTimes.push(dt);
+    AIM.streak++;
+    if (AIM.streak > AIM.bestStreak) AIM.bestStreak = AIM.streak;
+    AIM.activeTargets--;
+
+    // 击中动画
+    target.style.transition = 'transform .12s, opacity .12s';
+    target.style.transform = 'translate(-50%,-50%) scale(0)';
+    target.style.opacity = '0';
+    setTimeout(() => { if (target.isConnected) target.remove(); }, 130);
+
+    updateAimHUD();
+    // 命中后立即生成新目标
+    setTimeout(spawnOneTarget, 80);
+  };
+
+  target.addEventListener('click', onHit);
+  target.addEventListener('touchstart', (e) => { e.preventDefault(); onHit(e); }, {passive:false});
+
+  arena.appendChild(target);
+
+  // 生成动画：scale 0 → 1
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => target.classList.add('spawned'));
+  });
+}
+
+function handleAimArenaClick(e) {
+  if (e.target !== document.getElementById('aim-arena')) return;
+  AIM.shots++;
+  AIM.streak = 0;
+  updateAimHUD();
+  const flash = document.getElementById('aim-miss-flash');
+  flash.style.opacity = '1';
+  setTimeout(() => flash.style.opacity = '0', 120);
+}
+
+function updateAimHUD() {
+  document.getElementById('aim-hits').textContent = AIM.hits;
+  const acc = AIM.shots > 0 ? Math.round(AIM.hits / AIM.shots * 100) : 100;
+  document.getElementById('aim-accuracy').textContent = acc + '%';
+  // KPM 实时
+  const elapsed = (AIM.duration - Math.max(0, AIM.endTime - Date.now())) / 60000;
+  const kpm = elapsed > 0.05 ? Math.round(AIM.hits / elapsed) : 0;
+  document.getElementById('aim-kpm').textContent = kpm || '—';
+}
+
+function updateAimTimer() {
+  const remaining = Math.max(0, AIM.endTime - Date.now());
+  document.getElementById('aim-time').textContent = Math.ceil(remaining / 1000);
+  document.getElementById('aim-timer-bar').style.width = (remaining / AIM.duration * 100) + '%';
+  updateAimHUD();
+  if (remaining <= 0) { clearInterval(AIM.timerInterval); finishAim(); }
+}
+
+function finishAim() {
+  if (AIM.finished) return;
+  AIM.finished = true;
+  clearInterval(AIM.timerInterval);
+  // 移除所有目标
+  document.querySelectorAll('.aim-target').forEach(t => t.remove());
+
+  const totalShots = AIM.shots;
+  const accuracy = totalShots > 0 ? AIM.hits / totalShots : 0;
+  const kpm = Math.round(AIM.hits / (AIM.duration / 60000));
+  const avgHitTime = AIM.hitTimes.length > 0
+    ? Math.round(AIM.hitTimes.reduce((a,b)=>a+b,0) / AIM.hitTimes.length)
+    : 999;
+  const misses = AIM.expired + (totalShots - AIM.hits);
+
+  // 评分（三维度加权）
+  // 命中率 (40%)：100%=100, 80%=80, 60%=55, 40%=25
+  const accScore = Math.min(100, accuracy * 100 * 1.05);
+  // KPM (40%)：>100=100, 80-100=85, 60-80=70, 40-60=50, 20-40=30, <20=10
+  const kpmScore = kpm >= 100 ? 100 : kpm >= 80 ? 85 : kpm >= 60 ? 70 : kpm >= 40 ? 50 : kpm >= 20 ? 30 : 10;
+  // 平均命中时间 (20%)：<300=100, 300-500=80, 500-800=55, >800=25
+  const timeScore = avgHitTime < 300 ? 100 : avgHitTime < 500 ? 80 : avgHitTime < 800 ? 55 : 25;
+
+  const finalScore = Math.min(100, Math.max(0, Math.round(accScore * 0.4 + kpmScore * 0.4 + timeScore * 0.2)));
+  scores.aim = finalScore;
+
+  // 保存详细数据
+  rawData.aimHits = AIM.hits;
+  rawData.aimShots = totalShots;
+  rawData.aimKpm = kpm;
+  rawData.aimAccuracy = Math.round(accuracy * 100);
+  rawData.aimAvgTime = avgHitTime;
+  rawData.aimBestStreak = AIM.bestStreak;
+  rawData.aimMisses = misses;
+
+  // 填写结果页
+  document.getElementById('aim-final-score').textContent = finalScore;
+  document.getElementById('ar-hits').textContent = AIM.hits;
+  document.getElementById('ar-accuracy').textContent = Math.round(accuracy * 100) + '%';
+  document.getElementById('ar-kpm').textContent = kpm;
+  document.getElementById('ar-avgtime').textContent = avgHitTime + 'ms';
+  document.getElementById('ar-streak').textContent = AIM.bestStreak;
+  document.getElementById('ar-misses').textContent = misses;
+
+  calculateFocusScore();
+  showScreen('s-aim-result');
+}
+
+// ════════════════════════════════════════════
+// 专注稳定性：从反应时间方差计算
+// ════════════════════════════════════════════
+function calculateFocusScore() {
+  const times = rawData.reactionTimes.filter(t => t !== null);
+  if (times.length < 4) { scores.focus = 60; return; }
+  const avg = times.reduce((a,b)=>a+b,0)/times.length;
+  const variance = times.reduce((a,b)=>a+(b-avg)**2,0)/times.length;
+  const stdDev = Math.sqrt(variance);
+  // 比较前半与后半
+  const firstHalf = times.slice(0, Math.floor(times.length/2));
+  const secondHalf = times.slice(Math.floor(times.length/2));
+  const avgFirst = firstHalf.reduce((a,b)=>a+b,0)/firstHalf.length;
+  const avgSecond = secondHalf.reduce((a,b)=>a+b,0)/secondHalf.length;
+  const degradation = Math.max(0, avgSecond - avgFirst); // 后半变慢了多少ms
+
+  let s = 100 - (stdDev / 50) * 40 - (degradation / 100) * 40;
+  scores.focus = Math.min(100, Math.max(0, Math.round(s)));
+}
+
+// ════════════════════════════════════════════
+// TEST 6: 颜色感知
+// ════════════════════════════════════════════
+// 阶段一颜色序列：目标色=红，干扰色随机
+const CP1_COLORS = [
+  { hex:'#EF4444', label:'红色', isTarget:true  },
+  { hex:'#3B82F6', label:'蓝色', isTarget:false },
+  { hex:'#22C55E', label:'绿色', isTarget:false },
+  { hex:'#F59E0B', label:'黄色', isTarget:false },
+  { hex:'#A855F7', label:'紫色', isTarget:false },
+  { hex:'#F97316', label:'橙色', isTarget:false },
+];
+// 20轮序列：8次红色，12次干扰色
+function buildCP1Sequence() {
+  const reds = Array(8).fill(0).map(()=>0); // index 0 = red
+  const distractors = shuffle([1,2,3,4,5,1,2,3,4,5,1,2]); // 12次
+  return shuffle([...reds, ...distractors]);
+}
+
+const CP1 = {
+  round:0, total:20, sequence:[],
+  hits:0, falseAlarms:0, misses:0,
+  hitTimes:[], state:'idle', timer:null, startTime:0
+};
+
+function startColor() {
+  setProgress(6);
+  CP1.round=0; CP1.hits=0; CP1.falseAlarms=0; CP1.misses=0; CP1.hitTimes=[];
+  CP1.sequence = buildCP1Sequence();
+  showScreen('s-color-p1');
+  setTimeout(nextCP1Round, 600);
+}
+
+function nextCP1Round() {
+  if (CP1.round >= CP1.total) { finishCP1(); return; }
+  const arena = document.getElementById('color-arena');
+  document.getElementById('cp1-round').textContent = CP1.round + 1;
+  // 先变回暗色
+  arena.style.background = '#060B14';
+  arena.style.borderColor = 'var(--border)';
+  document.getElementById('color-arena-text').textContent = '等待...';
+  document.getElementById('color-arena-text').style.color = 'var(--sub)';
+  document.getElementById('color-arena-sub').textContent = '屏幕变红时点击';
+  CP1.state = 'blank';
+  // 随机空白时长
+  const delay = 700 + Math.random() * 1400;
+  CP1.timer = setTimeout(() => {
+    const colorIdx = CP1.sequence[CP1.round];
+    const color = CP1_COLORS[colorIdx];
+    CP1.round++;
+    arena.style.background = color.hex + '22'; // 半透明背景
+    arena.style.borderColor = color.hex;
+    document.getElementById('color-arena-text').textContent = color.label;
+    document.getElementById('color-arena-text').style.color = color.hex;
+    document.getElementById('color-arena-sub').textContent = color.isTarget ? '← 点击！' : '不要点击';
+    CP1.state = 'active';
+    CP1.isTarget = color.isTarget;
+    CP1.startTime = performance.now();
+    // 1.2s 后自动过期
+    CP1.timer = setTimeout(() => {
+      if (CP1.state !== 'active') return;
+      CP1.state = 'idle';
+      if (CP1.isTarget) CP1.misses++;
+      updateCP1HUD();
+      setTimeout(nextCP1Round, 350);
+    }, 1200);
+  }, delay);
+}
+
+function handleColorClick() {
+  if (CP1.state !== 'active') return;
+  clearTimeout(CP1.timer);
+  const rt = performance.now() - CP1.startTime;
+  CP1.state = 'idle';
+  if (CP1.isTarget) {
+    CP1.hits++;
+    CP1.hitTimes.push(rt);
+    document.getElementById('color-arena').style.boxShadow = '0 0 30px rgba(16,185,129,0.5)';
+    setTimeout(()=>document.getElementById('color-arena').style.boxShadow='', 250);
+  } else {
+    CP1.falseAlarms++;
+    document.getElementById('color-arena').style.boxShadow = '0 0 30px rgba(239,68,68,0.5)';
+    setTimeout(()=>document.getElementById('color-arena').style.boxShadow='', 250);
+  }
+  updateCP1HUD();
+  setTimeout(nextCP1Round, 400);
+}
+
+function updateCP1HUD() {
+  document.getElementById('cp1-hits').textContent = CP1.hits;
+  document.getElementById('cp1-false').textContent = CP1.falseAlarms;
+  if (CP1.hitTimes.length > 0) {
+    const avg = Math.round(CP1.hitTimes.reduce((a,b)=>a+b,0)/CP1.hitTimes.length);
+    document.getElementById('cp1-avgrt').textContent = avg + 'ms';
+  }
+}
+
+function finishCP1() {
+  rawData.colorP1Hits = CP1.hits;
+  rawData.colorP1Total = 8;   // 8次红色目标
+  rawData.colorP1FalseAlarms = CP1.falseAlarms;
+  rawData.colorP1Misses = CP1.misses;
+  rawData.colorP1AvgRT = CP1.hitTimes.length
+    ? Math.round(CP1.hitTimes.reduce((a,b)=>a+b,0)/CP1.hitTimes.length) : 999;
+  showScreen('s-color-transition');
+}
+
+// ── 阶段二：红色目标视觉搜索 ──────────────────
+// 8轮，每轮在一堆彩色圆点中快速找出所有红色目标并点击
+// 科学依据：FPS游戏中敌人识别依赖对特定颜色（红色血条/高亮）的快速定位
+// 难度递进：干扰色从明显（蓝/绿）→ 困难（橙红色，与红色相近）
+
+const CP2_ROUNDS = [
+  // { total, reds:[hue,...], distractors:[color,...], timeMs }
+  { total:12, reds:[0,5,355],      distractors:['#3B82F6','#10B981','#8B5CF6','#EAB308','#0EA5E9'], time:3000 },
+  { total:12, reds:[0,10,350,5],   distractors:['#3B82F6','#10B981','#8B5CF6','#EAB308','#EC4899'], time:2800 },
+  { total:15, reds:[0,5,10,355],   distractors:['#3B82F6','#10B981','hsl(28,90%,54%)','#8B5CF6'],   time:2800 }, // 橙色干扰
+  { total:16, reds:[0,5,355,8],    distractors:['hsl(22,88%,54%)','hsl(30,85%,54%)','#3B82F6','#10B981','#8B5CF6'], time:2600 },
+  { total:16, reds:[0,358,5],      distractors:['hsl(18,85%,54%)','hsl(25,83%,54%)','hsl(30,80%,55%)','#3B82F6','#8B5CF6'], time:2500 },
+  { total:20, reds:[355,0,8,352],  distractors:['hsl(20,82%,54%)','hsl(15,85%,54%)','hsl(25,80%,55%)','#3B82F6'], time:2400 },
+  { total:20, reds:[0,5,355],      distractors:['hsl(15,84%,54%)','hsl(20,82%,54%)','hsl(25,80%,55%)','hsl(12,83%,54%)','#3B82F6'], time:2200 },
+  { total:20, reds:[2,358,7,353],  distractors:['hsl(15,82%,54%)','hsl(18,80%,54%)','hsl(22,80%,55%)','hsl(12,82%,54%)','hsl(10,78%,55%)'], time:2000 },
+];
+const CP2_TOTAL_REDS = CP2_ROUNDS.reduce((a,r)=>a+r.reds.length,0);
+const CP2_TOTAL_DISTR = CP2_ROUNDS.reduce((a,r)=>a+(r.total-r.reds.length),0);
+
+const CP2 = { round:0, hits:0, falseClicks:0, missed:0, roundTimes:[], targets:[], clicked:new Set(), roundStart:0, timerRaf:null, timerDeadline:0 };
+
+function startColorP2() {
+  Object.assign(CP2, { round:0, hits:0, falseClicks:0, missed:0, roundTimes:[], targets:[], clicked:new Set(), timerRaf:null });
+  showScreen('s-color-p2');
+  renderCP2Round();
+}
+
+function renderCP2Round() {
+  const cfg = CP2_ROUNDS[CP2.round];
+  document.getElementById('cp2-round').textContent = CP2.round + 1;
+  document.getElementById('cp2-feedback').textContent = '';
+  document.getElementById('cp2-feedback').className = 'vision-feedback';
+  CP2.clicked = new Set();
+
+  // 构建圆点列表：红色目标 + 干扰色
+  CP2.targets = [];
+  cfg.reds.forEach(h => CP2.targets.push({ isRed:true, color:`hsl(${h},82%,54%)` }));
+  const distCount = cfg.total - cfg.reds.length;
+  for (let i=0; i<distCount; i++) {
+    CP2.targets.push({ isRed:false, color: cfg.distractors[i % cfg.distractors.length] });
+  }
+  // 随机打乱
+  for (let i=CP2.targets.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[CP2.targets[i],CP2.targets[j]]=[CP2.targets[j],CP2.targets[i]];}
+
+  const cols = cfg.total <= 12 ? 4 : 5;
+  const grid = document.getElementById('cp2-grid');
+  grid.style.gridTemplateColumns = `repeat(${cols},1fr)`;
+  grid.innerHTML = CP2.targets.map((t,i)=>`<div class="cp2-dot" id="cp2d${i}" style="background:${t.color}" onclick="cp2Click(${i})"></div>`).join('');
+
+  // 倒计时条
+  CP2.roundStart = performance.now();
+  CP2.timerDeadline = CP2.roundStart + cfg.time;
+  if (CP2.timerRaf) cancelAnimationFrame(CP2.timerRaf);
+  tickCP2Timer();
+}
+
+function tickCP2Timer() {
+  const now = performance.now();
+  const pct = Math.max(0, (CP2.timerDeadline - now) / (CP2_ROUNDS[CP2.round]?.time || 2500));
+  const bar = document.getElementById('cp2-timer-bar');
+  if (bar) {
+    bar.style.width = (pct*100)+'%';
+    bar.style.background = pct>0.4 ? '#EF4444' : pct>0.2 ? '#F97316' : '#FCD34D';
+  }
+  if (pct <= 0) { finishCP2Round(true); return; }
+  CP2.timerRaf = requestAnimationFrame(tickCP2Timer);
+}
+
+function cp2Click(idx) {
+  if (CP2.clicked.has(idx)) return;
+  CP2.clicked.add(idx);
+  const t = CP2.targets[idx];
+  const dot = document.getElementById('cp2d'+idx);
+  if (t.isRed) {
+    CP2.hits++;
+    dot.classList.add('hit');
+    // 全部红色找完 → 提前结束本轮
+    const cfg = CP2_ROUNDS[CP2.round];
+    const redIdxs = CP2.targets.map((x,i)=>x.isRed?i:-1).filter(i=>i>=0);
+    if (redIdxs.every(i=>CP2.clicked.has(i))) {
+      CP2.roundTimes.push(Math.round(performance.now()-CP2.roundStart));
+      cancelAnimationFrame(CP2.timerRaf);
+      setTimeout(()=>finishCP2Round(false), 400);
+    }
+  } else {
+    CP2.falseClicks++;
+    dot.classList.add('wrong');
+  }
+}
+
+function finishCP2Round(timeUp) {
+  cancelAnimationFrame(CP2.timerRaf);
+  const cfg = CP2_ROUNDS[CP2.round];
+  const redIdxs = CP2.targets.map((x,i)=>x.isRed?i:-1).filter(i=>i>=0);
+  const missedThis = redIdxs.filter(i=>!CP2.clicked.has(i)).length;
+  CP2.missed += missedThis;
+
+  const fb = document.getElementById('cp2-feedback');
+  if (timeUp && missedThis>0) {
+    fb.textContent = `⏱ 时间到！漏了 ${missedThis} 个目标`;
+    fb.className = 'vision-feedback wrong';
+  } else if (CP2.falseClicks>0) {
+    fb.textContent = '✓ 完成！但误触了非红色目标';
+    fb.className = 'vision-feedback';
+  } else {
+    fb.textContent = '✓ 全部识别！';
+    fb.className = 'vision-feedback correct';
+  }
+
+  CP2.round++;
+  if (CP2.round >= 8) {
+    setTimeout(finishColor, 800);
+  } else {
+    setTimeout(renderCP2Round, 800);
+  }
+}
+
+function finishColor() {
+  // 保存原始数据
+  rawData.colorP2Hits    = CP2.hits;
+  rawData.colorP2Missed  = CP2.missed;
+  rawData.colorP2FalseClicks = CP2.falseClicks;
+  rawData.colorP2Total   = CP2_TOTAL_REDS;
+  rawData.colorP2Correct = CP2.hits; // 兼容旧字段
+  rawData.colorP2AvgRT   = CP2.roundTimes.length
+    ? Math.round(CP2.roundTimes.reduce((a,b)=>a+b,0)/CP2.roundTimes.length) : 9999;
+
+  // ── 阶段一评分 (60%)：红色识别命中率 + 误触惩罚 + 速度 ──
+  const p1HitRate = CP1.hits / 8;
+  const p1FaRate  = CP1.falseAlarms / 12;
+  let p1Score = p1HitRate * 80 - p1FaRate * 40;
+  if (rawData.colorP1AvgRT < 350) p1Score = Math.min(100, p1Score + 15);
+  else if (rawData.colorP1AvgRT < 500) p1Score = Math.min(100, p1Score + 7);
+  p1Score = Math.max(0, p1Score);
+
+  // ── 阶段二评分 (40%)：目标搜索准确率 + 速度 ──
+  const hitRate   = CP2_TOTAL_REDS > 0 ? CP2.hits / CP2_TOTAL_REDS : 0;
+  const falseRate = CP2_TOTAL_DISTR > 0 ? CP2.falseClicks / CP2_TOTAL_DISTR : 0;
+  let p2Score = hitRate * 80 - falseRate * 40;
+  // 速度奖励：平均每轮<1500ms（快速识别）
+  if (rawData.colorP2AvgRT < 1200) p2Score = Math.min(100, p2Score + 20);
+  else if (rawData.colorP2AvgRT < 1800) p2Score = Math.min(100, p2Score + 10);
+  p2Score = Math.max(0, p2Score);
+
+  scores.color = Math.min(100, Math.max(0, Math.round(p1Score * 0.6 + p2Score * 0.4)));
+  showFinalScreen();
+}
+
+// ════════════════════════════════════════════
+// 完成：跳转报告
+// ════════════════════════════════════════════
+function showFinalScreen() {
+  showScreen('s-final');
+  sessionStorage.setItem('ve_scores', JSON.stringify(scores));
+  sessionStorage.setItem('ve_rawdata', JSON.stringify(rawData));
+  setTimeout(() => {
+    window.location.href = '/preview.html';
+  }, 2000);
+}
+
+// ════════════════════════════════════════════
+// 工具函数
+// ════════════════════════════════════════════
+function shuffle(arr) {
+  for (let i = arr.length-1; i>0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  return arr;
+}
+
+// 入口检查
+if (!sessionStorage.getItem('ve_device')) {
+  window.location.href = '/';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VE天赋雷达 · 测评报告</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{--bg:#0A0E1A;--bg2:#0D1220;--cyan:#00D4FF;--cyan-dim:rgba(0,212,255,0.12);--purple:#7C3AED;--text:#FFF;--sub:#94A3B8;--border:rgba(0,212,255,0.2);--card:rgba(255,255,255,0.04);--green:#10B981;--red:#EF4444;--yellow:#F59E0B;--gold:#FCD34D;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Noto Sans SC',sans-serif;min-height:100vh;}
+  body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 50% at 50% -10%,rgba(0,212,255,0.07) 0%,transparent 70%),radial-gradient(ellipse 50% 40% at 90% 80%,rgba(124,58,237,0.07) 0%,transparent 60%);pointer-events:none;z-index:0;}
+
+  /* ── 加载屏 ── */
+  #loading-screen{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;}
+  .spinner{width:60px;height:60px;border:3px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-text{font-family:'Orbitron',sans-serif;font-size:14px;color:var(--sub);letter-spacing:2px;}
+
+  /* ── 主内容 ── */
+  .container{max-width:860px;margin:0 auto;padding:40px 24px 80px;position:relative;z-index:1;}
+
+  /* ── 顶部 ── */
+  .report-header{text-align:center;margin-bottom:48px;}
+  .report-logo{font-family:'Orbitron',sans-serif;font-size:13px;color:var(--cyan);letter-spacing:4px;margin-bottom:16px;}
+  .report-title{font-family:'Orbitron',sans-serif;font-size:clamp(24px,5vw,40px);font-weight:900;background:linear-gradient(135deg,#fff 30%,var(--cyan) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px;}
+  .report-date{font-size:13px;color:var(--sub);}
+
+  /* ── 评级徽章 ── */
+  .rating-section{display:flex;flex-direction:column;align-items:center;margin-bottom:48px;}
+  .rating-badge{padding:16px 40px;border-radius:50px;font-family:'Orbitron',sans-serif;font-size:clamp(14px,3vw,20px);font-weight:700;letter-spacing:2px;text-align:center;margin-bottom:12px;}
+  .rating-badge.genius{background:linear-gradient(135deg,rgba(251,191,36,0.2),rgba(251,191,36,0.05));border:2px solid var(--gold);color:var(--gold);box-shadow:0 0 40px rgba(251,191,36,0.2);}
+  .rating-badge.pro{background:linear-gradient(135deg,rgba(0,212,255,0.15),rgba(0,212,255,0.03));border:2px solid var(--cyan);color:var(--cyan);box-shadow:0 0 40px rgba(0,212,255,0.15);}
+  .rating-badge.normal{background:rgba(124,58,237,0.1);border:2px solid rgba(124,58,237,0.4);color:#A78BFA;}
+  .rating-badge.below{background:rgba(148,163,184,0.08);border:2px solid rgba(148,163,184,0.3);color:var(--sub);}
+  .rating-subtitle{font-size:14px;color:var(--sub);}
+
+  /* ── 百分位排名 ── */
+  .percentile-section{text-align:center;margin-bottom:40px;}
+  .percentile-label{font-size:13px;color:var(--sub);margin-bottom:10px;letter-spacing:1px;}
+  .percentile-main{font-family:'Orbitron',sans-serif;font-size:clamp(32px,7vw,52px);font-weight:900;color:var(--text);line-height:1;margin-bottom:4px;}
+  .percentile-main span{color:var(--cyan);}
+  .percentile-sub{font-size:13px;color:var(--sub);margin-bottom:20px;}
+  .percentile-bar-wrap{position:relative;height:8px;background:linear-gradient(90deg,rgba(100,116,139,0.3) 0%,rgba(0,212,255,0.5) 50%,rgba(124,58,237,0.7) 80%,rgba(251,191,36,0.9) 100%);border-radius:4px;max-width:480px;margin:0 auto 8px;}
+  .percentile-marker{position:absolute;top:-7px;width:4px;height:22px;background:#fff;border-radius:2px;transform:translateX(-50%);box-shadow:0 0 10px rgba(255,255,255,0.7),0 0 20px rgba(0,212,255,0.4);}
+  .percentile-axis{display:flex;justify-content:space-between;max-width:480px;margin:0 auto;font-size:10px;color:var(--sub);letter-spacing:.5px;}
+
+  /* ── 两栏布局 ── */
+  .report-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px;}
+  @media(max-width:620px){.report-grid{grid-template-columns:1fr;}}
+
+  /* ── 卡片 ── */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;}
+  .card-title{font-family:'Orbitron',sans-serif;font-size:12px;color:var(--cyan);letter-spacing:2px;margin-bottom:20px;}
+
+  /* ── 雷达图 ── */
+  .chart-wrap{position:relative;width:100%;aspect-ratio:1;max-width:320px;margin:0 auto;}
+
+  /* ── 维度评分列表 ── */
+  .dim-list{display:flex;flex-direction:column;gap:16px;}
+  .dim-row{display:flex;flex-direction:column;gap:5px;}
+  .dim-row-top{display:flex;align-items:center;gap:10px;}
+  .dim-label{font-size:12px;color:var(--sub);flex:1;}
+  .dim-score{font-family:'Orbitron',sans-serif;font-size:14px;color:var(--text);width:28px;text-align:right;flex-shrink:0;}
+  .dim-bar-wrap{position:relative;height:7px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:visible;}
+  .dim-bar{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--cyan),var(--purple));transition:width 1s ease;position:relative;}
+  /* 基准线：普通人均值标记 */
+  .dim-benchmark{position:absolute;top:-3px;width:2px;height:13px;background:rgba(248,183,60,0.7);border-radius:1px;transform:translateX(-50%);z-index:2;}
+  .dim-benchmark::after{content:'avg';position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:9px;color:rgba(248,183,60,0.7);white-space:nowrap;font-family:'Orbitron',sans-serif;}
+  .dim-compare{font-size:11px;color:var(--sub);display:flex;justify-content:space-between;}
+  .dim-compare .better{color:var(--green);}
+  .dim-compare .worse{color:var(--red);}
+  /* 数据详情卡 */
+  .data-detail-card{margin-bottom:24px;}
+  .data-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;}
+  .data-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 12px;text-align:center;}
+  .data-num{font-family:'Orbitron',sans-serif;font-size:20px;color:var(--cyan);font-weight:700;}
+  .data-label{font-size:11px;color:var(--sub);margin-top:3px;}
+  .data-bench{font-size:10px;color:rgba(248,183,60,0.7);margin-top:2px;}
+
+  /* ── AI报告文字 ── */
+  .report-text-card{margin-bottom:24px;}
+  .report-text{font-size:15px;line-height:2;color:var(--sub);white-space:pre-wrap;}
+  .report-text .loading-inline{color:var(--cyan);animation:blink .8s infinite;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+  /* ── 游戏推荐 ── */
+  .game-tags{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;}
+  .game-tag{padding:6px 14px;border-radius:20px;font-size:13px;border:1px solid var(--border);color:var(--sub);}
+  .game-tag.highlight{border-color:var(--cyan);color:var(--cyan);background:var(--cyan-dim);}
+
+  /* ── 评分细则 ── */
+  .criteria-trigger{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;border:1px solid rgba(0,212,255,0.3);background:rgba(0,212,255,0.06);color:var(--sub);font-size:12px;cursor:pointer;transition:all .2s;letter-spacing:.5px;position:relative;}
+  .criteria-trigger:hover{border-color:var(--cyan);color:var(--cyan);}
+  .criteria-trigger .badge{width:16px;height:16px;border-radius:50%;background:rgba(0,212,255,0.2);color:var(--cyan);font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:700;}
+  .criteria-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;align-items:center;justify-content:center;padding:20px;}
+  .criteria-overlay.open{display:flex;}
+  .criteria-panel{background:#0D1220;border:1px solid rgba(0,212,255,0.25);border-radius:20px;padding:28px;max-width:660px;width:100%;max-height:85vh;overflow-y:auto;position:relative;}
+  .criteria-close{position:absolute;top:16px;right:20px;background:none;border:none;color:var(--sub);font-size:20px;cursor:pointer;line-height:1;}
+  .criteria-close:hover{color:var(--text);}
+  .criteria-h1{font-family:'Orbitron',sans-serif;font-size:13px;color:var(--cyan);letter-spacing:2px;margin-bottom:20px;}
+  .criteria-h2{font-size:11px;color:var(--cyan);letter-spacing:1.5px;margin:20px 0 10px;opacity:.7;}
+  .criteria-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .criteria-table th{text-align:left;padding:6px 10px;color:var(--sub);font-weight:400;border-bottom:1px solid rgba(255,255,255,0.06);white-space:nowrap;}
+  .criteria-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.04);color:var(--text);vertical-align:top;}
+  .criteria-table td:first-child{color:var(--sub);white-space:nowrap;}
+  .criteria-table .tag-genius{color:#FCD34D;}
+  .criteria-table .tag-pro{color:var(--cyan);}
+  .criteria-table .tag-normal{color:#A78BFA;}
+  .criteria-table .tag-yours{color:#10B981;font-weight:700;}
+  .criteria-note{font-size:11px;color:rgba(148,163,184,0.6);margin-top:16px;line-height:1.7;border-top:1px solid rgba(255,255,255,0.06);padding-top:14px;}
+
+  /* ── 下载按钮 ── */
+  .action-bar{display:flex;gap:12px;margin-bottom:48px;flex-wrap:wrap;}
+  .btn-dl{flex:1;min-width:160px;padding:16px;border-radius:10px;background:linear-gradient(135deg,var(--cyan),#0099CC);border:none;color:#0A0E1A;font-size:15px;font-weight:700;font-family:'Noto Sans SC',sans-serif;cursor:pointer;transition:all .2s;letter-spacing:1px;}
+  .btn-dl:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,212,255,0.35);}
+  .btn-dl:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+  .btn-outline{flex:1;min-width:160px;padding:16px;border-radius:10px;background:transparent;border:1px solid var(--border);color:var(--text);font-size:15px;font-family:'Noto Sans SC',sans-serif;cursor:pointer;transition:all .2s;}
+  .btn-outline:hover{border-color:var(--cyan);color:var(--cyan);}
+
+  /* ── 联系方式表单 ── */
+  #contact-section{background:linear-gradient(135deg,rgba(251,191,36,0.06),rgba(0,212,255,0.04));border:1px solid rgba(251,191,36,0.25);border-radius:20px;padding:40px;margin-bottom:48px;display:none;}
+  .contact-header{text-align:center;margin-bottom:28px;}
+  .contact-badge{display:inline-block;padding:4px 16px;background:rgba(251,191,36,0.15);border:1px solid rgba(251,191,36,0.4);border-radius:20px;font-size:12px;color:var(--gold);letter-spacing:2px;margin-bottom:12px;}
+  .contact-title{font-family:'Orbitron',sans-serif;font-size:clamp(16px,3vw,22px);color:var(--text);margin-bottom:8px;}
+  .contact-desc{font-size:14px;color:var(--sub);line-height:1.8;}
+  .form-group{margin-bottom:16px;}
+  .form-label{font-size:13px;color:var(--sub);margin-bottom:8px;display:block;}
+  .form-input{width:100%;padding:14px 16px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;font-family:'Noto Sans SC',sans-serif;outline:none;transition:border-color .2s;}
+  .form-input:focus{border-color:var(--cyan);}
+  .contact-type-row{display:flex;gap:10px;margin-bottom:16px;}
+  .ct-btn{flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--sub);font-family:'Noto Sans SC',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;}
+  .ct-btn.active{border-color:var(--cyan);background:var(--cyan-dim);color:var(--cyan);}
+  .btn-submit{width:100%;padding:16px;border-radius:10px;background:linear-gradient(135deg,var(--gold),#D97706);border:none;color:#1A1000;font-size:16px;font-weight:700;font-family:'Noto Sans SC',sans-serif;cursor:pointer;transition:all .2s;letter-spacing:1px;}
+  .btn-submit:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(251,191,36,0.35);}
+
+  /* ── 提交成功 ── */
+  #contact-success{display:none;text-align:center;padding:32px;}
+  .success-icon{font-size:56px;margin-bottom:16px;}
+  .success-title{font-family:'Orbitron',sans-serif;font-size:20px;color:var(--green);margin-bottom:12px;}
+  .success-desc{font-size:14px;color:var(--sub);line-height:1.8;}
+
+  /* ── 版本标签 ── */
+  .version-tag{display:inline-block;padding:3px 12px;border-radius:20px;font-size:11px;letter-spacing:1.5px;font-family:'Orbitron',sans-serif;margin-left:8px;vertical-align:middle;}
+  .version-tag.basic{background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.4);color:#A78BFA;}
+  .version-tag.advanced{background:rgba(0,212,255,.1);border:1px solid rgba(0,212,255,.3);color:var(--cyan);}
+
+  /* ── PDF目标（隐藏，用于截图） ── */
+  #pdf-target{position:absolute;left:-9999px;top:0;width:800px;background:#0A0E1A;padding:40px;font-family:'Noto Sans SC',sans-serif;color:#fff;}
+</style>
+</head>
+<body>
+
+<div id="loading-screen">
+  <svg width="48" height="48" viewBox="0 0 40 40" fill="none"><polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="#00D4FF" stroke-width="1.5"/><circle cx="20" cy="20" r="3" fill="#00D4FF"/></svg>
+  <div class="spinner"></div>
+  <div class="loading-text">正在生成你的专属报告...</div>
+</div>
+
+<div class="container" id="report-body" style="display:none;">
+
+  <!-- 顶部 -->
+  <div class="report-header">
+    <div class="report-logo">VE ESPORTS TALENT RADAR</div>
+    <div class="report-title">电竞天赋测评报告 <span class="version-tag" id="version-tag" style="display:none;"></span></div>
+    <div class="report-date" id="report-date"></div>
+  </div>
+
+  <!-- 评级 -->
+  <div class="rating-section">
+    <div class="rating-badge" id="rating-badge"></div>
+    <div class="rating-subtitle" id="rating-subtitle"></div>
+    <div style="margin-top:14px;">
+      <button class="criteria-trigger" onclick="openCriteria()">
+        <span class="badge">?</span> 评分细则 · 查看各项指标标准
+      </button>
+    </div>
+  </div>
+
+  <!-- 百分位排名 -->
+  <div class="percentile-section">
+    <div class="percentile-label">你的综合天赋在测评人群中的位置</div>
+    <div class="percentile-main">超越了 <span id="pct-num">—</span>%</div>
+    <div class="percentile-sub" id="pct-sub">的测评者</div>
+    <div class="percentile-bar-wrap">
+      <div class="percentile-marker" id="pct-marker" style="left:50%"></div>
+    </div>
+    <div class="percentile-axis">
+      <span>0%</span><span>普通人水平 (50%)</span><span>99%+</span>
+    </div>
+  </div>
+
+  <!-- 雷达图 + 维度分数 -->
+  <div class="report-grid">
+    <div class="card">
+      <div class="card-title">天赋雷达图</div>
+      <div class="chart-wrap"><canvas id="radar-chart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">维度评分详情</div>
+      <div class="dim-list" id="dim-list"></div>
+    </div>
+  </div>
+
+  <!-- 原始数据详情 -->
+  <div class="card data-detail-card">
+    <div class="card-title">实测数据详情</div>
+    <div class="data-grid" id="data-grid"></div>
+  </div>
+
+  <!-- AI 分析报告 -->
+  <div class="card report-text-card">
+    <div class="card-title">专业分析报告</div>
+    <div class="report-text" id="report-text"><span class="loading-inline">正在生成专属分析...</span></div>
+  </div>
+
+  <!-- 操作按钮 -->
+  <div class="action-bar">
+    <button class="btn-dl" id="btn-download" onclick="downloadPDF()">下载完整PDF报告</button>
+    <button class="btn-outline" onclick="window.location.href='/'">返回首页</button>
+  </div>
+
+  <!-- 联系方式（高评级才显示） -->
+  <div id="contact-section">
+    <div class="contact-header">
+      <div class="contact-badge">俱乐部直达通道</div>
+      <div class="contact-title" id="contact-title">你的天赋已引起俱乐部注意</div>
+      <div class="contact-desc" id="contact-desc"></div>
+    </div>
+    <div id="contact-form">
+      <div class="form-group">
+        <label class="form-label">你的名字（昵称也可）</label>
+        <input class="form-input" type="text" id="f-name" placeholder="输入名字">
+      </div>
+      <div class="form-group">
+        <label class="form-label">联系方式类型</label>
+        <div class="contact-type-row">
+          <button class="ct-btn active" id="ct-qq" onclick="selectCT('qq')">QQ号</button>
+          <button class="ct-btn" id="ct-email" onclick="selectCT('email')">邮箱</button>
+          <button class="ct-btn" id="ct-wechat" onclick="selectCT('wechat')">微信号</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" id="contact-input-label">QQ号</label>
+        <input class="form-input" type="text" id="f-contact" placeholder="输入你的QQ号">
+      </div>
+      <button class="btn-submit" onclick="submitContact()">提交，让俱乐部看到我的报告 →</button>
+    </div>
+    <div id="contact-success">
+      <div class="success-icon">🎉</div>
+      <div class="success-title">报告已提交成功！</div>
+      <div class="success-desc" id="success-desc"></div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- 评分细则浮层 -->
+<div class="criteria-overlay" id="criteria-overlay" onclick="closeCriteriaOutside(event)">
+  <div class="criteria-panel" id="criteria-panel">
+    <button class="criteria-close" onclick="closeCriteria()">✕</button>
+    <div class="criteria-h1">评分细则 · SCORING CRITERIA</div>
+    <div id="criteria-content"></div>
+  </div>
+</div>
+
+<!-- PDF截图目标 -->
+<div id="pdf-target"></div>
+
+<script>
+const { jsPDF } = window.jspdf;
+
+const DIM_NAMES = {
+  reaction:'反应速度', impulse:'冲动抑制',
+  vision:'动态视力', cognition:'认知处理速度',
+  aim:'手眼协调', focus:'专注稳定性', color:'色觉感知'
+};
+const DIM_KEYS = ['reaction','impulse','vision','cognition','aim','focus','color'];
+
+const GAME_MAP = {
+  reaction:['FPS','射击类'],
+  impulse:['MOBA','格斗类'],
+  vision:['格斗类','赛车竞速'],
+  cognition:['MOBA','RTS'],
+  aim:['FPS','射击类'],
+  focus:['RTS','MOBA'],
+  color:['FPS','格斗类']
+};
+
+let scores = {};
+let rating = '';
+let ratingKey = '';
+let contactType = 'qq';
+let reportTextContent = '';
+
+// ── 评级判断 ──────────────────────────────────
+function calcRating(s) {
+  const vals = DIM_KEYS.map(k => s[k] || 0);
+  const avg = vals.reduce((a,b)=>a+b,0)/7;
+  const above90 = vals.filter(v=>v>=90).length;
+  const above80 = vals.filter(v=>v>=80).length;
+  const minVal = Math.min(...vals);
+
+  // 职业级天才少年：平均≥90，至少4项≥90，最低项≥78
+  if (avg >= 90 && above90 >= 4 && minVal >= 78) return 'genius';
+  // 有潜力的职业玩家：平均≥76，至少3项≥80
+  if (avg >= 76 && above80 >= 3) return 'pro';
+  // 普通玩家：平均≥45
+  if (avg >= 45) return 'normal';
+  return 'below';
+}
+
+const RATING_CONFIG = {
+  genius: {
+    label:'👑 职业级天才少年',
+    subtitle:'你拥有十万里挑一的电竞天赋',
+    badgeClass:'genius',
+    contactTitle:'你的天赋已触发俱乐部定向邀请',
+    contactDesc:'恭喜！你达到了「职业级天才少年」的顶级评级，VE已将你的完整报告推送至合作俱乐部青训团队。<br><br>请留下联系方式，俱乐部将在 <strong style="color:#FCD34D">3-7个工作日内</strong> 主动联系你，邀请参加专业试训。'
+  },
+  pro: {
+    label:'🚀 有潜力的电竞职业玩家',
+    subtitle:'你具备突破职业门槛的潜力',
+    badgeClass:'pro',
+    contactTitle:'俱乐部已收到你的雷达数据',
+    contactDesc:'你的测评结果表明你具备冲击职业的潜力。留下联系方式后，VE将把你纳入合作俱乐部的人才储备库。<br><br>如俱乐部有适合的机会，将第一时间与你取得联系。'
+  },
+  normal: { label:'🎮 普通玩家水平', subtitle:'具备一定游戏基础，通过训练可持续提升', badgeClass:'normal' },
+  below:  { label:'📊 弱于普通人水平', subtitle:'基础能力有提升空间，坚持训练即可进步', badgeClass:'below' }
+};
+
+// ── 评分细则面板 ──────────────────────────────
+function openCriteria() {
+  buildCriteriaContent();
+  document.getElementById('criteria-overlay').classList.add('open');
+}
+function closeCriteria() {
+  document.getElementById('criteria-overlay').classList.remove('open');
+}
+function closeCriteriaOutside(e) {
+  if (e.target === document.getElementById('criteria-overlay')) closeCriteria();
+}
+
+function buildCriteriaContent() {
+  const raw = JSON.parse(sessionStorage.getItem('ve_rawdata') || '{}');
+  const avg = (DIM_KEYS.reduce((a,k)=>a+(scores[k]||0),0)/7).toFixed(1);
+
+  // 计算用户各项原始数据
+  const myRT = raw.reactionTimes && raw.reactionTimes.length
+    ? Math.round(raw.reactionTimes.reduce((a,b)=>a+b,0)/raw.reactionTimes.length) + 'ms'
+    : '—';
+  const myFA = raw.gngFalseAlarms !== undefined ? raw.gngFalseAlarms + '次误触' : '—';
+  const myVis = raw.visionCorrect !== undefined ? raw.visionCorrect + '/' + raw.visionTotal + ' 题' : '—';
+  const myKpm = raw.aimKpm !== undefined ? 'KPM ' + raw.aimKpm + '，准确率 ' + raw.aimAccuracy + '%' : '—';
+
+  // 专注稳定性：从reactionTimes推导
+  let myFocusDesc = '—';
+  if (raw.reactionTimes && raw.reactionTimes.length >= 4) {
+    const times = raw.reactionTimes;
+    const mean = times.reduce((a,b)=>a+b,0)/times.length;
+    const sd = Math.round(Math.sqrt(times.reduce((a,b)=>a+(b-mean)**2,0)/times.length));
+    const first = times.slice(0,Math.floor(times.length/2));
+    const last = times.slice(Math.floor(times.length/2));
+    const deg = Math.round(last.reduce((a,b)=>a+b,0)/last.length - first.reduce((a,b)=>a+b,0)/first.length);
+    myFocusDesc = `RT方差 ±${sd}ms，${deg>0?`后期慢${deg}ms`:'无衰退'}`;
+  }
+
+  const p1Total = raw.colorP1Total || 8;
+  const p1Acc = raw.colorP1Hits !== undefined ? Math.round(raw.colorP1Hits / p1Total * 100) : null;
+  const myColor = p1Acc !== null
+    ? `P1识别${p1Acc}%${raw.colorP2Hits !== undefined ? '，P2搜索'+raw.colorP2Hits+'/'+raw.colorP2Total+'个' : ''}`
+    : '—';
+
+  document.getElementById('criteria-content').innerHTML = `
+    <!-- 综合评级标准 -->
+    <div class="criteria-h2">综合评级标准</div>
+    <table class="criteria-table">
+      <thead><tr>
+        <th>评级</th><th>条件</th><th>约占人群</th><th>综合均分</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td class="tag-genius">👑 职业级天才少年</td>
+          <td>均分 ≥90 且 4项以上 ≥90分 且最低项 ≥78</td>
+          <td class="tag-genius">top 0.3%</td>
+          <td>90-100</td>
+        </tr>
+        <tr>
+          <td class="tag-pro">🚀 有潜力的职业玩家</td>
+          <td>均分 ≥76 且 3项以上 ≥80分</td>
+          <td class="tag-pro">top 5%</td>
+          <td>76-89</td>
+        </tr>
+        <tr>
+          <td class="tag-normal">🎮 普通玩家水平</td>
+          <td>均分 ≥45</td>
+          <td style="color:#A78BFA;">30%-95%</td>
+          <td>45-75</td>
+        </tr>
+        <tr>
+          <td style="color:var(--sub);">📊 弱于普通人</td>
+          <td>均分 &lt;45</td>
+          <td style="color:var(--sub);">bottom 30%</td>
+          <td>0-44</td>
+        </tr>
+        <tr style="border-top:1px solid rgba(0,212,255,0.2);">
+          <td style="color:var(--sub);">本次综合均分</td>
+          <td colspan="3" class="tag-yours">${avg} 分 · ${RATING_CONFIG[ratingKey].label}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- 各项测试职业基准 -->
+    <div class="criteria-h2">各测试项目参考基准（数据来源：认知科学研究）</div>
+    <table class="criteria-table">
+      <thead><tr>
+        <th>测试项目</th>
+        <th class="tag-genius">天才级 (90+)</th>
+        <th class="tag-pro">职业级 (80+)</th>
+        <th style="color:#A78BFA;">普通人 (~50)</th>
+        <th class="tag-yours">你的成绩</th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td>⚡ 反应速度</td>
+          <td class="tag-genius">&lt;210ms</td>
+          <td class="tag-pro">&lt;230ms</td>
+          <td style="color:#A78BFA;">~260ms</td>
+          <td class="tag-yours">${myRT}</td>
+        </tr>
+        <tr>
+          <td>🛡 冲动抑制</td>
+          <td class="tag-genius">0误触 0漏触</td>
+          <td class="tag-pro">≤1误触</td>
+          <td style="color:#A78BFA;">~1-2误触</td>
+          <td class="tag-yours">${myFA}</td>
+        </tr>
+        <tr>
+          <td>👁 动态视力</td>
+          <td class="tag-genius">6/6 全对</td>
+          <td class="tag-pro">5/6</td>
+          <td style="color:#A78BFA;">3/6</td>
+          <td class="tag-yours">${myVis}</td>
+        </tr>
+        <tr>
+          <td>🧠 认知处理</td>
+          <td class="tag-genius">3×3极速 4×4快速 5×5完成</td>
+          <td class="tag-pro">各级快速完成少错</td>
+          <td style="color:#A78BFA;">基准时间内完成</td>
+          <td class="tag-yours">${scores.cognition}分</td>
+        </tr>
+        <tr>
+          <td>🎯 手眼协调</td>
+          <td class="tag-genius">KPM≥100 准确≥90%</td>
+          <td class="tag-pro">KPM≥60 准确≥75%</td>
+          <td style="color:#A78BFA;">KPM~44 准确~65%</td>
+          <td class="tag-yours">${myKpm}</td>
+        </tr>
+        <tr>
+          <td>🔋 专注稳定</td>
+          <td class="tag-genius">RT方差&lt;10ms 无衰退</td>
+          <td class="tag-pro">方差&lt;25ms 轻微衰退</td>
+          <td style="color:#A78BFA;">方差~30ms</td>
+          <td class="tag-yours">${myFocusDesc}</td>
+        </tr>
+        <tr>
+          <td>🎨 色觉感知</td>
+          <td class="tag-genius">P1: 0误触 极速<br>P2: 全轮快速找齐</td>
+          <td class="tag-pro">P1: ≤1误触<br>P2: 高命中率</td>
+          <td style="color:#A78BFA;">P1: ~2误触<br>P2: 中等速度</td>
+          <td class="tag-yours">${myColor}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- 评分计算方式 -->
+    <div class="criteria-h2">评分计算方式</div>
+    <table class="criteria-table">
+      <thead><tr><th>维度</th><th>计算逻辑</th></tr></thead>
+      <tbody>
+        <tr><td>反应速度</td><td>平均反应时间线性映射：190ms=100分，273ms=50分，360ms=20分</td></tr>
+        <tr><td>冲动抑制</td><td>100 − 误触率×60 − 漏触率×40（误触惩罚更重）</td></tr>
+        <tr><td>动态视力</td><td>正确题数 / 6 × 100（难度递增：4位→5位→6位数字，显示220-350ms）</td></tr>
+        <tr><td>认知处理</td><td>各级方格完成时间与基准对比（3×3基准12s，4×4基准35s，5×5基准80s）</td></tr>
+        <tr><td>手眼协调</td><td>命中率×40% + KPM×40% + 平均命中时间×20%</td></tr>
+        <tr><td>专注稳定</td><td>从反应速度测试推导：100 − 方差惩罚×40 − 后期衰退惩罚×40</td></tr>
+        <tr><td>色觉感知</td><td>P1红色识别（命中率+速度）×60% + P2目标搜索（准确+速度）×40%</td></tr>
+      </tbody>
+    </table>
+
+    <div class="criteria-note">
+      数据参考来源：<br>
+      · <strong>反应速度：</strong>普通人均值 ~260ms（文献综述均值，Laming 1968; Brebner & Welford 1980; HumanBenchmark.com 大样本中位数~250ms）；职业FPS选手（CS2/Valorant）均值 160-180ms（ResearchGate, "Comparison of Reaction Time Between eSports Players", 2021）<br>
+      · <strong>冲动抑制：</strong>健康成人 Go/No-Go 误触率（commission error rate）约 10-15%，对应 6 次No-Go中约 0-1 次误触（PMC/NIH, "Impulsive Errors on a Go-NoGo Reaction Time Task", 2010）<br>
+      · <strong>专注稳定性：</strong>职业选手的核心优势在于反应时间低方差（intraindividual variability）与抗疲劳性，而非单纯速度优势（Nature Scientific Reports, 2022）<br>
+      · <strong>手眼协调：</strong>KPM 基准参考 AimLab 内部统计数据；无公开同行评审研究<br>
+      · <strong>动态视力 / 认知处理：</strong>内部测试校准，无直接学术验证<br>
+      · <strong>色觉感知：</strong>原创设计，基于 FPS 游戏敌人颜色识别机制，目前尚无直接学术验证
+    </div>
+  `;
+}
+
+// ── 百分位计算（正态分布近似：均值50，标准差15） ──
+function scoreToPercentile(score) {
+  const z = (score - 50) / 15;
+  const t = 1 / (1 + 0.3275911 * Math.abs(z));
+  const poly = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
+  const erfc = poly * Math.exp(-z * z);
+  const pct = z >= 0 ? (1 - erfc / 2) * 100 : erfc / 2 * 100;
+  return Math.min(99.9, Math.max(0.1, pct));
+}
+
+function renderPercentile() {
+  const avg = DIM_KEYS.reduce((a,k)=>a+(scores[k]||0),0) / 7;
+  const pct = scoreToPercentile(avg);
+  const pctDisplay = pct >= 99 ? pct.toFixed(1) : pct >= 10 ? pct.toFixed(1) : pct.toFixed(1);
+  document.getElementById('pct-num').textContent = pct >= 99.9 ? '99.9+' : pctDisplay;
+  // 位置：百分位直接映射到bar宽度（留2%边距）
+  const markerLeft = Math.min(97, Math.max(3, pct));
+  document.getElementById('pct-marker').style.left = markerLeft + '%';
+  // 子标题：加描述
+  const desc = pct >= 99 ? '· 顶尖天赋，极为罕见' : pct >= 90 ? '· 远超大多数人' : pct >= 70 ? '· 高于平均水平' : pct >= 45 ? '· 接近平均水平' : '· 仍有提升空间';
+  document.getElementById('pct-sub').textContent = '的测评者 ' + desc;
+}
+
+// ── 主流程 ────────────────────────────────────
+let reportMode = 'advanced'; // 'basic' | 'advanced'
+
+async function init() {
+  scores = JSON.parse(sessionStorage.getItem('ve_scores') || '{}');
+  if (!Object.keys(scores).length) { window.location.href='/'; return; }
+
+  // 读取报告模式
+  reportMode = sessionStorage.getItem('ve_report_mode') || 'advanced';
+  const vtag = document.getElementById('version-tag');
+  vtag.style.display = 'inline-block';
+  vtag.className = 'version-tag ' + reportMode;
+  vtag.textContent = reportMode === 'basic' ? 'BASIC' : 'ADVANCED';
+
+  document.getElementById('report-date').textContent = new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'}) + ' 测评';
+
+  ratingKey = calcRating(scores);
+  rating = RATING_CONFIG[ratingKey].label;
+
+  renderRating();
+  renderPercentile();
+  renderChart();
+  renderDimList();
+  renderDataDetail();
+  showContactSection();
+
+  // basic 模式：折叠部分深度内容
+  if (reportMode === 'basic') {
+    // AI分析段落仍然显示，但文字会更短（由basic prompt控制）
+    // PDF按钮文案调整
+    const dlBtn = document.getElementById('btn-download');
+    if (dlBtn) dlBtn.textContent = '下载基础版PDF报告（2页）';
+  }
+
+  // 生成AI报告（异步）
+  generateReport();
+}
+
+function renderRating() {
+  const cfg = RATING_CONFIG[ratingKey];
+  const badge = document.getElementById('rating-badge');
+  badge.textContent = cfg.label;
+  badge.className = 'rating-badge ' + cfg.badgeClass;
+  document.getElementById('rating-subtitle').textContent = cfg.subtitle;
+}
+
+function renderChart() {
+  const ctx = document.getElementById('radar-chart').getContext('2d');
+  new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: DIM_KEYS.map(k => DIM_NAMES[k]),
+      datasets: [{
+        data: DIM_KEYS.map(k => scores[k] || 0),
+        backgroundColor: 'rgba(0,212,255,0.1)',
+        borderColor: '#00D4FF',
+        borderWidth: 2,
+        pointBackgroundColor: '#00D4FF',
+        pointBorderColor: '#0A0E1A',
+        pointRadius: 5,
+        pointHoverRadius: 7
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:true,
+      scales:{r:{
+        min:0,max:100,
+        grid:{color:'rgba(255,255,255,0.06)'},
+        angleLines:{color:'rgba(255,255,255,0.06)'},
+        pointLabels:{color:'#94A3B8',font:{size:11,family:"'Noto Sans SC'"}},
+        ticks:{display:false,stepSize:20}
+      }},
+      plugins:{legend:{display:false}}
+    }
+  });
+}
+
+// 每个维度的普通人均分（基于测试标准校准）
+const BENCHMARKS = {
+  reaction: 50, impulse: 55, vision: 47,
+  cognition: 52, aim: 47, focus: 55, color: 52
+};
+
+function renderDimList() {
+  const container = document.getElementById('dim-list');
+  DIM_KEYS.forEach(k => {
+    const score = scores[k] || 0;
+    const bench = BENCHMARKS[k];
+    const diff = score - bench;
+    const diffText = diff > 0 ? `+${diff} 超过均值` : diff < 0 ? `${diff} 低于均值` : '与均值持平';
+    const diffClass = diff > 0 ? 'better' : diff < 0 ? 'worse' : '';
+    const row = document.createElement('div');
+    row.className = 'dim-row';
+    row.innerHTML = `
+      <div class="dim-row-top">
+        <div class="dim-label">${DIM_NAMES[k]}</div>
+        <div class="dim-score">${score}</div>
+      </div>
+      <div class="dim-bar-wrap">
+        <div class="dim-bar" style="width:0%" data-target="${score}%"></div>
+        <div class="dim-benchmark" style="left:${bench}%"></div>
+      </div>
+      <div class="dim-compare">
+        <span>普通人均分 ${bench} / 满分 100</span>
+        <span class="${diffClass}">${diffText}</span>
+      </div>`;
+    container.appendChild(row);
+  });
+  setTimeout(() => {
+    document.querySelectorAll('.dim-bar').forEach(b => b.style.width = b.dataset.target);
+  }, 100);
+}
+
+function renderDataDetail() {
+  const raw = JSON.parse(sessionStorage.getItem('ve_rawdata') || '{}');
+  const container = document.getElementById('data-grid');
+  const items = [];
+
+  // 反应速度
+  if (raw.reactionTimes && raw.reactionTimes.length) {
+    const avgRT = Math.round(raw.reactionTimes.reduce((a,b)=>a+b,0)/raw.reactionTimes.length);
+    const bestRT = Math.min(...raw.reactionTimes);
+    items.push({ num: avgRT + 'ms', label: '平均反应时间', bench: '普通人均值 260ms' });
+    items.push({ num: bestRT + 'ms', label: '最快反应时间', bench: '职业选手均值 160-180ms' });
+  }
+
+  // 冲动抑制
+  if (raw.gngHits !== undefined) {
+    const total = raw.gngHits + raw.gngFalseAlarms + raw.gngMisses;
+    items.push({ num: raw.gngFalseAlarms, label: 'Go/No-Go 误触次数', bench: '优秀：≤1次' });
+    items.push({ num: raw.gngHits + '/14', label: '正确命中', bench: '满分：14/14' });
+  }
+
+  // 动态视力
+  if (raw.visionCorrect !== undefined) {
+    items.push({ num: raw.visionCorrect + '/' + raw.visionTotal, label: '动态视力正确率', bench: '普通人均值 ~3/6' });
+  }
+
+  // Aim 详情
+  if (raw.aimHits !== undefined) {
+    items.push({ num: raw.aimHits, label: '命中数 (Kills)', bench: '普通人均值 ~22' });
+    items.push({ num: (raw.aimAccuracy || 0) + '%', label: '命中率 (Accuracy)', bench: '普通人均值 ~65%' });
+    items.push({ num: raw.aimKpm || '—', label: 'KPM (每分命中)', bench: '普通人均值 ~44' });
+    if (raw.aimAvgTime) items.push({ num: raw.aimAvgTime + 'ms', label: '平均命中时间', bench: '优秀：<400ms' });
+  }
+
+  // 色觉感知
+  if (raw.colorP1Hits !== undefined) {
+    const p1Acc = raw.colorP1Total ? Math.round(raw.colorP1Hits / raw.colorP1Total * 100) : 0;
+    items.push({ num: p1Acc + '%', label: '色觉识别准确率', bench: '普通人均值 ~72%' });
+    if (raw.colorP1AvgRT) items.push({ num: raw.colorP1AvgRT + 'ms', label: '色觉平均反应时', bench: '优秀：<350ms' });
+    if (raw.colorP2Correct !== undefined) items.push({ num: raw.colorP2Correct + '/10', label: '色差辨别正确数', bench: '普通人均值 ~6/10' });
+  }
+
+  container.innerHTML = items.map(it => `
+    <div class="data-item">
+      <div class="data-num">${it.num}</div>
+      <div class="data-label">${it.label}</div>
+      <div class="data-bench">${it.bench}</div>
+    </div>`).join('');
+}
+
+function renderGameTags() {
+  // 找出最强维度，推荐对应游戏
+  const best = DIM_KEYS.sort((a,b)=>(scores[b]||0)-(scores[a]||0)).slice(0,2);
+  const games = new Set();
+  best.forEach(k => (GAME_MAP[k]||[]).forEach(g=>games.add(g)));
+  const all = ['FPS','MOBA','RTS','格斗类','射击类','赛车竞速'];
+  // 插入标签到报告后（如果已有game-tags容器）
+}
+
+function showContactSection() {
+  if (ratingKey !== 'genius' && ratingKey !== 'pro') return;
+  const cfg = RATING_CONFIG[ratingKey];
+  const sec = document.getElementById('contact-section');
+  sec.style.display = 'block';
+  document.getElementById('contact-title').textContent = cfg.contactTitle;
+  document.getElementById('contact-desc').innerHTML = cfg.contactDesc;
+}
+
+async function generateReport() {
+  const rawData = JSON.parse(sessionStorage.getItem('ve_rawdata') || '{}');
+  try {
+    const res = await fetch('/api/generate-report', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ scores, rating: RATING_CONFIG[ratingKey].label, device: sessionStorage.getItem('ve_device'), rawData, mode: reportMode })
+    });
+    const data = await res.json();
+    if (data.success && data.text) {
+      reportTextContent = data.text;
+      typewriterEffect(data.text);
+    } else {
+      document.getElementById('report-text').textContent = fallbackText();
+    }
+  } catch(e) {
+    document.getElementById('report-text').textContent = fallbackText();
+  } finally {
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('report-body').style.display = 'block';
+  }
+}
+
+function typewriterEffect(text) {
+  const el = document.getElementById('report-text');
+  el.innerHTML = '';
+  let i = 0;
+  const interval = setInterval(() => {
+    el.textContent += text[i];
+    i++;
+    if (i >= text.length) clearInterval(interval);
+  }, 18);
+  reportTextContent = text;
+}
+
+function fallbackText() {
+  const avg = (DIM_KEYS.reduce((a,k)=>a+(scores[k]||0),0)/7).toFixed(1);
+  const cfg = RATING_CONFIG[ratingKey];
+  return `本次测评综合评分 ${avg} 分，综合评级为「${cfg.label.replace(/^[^\s]+ /,'')}」。\n\n你在七大核心维度上展现出了各具特色的能力表现，整体发挥${parseFloat(avg)>70?'稳定且出色':'有一定的提升空间'}。\n\n建议针对薄弱维度进行定向训练，结合Aim Lab等专业工具每日坚持练习，一般3-6个月内即可看到显著提升。\n\n感谢参与VE天赋雷达测评，期待你的成长！`;
+}
+
+// ── 联系方式 ──────────────────────────────────
+function selectCT(type) {
+  contactType = type;
+  ['qq','email','wechat'].forEach(t => {
+    document.getElementById('ct-'+t).classList.toggle('active', t===type);
+  });
+  const labels = {qq:'QQ号', email:'邮箱地址', wechat:'微信号'};
+  const placeholders = {qq:'输入你的QQ号', email:'example@email.com', wechat:'输入你的微信号'};
+  document.getElementById('contact-input-label').textContent = labels[type];
+  document.getElementById('f-contact').placeholder = placeholders[type];
+}
+
+async function submitContact() {
+  const name = document.getElementById('f-name').value.trim() || '匿名选手';
+  const contact = document.getElementById('f-contact').value.trim();
+  if (!contact) { alert('请输入联系方式'); return; }
+
+  try {
+    await fetch('/api/submit-contact', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ name, contact, contactType, rating: RATING_CONFIG[ratingKey].label, scores })
+    });
+  } catch(e) {}
+
+  document.getElementById('contact-form').style.display = 'none';
+  document.getElementById('contact-success').style.display = 'block';
+  const desc = ratingKey === 'genius'
+    ? `<strong>${name}</strong>，你的完整测评报告已成功推送至合作俱乐部青训团队。<br><br>以你「职业级天才少年」的评级，<strong style="color:#10B981">极大概率</strong>会在近期收到俱乐部的试训邀请。请保持联系方式畅通，期待你在职业赛场上发光！`
+    : `<strong>${name}</strong>，你的报告已纳入俱乐部人才储备库。<br><br>以你目前的潜力，若持续训练提升，<strong style="color:#00D4FF">有可能</strong>收到俱乐部的关注和邀请。继续加油！`;
+  document.getElementById('success-desc').innerHTML = desc;
+}
+
+// ── PDF下载 ───────────────────────────────────
+async function downloadPDF() {
+  const btn = document.getElementById('btn-download');
+  btn.disabled = true; btn.textContent = '生成图表中...';
+
+  try {
+    // 1. 从已渲染的雷达图获取图片
+    const radarImg = document.getElementById('radar-chart').toDataURL('image/png');
+
+    // 2. 生成维度对比柱状图
+    btn.textContent = '生成对比图表...';
+    const barImg = await renderBarChartImage();
+
+    // 3. 生成反应时间折线图（如有数据）
+    const raw = JSON.parse(sessionStorage.getItem('ve_rawdata') || '{}');
+    let lineImg = null;
+    if (raw.reactionTimes && raw.reactionTimes.length > 2) {
+      lineImg = await renderLineChartImage(raw.reactionTimes);
+    }
+
+    // 4. 构建 PDF HTML 内容
+    btn.textContent = '合成报告...';
+    const target = document.getElementById('pdf-target');
+    target.innerHTML = buildPDFContent(radarImg, barImg, lineImg);
+
+    await new Promise(r => setTimeout(r, 600));
+
+    const canvas = await html2canvas(target, {
+      backgroundColor: '#0A0E1A', scale: 2, useCORS: true, logging: false,
+      width: 800, windowWidth: 800
+    });
+
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgW = pageWidth;
+    const imgH = (canvas.height / canvas.width) * imgW;
+
+    let y = 0;
+    while (y < imgH) {
+      if (y > 0) pdf.addPage();
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, -y, imgW, imgH);
+      y += pageHeight;
+    }
+
+    pdf.save(`VE天赋雷达报告_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.pdf`);
+  } catch(e) {
+    console.error(e);
+    alert('PDF生成失败，请稍后重试');
+  }
+
+  btn.disabled = false; btn.textContent = '下载完整PDF报告';
+}
+
+// 生成维度对比柱状图（用户得分 vs 普通人均分）
+async function renderBarChartImage() {
+  const cvs = document.createElement('canvas');
+  cvs.width = 720; cvs.height = 300;
+  const ctx = cvs.getContext('2d');
+  // 深色背景
+  ctx.fillStyle = '#111827';
+  ctx.fillRect(0, 0, cvs.width, cvs.height);
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: DIM_KEYS.map(k => DIM_NAMES[k]),
+      datasets: [
+        {
+          label: '你的得分',
+          data: DIM_KEYS.map(k => scores[k] || 0),
+          backgroundColor: 'rgba(0,212,255,0.75)',
+          borderColor: '#00D4FF',
+          borderWidth: 1,
+          borderRadius: 5
+        },
+        {
+          label: '普通人均分',
+          data: DIM_KEYS.map(k => BENCHMARKS[k]),
+          backgroundColor: 'rgba(248,183,60,0.55)',
+          borderColor: '#F8B73C',
+          borderWidth: 1,
+          borderRadius: 5
+        }
+      ]
+    },
+    options: {
+      responsive: false,
+      animation: { duration: 0 },
+      scales: {
+        y: {
+          min: 0, max: 100,
+          grid: { color: 'rgba(255,255,255,0.08)' },
+          ticks: { color: '#94A3B8', font: { size: 11 } }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { color: '#94A3B8', font: { size: 11 } }
+        }
+      },
+      plugins: {
+        legend: { labels: { color: '#CBD5E1', font: { size: 11 }, boxWidth: 12 } }
+      }
+    }
+  });
+
+  await new Promise(r => setTimeout(r, 120));
+  return cvs.toDataURL('image/png');
+}
+
+// 生成反应时间折线图
+async function renderLineChartImage(reactionTimes) {
+  const cvs = document.createElement('canvas');
+  cvs.width = 720; cvs.height = 240;
+  const ctx = cvs.getContext('2d');
+  ctx.fillStyle = '#111827';
+  ctx.fillRect(0, 0, cvs.width, cvs.height);
+
+  const avgBench = 260;
+  const minY = Math.max(80, Math.min(...reactionTimes) - 60);
+  const maxY = Math.max(avgBench + 60, Math.max(...reactionTimes) + 40);
+
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: reactionTimes.map((_, i) => `第${i+1}轮`),
+      datasets: [
+        {
+          label: '你的反应时间 (ms)',
+          data: reactionTimes,
+          borderColor: '#00D4FF',
+          backgroundColor: 'rgba(0,212,255,0.12)',
+          tension: 0.35,
+          fill: true,
+          pointRadius: 4,
+          pointBackgroundColor: '#00D4FF',
+          pointBorderColor: '#0A0E1A',
+          pointBorderWidth: 2
+        },
+        {
+          label: '普通人均值 273ms',
+          data: reactionTimes.map(() => avgBench),
+          borderColor: 'rgba(248,183,60,0.7)',
+          borderDash: [6, 4],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false,
+          tension: 0
+        }
+      ]
+    },
+    options: {
+      responsive: false,
+      animation: { duration: 0 },
+      scales: {
+        y: {
+          min: minY, max: maxY,
+          grid: { color: 'rgba(255,255,255,0.08)' },
+          ticks: { color: '#94A3B8', font: { size: 11 }, callback: v => v + 'ms' }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { color: '#94A3B8', font: { size: 10 } }
+        }
+      },
+      plugins: {
+        legend: { labels: { color: '#CBD5E1', font: { size: 11 }, boxWidth: 12 } }
+      }
+    }
+  });
+
+  await new Promise(r => setTimeout(r, 120));
+  return cvs.toDataURL('image/png');
+}
+
+function buildPDFContent(radarImg, barImg, lineImg) {
+  const cfg = RATING_CONFIG[ratingKey];
+  const avg = (DIM_KEYS.reduce((a,k)=>a+(scores[k]||0),0)/7).toFixed(1);
+  const accentColor = ratingKey==='genius' ? '#FCD34D' : ratingKey==='pro' ? '#00D4FF' : '#A78BFA';
+  const raw = JSON.parse(sessionStorage.getItem('ve_rawdata') || '{}');
+  const dateStr = new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
+
+  // 实测数据摘要
+  const dataLines = [];
+  if (raw.reactionTimes && raw.reactionTimes.length) {
+    const avgRT = Math.round(raw.reactionTimes.reduce((a,b)=>a+b,0)/raw.reactionTimes.length);
+    const bestRT = Math.min(...raw.reactionTimes);
+    dataLines.push(`反应速度：平均 ${avgRT}ms（普通人均值 273ms）· 最快 ${bestRT}ms`);
+  }
+  if (raw.gngHits !== undefined) {
+    dataLines.push(`冲动抑制：命中 ${raw.gngHits}/14 · 误触 ${raw.gngFalseAlarms} 次`);
+  }
+  if (raw.visionCorrect !== undefined) {
+    dataLines.push(`动态视力：${raw.visionCorrect}/${raw.visionTotal} 题正确（普通人均值 ~3/6）`);
+  }
+  if (raw.aimHits !== undefined) {
+    dataLines.push(`手眼协调：命中 ${raw.aimHits} 个 · 准确率 ${raw.aimAccuracy}% · KPM ${raw.aimKpm}（普通人均值 ~44）`);
+  }
+  if (raw.colorP1Hits !== undefined) {
+    const p1Acc = raw.colorP1Total ? Math.round(raw.colorP1Hits/raw.colorP1Total*100) : 0;
+    dataLines.push(`色觉感知：识别准确率 ${p1Acc}%${raw.colorP2Correct !== undefined ? ` · 色差辨别 ${raw.colorP2Correct}/10 正确` : ''}`);
+  }
+
+  const dimRows = DIM_KEYS.map(k => {
+    const s = scores[k] || 0;
+    const bench = BENCHMARKS[k];
+    const diff = s - bench;
+    const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
+    const diffColor = diff > 0 ? '#10B981' : diff < 0 ? '#EF4444' : '#94A3B8';
+    return `
+      <tr>
+        <td style="padding:7px 12px;color:#CBD5E1;font-size:13px;">${DIM_NAMES[k]}</td>
+        <td style="padding:7px 12px;text-align:center;">
+          <div style="background:rgba(255,255,255,0.06);border-radius:4px;height:10px;position:relative;">
+            <div style="position:absolute;left:0;top:0;height:10px;width:${s}%;background:linear-gradient(90deg,#00D4FF,#7C3AED);border-radius:4px;"></div>
+            <div style="position:absolute;top:-3px;left:${bench}%;width:2px;height:16px;background:#F8B73C;border-radius:1px;transform:translateX(-50%);"></div>
+          </div>
+        </td>
+        <td style="padding:7px 12px;text-align:center;font-family:monospace;color:#fff;font-size:14px;font-weight:700;">${s}</td>
+        <td style="padding:7px 12px;text-align:center;color:${diffColor};font-size:12px;">${diffStr}</td>
+      </tr>`;
+  }).join('');
+
+  return `
+    <div style="background:#0A0E1A;color:#fff;padding:48px 48px 60px;font-family:sans-serif;width:800px;">
+
+      <!-- 页头 -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:36px;padding-bottom:20px;border-bottom:1px solid rgba(0,212,255,0.2);">
+        <div>
+          <div style="font-size:10px;color:#00D4FF;letter-spacing:4px;margin-bottom:6px;">VE ESPORTS TALENT RADAR</div>
+          <div style="font-size:28px;font-weight:900;color:#fff;letter-spacing:1px;">电竞天赋测评报告</div>
+          <div style="font-size:12px;color:#94A3B8;margin-top:4px;">${dateStr}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="padding:10px 24px;border:2px solid ${accentColor};border-radius:30px;font-size:14px;font-weight:700;color:${accentColor};display:inline-block;">${cfg.label}</div>
+          <div style="font-size:12px;color:#94A3B8;margin-top:6px;">综合均分 <span style="color:#fff;font-weight:700;">${avg}</span> / 100</div>
+        </div>
+      </div>
+
+      <!-- 雷达图 + 维度表格 -->
+      <div style="display:flex;gap:32px;margin-bottom:32px;align-items:flex-start;">
+        <div style="flex:0 0 240px;">
+          <div style="font-size:10px;color:#00D4FF;letter-spacing:2px;margin-bottom:12px;">天赋雷达图</div>
+          <img src="${radarImg}" style="width:240px;height:240px;object-fit:contain;" />
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:10px;color:#00D4FF;letter-spacing:2px;margin-bottom:12px;">七维度评分详情 <span style="color:#F8B73C;font-size:9px;">▌ = 普通人均分</span></div>
+          <table style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.08);">
+                <th style="padding:5px 12px;text-align:left;font-size:11px;color:#64748B;font-weight:400;">维度</th>
+                <th style="padding:5px 12px;font-size:11px;color:#64748B;font-weight:400;min-width:140px;">得分条</th>
+                <th style="padding:5px 12px;text-align:center;font-size:11px;color:#64748B;font-weight:400;">分数</th>
+                <th style="padding:5px 12px;text-align:center;font-size:11px;color:#64748B;font-weight:400;">vs均值</th>
+              </tr>
+            </thead>
+            <tbody>${dimRows}</tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 维度对比柱状图 -->
+      <div style="margin-bottom:32px;">
+        <div style="font-size:10px;color:#00D4FF;letter-spacing:2px;margin-bottom:12px;">维度得分对比（你 vs 普通人）</div>
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(0,212,255,0.15);border-radius:10px;padding:16px;">
+          <img src="${barImg}" style="width:100%;height:auto;" />
+        </div>
+      </div>
+
+      ${lineImg ? `
+      <!-- 反应时间折线图 -->
+      <div style="margin-bottom:32px;">
+        <div style="font-size:10px;color:#00D4FF;letter-spacing:2px;margin-bottom:12px;">反应速度趋势（各轮次）</div>
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(0,212,255,0.15);border-radius:10px;padding:16px;">
+          <img src="${lineImg}" style="width:100%;height:auto;" />
+        </div>
+      </div>` : ''}
+
+      <!-- 实测数据摘要 -->
+      ${dataLines.length ? `
+      <div style="margin-bottom:32px;">
+        <div style="font-size:10px;color:#00D4FF;letter-spacing:2px;margin-bottom:12px;">实测数据摘要</div>
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(0,212,255,0.15);border-radius:10px;padding:16px 20px;">
+          ${dataLines.map(l=>`<div style="font-size:13px;color:#94A3B8;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);">${l}</div>`).join('')}
+        </div>
+      </div>` : ''}
+
+      <!-- 专业分析报告 -->
+      <div style="margin-bottom:32px;">
+        <div style="font-size:10px;color:#00D4FF;letter-spacing:2px;margin-bottom:12px;">AI专业分析报告</div>
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(0,212,255,0.15);border-radius:10px;padding:24px;">
+          <div style="font-size:14px;color:#CBD5E1;line-height:2.1;white-space:pre-wrap;">${reportTextContent || fallbackText()}</div>
+        </div>
+      </div>
+
+      <!-- 页脚 -->
+      <div style="text-align:center;padding-top:20px;border-top:1px solid rgba(255,255,255,0.06);">
+        <div style="font-size:11px;color:rgba(255,255,255,0.25);">© ${new Date().getFullYear()} VE天赋雷达 · ESPORTS TALENT RADAR · 本报告由AI系统生成，仅供参考</div>
+      </div>
+
+    </div>`;
+}
+
+// 启动
+init();
+</script>
+</body>
+</html>

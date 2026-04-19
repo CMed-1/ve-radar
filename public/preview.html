@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VE天赋雷达 · 测评结果</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{--bg:#0A0E1A;--bg2:#0D1220;--cyan:#00D4FF;--cyan-dim:rgba(0,212,255,0.12);--purple:#7C3AED;--text:#FFF;--sub:#94A3B8;--border:rgba(0,212,255,0.2);--card:rgba(255,255,255,0.04);--green:#10B981;--red:#EF4444;--gold:#FCD34D;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans SC',sans-serif;min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 50% at 50% -10%,rgba(0,212,255,0.07) 0%,transparent 70%),radial-gradient(ellipse 50% 40% at 90% 80%,rgba(124,58,237,0.07) 0%,transparent 60%);pointer-events:none;z-index:0;}
+
+/* Loading */
+#loading{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;}
+.spinner{width:56px;height:56px;border:3px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-family:'Orbitron',sans-serif;font-size:13px;color:var(--sub);letter-spacing:2px;}
+
+/* Layout */
+.container{max-width:860px;margin:0 auto;padding:40px 24px 80px;position:relative;z-index:1;}
+
+/* Header */
+.page-logo{text-align:center;font-family:'Orbitron',sans-serif;font-size:12px;color:var(--cyan);letter-spacing:4px;margin-bottom:40px;opacity:.7;}
+
+/* Rating hero */
+.result-hero{text-align:center;margin-bottom:40px;}
+.complete-badge{display:inline-flex;align-items:center;gap:8px;padding:5px 16px;border-radius:20px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.35);font-size:12px;color:#10B981;letter-spacing:1px;margin-bottom:20px;}
+.complete-dot{width:6px;height:6px;border-radius:50%;background:#10B981;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.rating-badge{padding:14px 36px;border-radius:40px;font-family:'Orbitron',sans-serif;font-size:clamp(14px,3vw,20px);font-weight:700;letter-spacing:2px;display:inline-block;margin-bottom:12px;}
+.rating-badge.genius{background:linear-gradient(135deg,rgba(251,191,36,.2),rgba(251,191,36,.04));border:2px solid var(--gold);color:var(--gold);box-shadow:0 0 40px rgba(251,191,36,.2);}
+.rating-badge.pro{background:linear-gradient(135deg,rgba(0,212,255,.15),rgba(0,212,255,.03));border:2px solid var(--cyan);color:var(--cyan);box-shadow:0 0 40px rgba(0,212,255,.15);}
+.rating-badge.normal{background:rgba(124,58,237,.1);border:2px solid rgba(124,58,237,.4);color:#A78BFA;}
+.rating-badge.below{background:rgba(148,163,184,.08);border:2px solid rgba(148,163,184,.3);color:var(--sub);}
+.rating-sub{font-size:14px;color:var(--sub);margin-bottom:16px;}
+.pct-display{font-family:'Orbitron',sans-serif;font-size:clamp(28px,6vw,44px);font-weight:900;margin-bottom:4px;}
+.pct-display span{color:var(--cyan);}
+.pct-sub{font-size:13px;color:var(--sub);}
+
+/* Radar */
+.radar-wrap{max-width:280px;margin:32px auto;}
+
+/* Divider */
+.section-divider{border:none;border-top:1px solid var(--border);margin:36px 0;}
+
+/* Unlock section */
+.unlock-header{text-align:center;margin-bottom:24px;}
+.unlock-title{font-family:'Orbitron',sans-serif;font-size:clamp(16px,3vw,22px);color:var(--text);margin-bottom:8px;}
+.unlock-sub{font-size:14px;color:var(--sub);}
+
+/* Invited user: single button */
+.invited-box{background:linear-gradient(135deg,rgba(0,212,255,.06),rgba(124,58,237,.04));border:1px solid rgba(0,212,255,.3);border-radius:16px;padding:28px;text-align:center;margin-bottom:24px;}
+.invited-tag{display:inline-block;padding:4px 14px;border-radius:20px;background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.3);font-size:12px;color:var(--cyan);letter-spacing:1px;margin-bottom:12px;}
+.invited-desc{font-size:14px;color:var(--sub);margin-bottom:20px;line-height:1.7;}
+.btn-invited{display:block;width:100%;padding:16px;border-radius:10px;background:linear-gradient(135deg,var(--cyan),#0099CC);border:none;color:#0A0E1A;font-size:16px;font-weight:700;font-family:'Noto Sans SC',sans-serif;cursor:pointer;transition:all .2s;letter-spacing:1px;}
+.btn-invited:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,212,255,.4);}
+
+/* Plan cards */
+.plans-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:16px;}
+@media(max-width:560px){.plans-grid{grid-template-columns:1fr;}}
+
+.plan-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;position:relative;display:flex;flex-direction:column;}
+.plan-card.featured{border-color:rgba(0,212,255,.5);background:rgba(0,212,255,.04);}
+.plan-card.featured::before{content:'推荐';position:absolute;top:-12px;left:50%;transform:translateX(-50%);padding:3px 14px;border-radius:20px;background:var(--cyan);color:#0A0E1A;font-size:11px;font-weight:700;letter-spacing:1px;}
+.plan-name{font-family:'Orbitron',sans-serif;font-size:13px;color:var(--sub);letter-spacing:1px;margin-bottom:8px;}
+.plan-price{font-family:'Orbitron',sans-serif;font-size:28px;font-weight:900;color:var(--text);margin-bottom:4px;}
+.plan-price-sub{font-size:12px;color:var(--sub);margin-bottom:16px;}
+.plan-features{list-style:none;flex:1;}
+.plan-features li{font-size:13px;color:var(--sub);padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);display:flex;gap:8px;align-items:flex-start;}
+.plan-features li:last-child{border-bottom:none;}
+.plan-features li::before{content:'✓';color:var(--green);flex-shrink:0;font-weight:700;}
+.plan-features li.extra::before{content:'✦';color:var(--cyan);}
+.plan-btn{margin-top:20px;width:100%;padding:14px;border-radius:10px;border:none;font-size:15px;font-weight:700;font-family:'Noto Sans SC',sans-serif;cursor:pointer;transition:all .2s;letter-spacing:1px;}
+.plan-btn.basic{background:rgba(255,255,255,.07);border:1px solid var(--border);color:var(--text);}
+.plan-btn.basic:hover{border-color:var(--cyan);color:var(--cyan);}
+.plan-btn.advanced{background:linear-gradient(135deg,var(--cyan),#0099CC);color:#0A0E1A;}
+.plan-btn.advanced:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,212,255,.35);}
+.test-mode-note{text-align:center;font-size:12px;color:rgba(148,163,184,.5);margin-top:8px;}
+
+/* Plan difference note */
+.plan-note{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px 18px;font-size:13px;color:var(--sub);line-height:1.8;margin-bottom:8px;}
+.plan-note strong{color:var(--text);}
+
+/* Club section */
+.club-section{background:linear-gradient(135deg,rgba(251,191,36,.06),rgba(0,212,255,.03));border:1px solid rgba(251,191,36,.2);border-radius:16px;padding:28px;margin-bottom:24px;}
+.club-badge{display:inline-block;padding:4px 14px;border-radius:20px;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.35);font-size:12px;color:var(--gold);letter-spacing:1px;margin-bottom:12px;}
+.club-title{font-family:'Orbitron',sans-serif;font-size:clamp(15px,2.5vw,18px);color:var(--text);margin-bottom:10px;}
+.club-desc{font-size:14px;color:var(--sub);line-height:1.8;}
+.club-note{margin-top:14px;padding:10px 14px;background:rgba(0,0,0,.2);border-radius:8px;font-size:12px;color:rgba(148,163,184,.7);line-height:1.6;}
+
+/* Training section */
+.training-section{background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.2);border-radius:16px;padding:24px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;}
+.training-text h3{font-family:'Orbitron',sans-serif;font-size:14px;color:#A78BFA;margin-bottom:6px;letter-spacing:1px;}
+.training-text p{font-size:13px;color:var(--sub);line-height:1.6;}
+.btn-training{padding:12px 24px;border-radius:10px;background:rgba(124,58,237,.15);border:1px solid rgba(124,58,237,.4);color:#A78BFA;font-size:14px;font-family:'Noto Sans SC',sans-serif;cursor:not-allowed;opacity:.6;white-space:nowrap;}
+
+/* Back link */
+.back-link{text-align:center;margin-top:32px;}
+.back-link a{color:var(--sub);font-size:13px;text-decoration:none;border-bottom:1px solid rgba(148,163,184,.3);}
+.back-link a:hover{color:var(--text);}
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <svg width="48" height="48" viewBox="0 0 40 40" fill="none"><polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="#00D4FF" stroke-width="1.5"/><circle cx="20" cy="20" r="3" fill="#00D4FF"/></svg>
+  <div class="spinner"></div>
+  <div class="loading-text">正在汇总测评结果...</div>
+</div>
+
+<div class="container" id="main" style="display:none;">
+
+  <div class="page-logo">VE ESPORTS TALENT RADAR</div>
+
+  <!-- 评级展示 -->
+  <div class="result-hero">
+    <div class="complete-badge"><span class="complete-dot"></span>测评完成</div>
+    <div><div class="rating-badge" id="rating-badge"></div></div>
+    <div class="rating-sub" id="rating-sub"></div>
+    <div class="pct-display">超越了 <span id="pct-num">—</span>%</div>
+    <div class="pct-sub" id="pct-sub-text">的测评者</div>
+  </div>
+
+  <!-- 雷达图 -->
+  <div class="radar-wrap">
+    <canvas id="radar-chart"></canvas>
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- 解锁区域 -->
+  <div class="unlock-header">
+    <div class="unlock-title">解锁你的完整报告</div>
+    <div class="unlock-sub">查看七维详细分析、AI专业解读和PDF下载</div>
+  </div>
+
+  <!-- 邀请码用户：直接进入 -->
+  <div class="invited-box" id="invited-box" style="display:none;">
+    <div class="invited-tag">邀请码用户 · 专属权益</div>
+    <div class="invited-desc">你使用了有效邀请码参与测评，可免费查看完整的进阶版报告，包含所有深度分析内容。</div>
+    <button class="btn-invited" onclick="unlockReport('advanced')">查看完整报告 →</button>
+  </div>
+
+  <!-- 非邀请码用户：双卡片 -->
+  <div id="plans-box">
+    <div class="plans-grid">
+      <!-- 基础版 -->
+      <div class="plan-card">
+        <div class="plan-name">BASIC</div>
+        <div class="plan-price">¥6.9</div>
+        <div class="plan-price-sub">基础版报告</div>
+        <ul class="plan-features">
+          <li>综合评级 + 七维评分</li>
+          <li>七维战力雷达图</li>
+          <li>天赋标签</li>
+          <li>游戏 / 角色方向建议</li>
+          <li>简版训练建议</li>
+          <li>基础 PDF 报告（2页）</li>
+        </ul>
+        <button class="plan-btn basic" onclick="unlockReport('basic')">查看基础版报告</button>
+      </div>
+      <!-- 进阶版 -->
+      <div class="plan-card featured">
+        <div class="plan-name">ADVANCED</div>
+        <div class="plan-price">¥19.9</div>
+        <div class="plan-price-sub">进阶版报告</div>
+        <ul class="plan-features">
+          <li>基础版全部内容</li>
+          <li class="extra">七维能力深度拆解</li>
+          <li class="extra">能力结构分析</li>
+          <li class="extra">职业潜力评估</li>
+          <li class="extra">角色 / 项目细化方向</li>
+          <li class="extra">短板风险分析</li>
+          <li class="extra">个性化训练计划</li>
+          <li class="extra">进阶 PDF 报告（4-5页）</li>
+        </ul>
+        <button class="plan-btn advanced" onclick="unlockReport('advanced')">查看进阶版报告</button>
+      </div>
+    </div>
+    <div class="test-mode-note">📌 测试阶段：两个版本当前均免费开放，支付功能即将上线</div>
+    <div class="plan-note" style="margin-top:12px;">
+      <strong>关于俱乐部推荐：</strong>推荐资格与购买版本<strong>无关</strong>，仅与测评成绩有关。达到前 5% 或前 0.1% 评级的用户，VE 将主动向合作俱乐部推送你的报告，无论是否购买报告。
+    </div>
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- 俱乐部推荐（仅 genius/pro 显示） -->
+  <div class="club-section" id="club-section" style="display:none;">
+    <div class="club-badge" id="club-badge">俱乐部关注通道</div>
+    <div class="club-title" id="club-title"></div>
+    <div class="club-desc" id="club-desc"></div>
+    <div class="club-note">推荐资格与报告购买版本无关，仅基于测评成绩判定。基础版与进阶版用户享有完全相同的俱乐部推荐权益。</div>
+  </div>
+
+  <!-- 训练站入口（预埋） -->
+  <div class="training-section">
+    <div class="training-text">
+      <h3>VE 专项训练站</h3>
+      <p>根据你的测评数据，制定针对薄弱维度的专项训练计划<br>季会员 <del style="opacity:.5">¥14.9</del> → 购买报告后最低 ¥4.9</p>
+    </div>
+    <button class="btn-training">即将开放 · 敬请期待</button>
+  </div>
+
+  <div class="back-link">
+    <a href="/">返回首页重新测评</a>
+  </div>
+
+</div>
+
+<script>
+// ── 支付开关（后续改 true 即可）──
+const PAYMENT_ENABLED = false;
+
+// ── 评级配置（与 report.html 保持一致）──
+const DIM_KEYS = ['reaction','impulse','vision','cognition','aim','focus','color'];
+const DIM_NAMES = { reaction:'反应速度', impulse:'冲动抑制', vision:'动态视力', cognition:'认知处理速度', aim:'手眼协调', focus:'专注稳定性', color:'色觉感知' };
+
+const RATING_CONFIG = {
+  genius:{ label:'👑 职业级天才少年', sub:'你拥有十万里挑一的电竞天赋', cls:'genius', clubTitle:'你的天赋已触发俱乐部定向邀请', clubDesc:'恭喜！你达到了「职业级天才少年」的顶级评级，VE已将你的完整报告推送至合作俱乐部青训团队。俱乐部将在 <strong style="color:#FCD34D">3-7个工作日内</strong> 主动联系，邀请参加专业试训。', clubBadge:'俱乐部定向邀请 · 顶级通道' },
+  pro:{    label:'🚀 有潜力的电竞职业玩家', sub:'你具备突破职业门槛的潜力', cls:'pro', clubTitle:'俱乐部已收到你的天赋数据', clubDesc:'你的测评结果表明具备冲击职业的潜力。VE将把你纳入合作俱乐部人才储备库，如有适合机会，俱乐部将第一时间联系你。', clubBadge:'俱乐部人才储备 · 持续关注' },
+  normal:{ label:'🎮 普通玩家水平', sub:'具备一定游戏基础，通过训练可持续提升', cls:'normal' },
+  below:{  label:'📊 弱于普通人水平', sub:'基础能力有提升空间，坚持训练即可进步', cls:'below' }
+};
+
+function calcRating(s) {
+  const vals = DIM_KEYS.map(k => s[k] || 0);
+  const avg = vals.reduce((a,b)=>a+b,0)/7;
+  const above90 = vals.filter(v=>v>=90).length;
+  const above80 = vals.filter(v=>v>=80).length;
+  const minVal = Math.min(...vals);
+  if (avg >= 90 && above90 >= 4 && minVal >= 78) return 'genius';
+  if (avg >= 76 && above80 >= 3) return 'pro';
+  if (avg >= 45) return 'normal';
+  return 'below';
+}
+
+function scoreToPercentile(score) {
+  const z = (score - 50) / 15;
+  const t = 1 / (1 + 0.3275911 * Math.abs(z));
+  const poly = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
+  const erfc = poly * Math.exp(-z * z);
+  return Math.min(99.9, Math.max(0.1, z >= 0 ? (1 - erfc/2)*100 : erfc/2*100));
+}
+
+function unlockReport(mode) {
+  if (PAYMENT_ENABLED) {
+    window.location.href = `/pay.html?mode=${mode}`;
+  } else {
+    sessionStorage.setItem('ve_report_mode', mode);
+    window.location.href = '/report.html';
+  }
+}
+
+function init() {
+  const scores = JSON.parse(sessionStorage.getItem('ve_scores') || '{}');
+  if (!Object.keys(scores).length) { window.location.href = '/'; return; }
+
+  const ratingKey = calcRating(scores);
+  const cfg = RATING_CONFIG[ratingKey];
+  const avg = DIM_KEYS.reduce((a,k)=>a+(scores[k]||0),0)/7;
+  const pct = scoreToPercentile(avg);
+
+  // 评级
+  const badge = document.getElementById('rating-badge');
+  badge.textContent = cfg.label;
+  badge.className = 'rating-badge ' + cfg.cls;
+  document.getElementById('rating-sub').textContent = cfg.sub;
+
+  // 百分位
+  document.getElementById('pct-num').textContent = pct >= 99.9 ? '99.9+' : pct.toFixed(1);
+  const pctDesc = pct >= 99 ? '· 顶尖天赋，极为罕见' : pct >= 90 ? '· 远超大多数测评者' : pct >= 70 ? '· 高于平均水平' : '· 接近平均水平';
+  document.getElementById('pct-sub-text').textContent = '的测评者 ' + pctDesc;
+
+  // 雷达图
+  renderRadar(scores);
+
+  // 邀请码判断
+  const isInvited = sessionStorage.getItem('ve_invited') === 'true';
+  if (isInvited) {
+    document.getElementById('invited-box').style.display = 'block';
+    document.getElementById('plans-box').style.display = 'none';
+  }
+
+  // 俱乐部推荐区
+  if (ratingKey === 'genius' || ratingKey === 'pro') {
+    const sec = document.getElementById('club-section');
+    sec.style.display = 'block';
+    document.getElementById('club-badge').textContent = cfg.clubBadge;
+    document.getElementById('club-title').textContent = cfg.clubTitle;
+    document.getElementById('club-desc').innerHTML = cfg.clubDesc;
+  }
+
+  // 显示主内容
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('main').style.display = 'block';
+}
+
+function renderRadar(scores) {
+  const ctx = document.getElementById('radar-chart').getContext('2d');
+  new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: DIM_KEYS.map(k => DIM_NAMES[k]),
+      datasets: [{
+        data: DIM_KEYS.map(k => scores[k] || 0),
+        backgroundColor: 'rgba(0,212,255,0.1)',
+        borderColor: '#00D4FF',
+        borderWidth: 2,
+        pointBackgroundColor: '#00D4FF',
+        pointBorderColor: '#0A0E1A',
+        pointRadius: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      scales: { r: {
+        min:0, max:100,
+        grid: { color:'rgba(255,255,255,0.06)' },
+        angleLines: { color:'rgba(255,255,255,0.06)' },
+        pointLabels: { color:'#94A3B8', font:{size:10,family:"'Noto Sans SC'"} },
+        ticks: { display:false }
+      }},
+      plugins: { legend: { display:false } }
+    }
+  });
+}
+
+init();
+</script>
+</body>
+</html>

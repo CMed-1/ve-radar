@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>VE天赋雷达 · 管理后台</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0A0E1A;--cyan:#00D4FF;--purple:#7C3AED;--text:#FFF;--sub:#94A3B8;--border:rgba(0,212,255,0.2);--card:rgba(255,255,255,0.04);--green:#10B981;--red:#EF4444;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Noto Sans SC',sans-serif;min-height:100vh;}
+
+  /* 登录 */
+  #login-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:100;}
+  .login-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:40px;width:100%;max-width:400px;text-align:center;}
+  .login-title{font-family:'Orbitron',sans-serif;font-size:20px;color:var(--cyan);margin-bottom:8px;letter-spacing:2px;}
+  .login-sub{font-size:13px;color:var(--sub);margin-bottom:28px;}
+  .login-input{width:100%;padding:14px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:15px;outline:none;margin-bottom:14px;transition:border-color .2s;}
+  .login-input:focus{border-color:var(--cyan);}
+  .login-btn{width:100%;padding:14px;border-radius:10px;background:linear-gradient(135deg,var(--cyan),#0099CC);border:none;color:#0A0E1A;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;}
+  .login-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,212,255,0.3);}
+  .login-err{color:var(--red);font-size:13px;margin-top:10px;display:none;}
+
+  /* 主面板 */
+  #admin-panel{display:none;padding:24px;}
+  .admin-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;padding-bottom:20px;border-bottom:1px solid var(--border);}
+  .admin-logo{font-family:'Orbitron',sans-serif;font-size:16px;color:var(--cyan);letter-spacing:2px;}
+  .admin-logout{padding:8px 20px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--sub);font-family:'Noto Sans SC',sans-serif;cursor:pointer;transition:all .2s;}
+  .admin-logout:hover{border-color:var(--red);color:var(--red);}
+
+  /* 标签页 */
+  .tabs{display:flex;gap:2px;margin-bottom:28px;background:rgba(255,255,255,0.03);border-radius:10px;padding:4px;}
+  .tab-btn{flex:1;padding:10px;border-radius:8px;border:none;background:transparent;color:var(--sub);font-family:'Noto Sans SC',sans-serif;font-size:14px;cursor:pointer;transition:all .2s;}
+  .tab-btn.active{background:var(--card);color:var(--cyan);border:1px solid var(--border);}
+
+  /* 卡片 */
+  .panel{display:none;}
+  .panel.active{display:block;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:20px;}
+  .card-title{font-family:'Orbitron',sans-serif;font-size:12px;color:var(--cyan);letter-spacing:2px;margin-bottom:20px;}
+
+  /* 生成码 */
+  .gen-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;}
+  .form-group{flex:1;min-width:120px;}
+  .form-label{font-size:12px;color:var(--sub);margin-bottom:8px;display:block;}
+  .form-input{width:100%;padding:12px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;outline:none;transition:border-color .2s;}
+  .form-input:focus{border-color:var(--cyan);}
+  .btn-gen{padding:12px 28px;border-radius:8px;background:linear-gradient(135deg,var(--cyan),#0099CC);border:none;color:#0A0E1A;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s;}
+  .btn-gen:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,212,255,0.3);}
+  .gen-result{margin-top:16px;display:none;}
+  .code-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+  .code-chip{padding:6px 14px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.25);border-radius:20px;font-family:monospace;font-size:13px;color:var(--cyan);cursor:pointer;user-select:all;}
+  .code-chip:hover{background:rgba(0,212,255,0.15);}
+  .copy-all-btn{padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--sub);font-family:'Noto Sans SC',sans-serif;font-size:13px;cursor:pointer;margin-top:10px;}
+  .copy-all-btn:hover{border-color:var(--cyan);color:var(--cyan);}
+
+  /* 表格 */
+  .data-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .data-table th{text-align:left;padding:10px 12px;color:var(--sub);border-bottom:1px solid var(--border);font-weight:400;font-size:12px;letter-spacing:1px;}
+  .data-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle;}
+  .data-table tr:last-child td{border-bottom:none;}
+  .data-table tr:hover td{background:rgba(255,255,255,0.02);}
+  .status-used{color:var(--sub);}
+  .status-unused{color:var(--green);}
+  .rating-pill{padding:2px 10px;border-radius:10px;font-size:11px;}
+  .rating-genius{background:rgba(252,211,77,0.12);color:#FCD34D;}
+  .rating-pro{background:rgba(0,212,255,0.12);color:var(--cyan);}
+  .rating-normal{background:rgba(124,58,237,0.12);color:#A78BFA;}
+
+  /* 统计卡片 */
+  .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;margin-bottom:20px;}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;text-align:center;}
+  .stat-num{font-family:'Orbitron',sans-serif;font-size:28px;color:var(--cyan);}
+  .stat-label{font-size:12px;color:var(--sub);margin-top:4px;}
+
+  .refresh-btn{padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--sub);font-family:'Noto Sans SC',sans-serif;font-size:13px;cursor:pointer;float:right;}
+  .refresh-btn:hover{border-color:var(--cyan);color:var(--cyan);}
+
+  @media(max-width:600px){
+    .gen-row{flex-direction:column;}
+    .data-table{display:block;overflow-x:auto;}
+  }
+</style>
+</head>
+<body>
+
+<!-- 登录 -->
+<div id="login-screen">
+  <div class="login-card">
+    <div style="font-size:40px;margin-bottom:12px;">⬡</div>
+    <div class="login-title">VE管理后台</div>
+    <div class="login-sub">请输入管理员密码</div>
+    <input class="login-input" type="password" id="pwd-input" placeholder="管理员密码" onkeydown="if(event.key==='Enter')login()">
+    <button class="login-btn" onclick="login()">进入后台</button>
+    <div class="login-err" id="login-err">密码错误</div>
+  </div>
+</div>
+
+<!-- 主面板 -->
+<div id="admin-panel">
+  <div class="admin-header">
+    <div class="admin-logo">VE RADAR · 管理后台</div>
+    <button class="admin-logout" onclick="logout()">退出登录</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('codes')">邀请码管理</button>
+    <button class="tab-btn" onclick="switchTab('contacts')">联系方式库</button>
+    <button class="tab-btn" onclick="switchTab('stats')">数据概览</button>
+  </div>
+
+  <!-- 邀请码面板 -->
+  <div class="panel active" id="panel-codes">
+    <div class="card">
+      <div class="card-title">生成邀请码</div>
+      <div class="gen-row">
+        <div class="form-group">
+          <label class="form-label">生成数量</label>
+          <input class="form-input" type="number" id="gen-count" value="10" min="1" max="200">
+        </div>
+        <div class="form-group" style="flex:2;">
+          <label class="form-label">备注（可选）</label>
+          <input class="form-input" type="text" id="gen-note" placeholder="例：2024活动批次">
+        </div>
+        <button class="btn-gen" onclick="generateCodes()">生成</button>
+      </div>
+      <div class="gen-result" id="gen-result">
+        <div style="font-size:13px;color:var(--sub);margin-bottom:8px;">已生成（点击单个可复制）：</div>
+        <div class="code-list" id="code-list"></div>
+        <button class="copy-all-btn" onclick="copyAll()">一键复制全部</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">所有邀请码 <button class="refresh-btn" onclick="loadCodes()">刷新</button></div>
+      <table class="data-table" id="codes-table">
+        <thead><tr><th>邀请码</th><th>状态</th><th>使用时间</th><th>备注</th><th>生成时间</th></tr></thead>
+        <tbody id="codes-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 联系方式面板 -->
+  <div class="panel" id="panel-contacts">
+    <div class="card">
+      <div class="card-title">候选人联系方式 <button class="refresh-btn" onclick="loadContacts()">刷新</button></div>
+      <table class="data-table" id="contacts-table">
+        <thead><tr><th>姓名</th><th>联系方式</th><th>类型</th><th>评级</th><th>提交时间</th></tr></thead>
+        <tbody id="contacts-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 数据概览面板 -->
+  <div class="panel" id="panel-stats">
+    <div class="stats-row" id="stats-row"></div>
+    <div class="card">
+      <div class="card-title">快速操作</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button class="btn-gen" onclick="exportCSV()">导出联系方式CSV</button>
+        <button class="btn-gen" style="background:linear-gradient(135deg,var(--purple),#5B21B6);" onclick="exportCodeCSV()">导出邀请码CSV</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let adminPwd = '';
+let allCodes = [], allContacts = [];
+
+// ── 登录 ──────────────────────────────────────
+async function login() {
+  const pwd = document.getElementById('pwd-input').value;
+  if (!pwd) return;
+  const res = await fetch('/api/admin/codes', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ password: pwd })
+  });
+  const data = await res.json();
+  if (data.success) {
+    adminPwd = pwd;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-panel').style.display = 'block';
+    allCodes = data.codes;
+    renderCodes();
+    loadContacts();
+    renderStats();
+  } else {
+    document.getElementById('login-err').style.display = 'block';
+  }
+}
+
+function logout() {
+  adminPwd = ''; location.reload();
+}
+
+// ── 标签切换 ──────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => {
+    b.classList.toggle('active', ['codes','contacts','stats'][i]===tab);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-'+tab).classList.add('active');
+  if (tab==='contacts') loadContacts();
+  if (tab==='stats') renderStats();
+}
+
+// ── 生成邀请码 ────────────────────────────────
+async function generateCodes() {
+  const count = parseInt(document.getElementById('gen-count').value)||1;
+  const note = document.getElementById('gen-note').value.trim();
+  const res = await fetch('/api/admin/generate-codes', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ password:adminPwd, count, note })
+  });
+  const data = await res.json();
+  if (!data.success) { alert(data.message); return; }
+
+  const resultEl = document.getElementById('gen-result');
+  const listEl = document.getElementById('code-list');
+  resultEl.style.display = 'block';
+  listEl.innerHTML = '';
+  data.codes.forEach(code => {
+    const chip = document.createElement('div');
+    chip.className = 'code-chip';
+    chip.textContent = code;
+    chip.onclick = () => { navigator.clipboard.writeText(code); chip.style.background='rgba(16,185,129,0.15)'; setTimeout(()=>chip.style.background='',800); };
+    listEl.appendChild(chip);
+  });
+
+  await loadCodes();
+}
+
+async function loadCodes() {
+  const res = await fetch('/api/admin/codes', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ password: adminPwd })
+  });
+  const data = await res.json();
+  if (data.success) { allCodes = data.codes; renderCodes(); renderStats(); }
+}
+
+function renderCodes() {
+  const tbody = document.getElementById('codes-tbody');
+  tbody.innerHTML = allCodes.map(c=>`
+    <tr>
+      <td><span style="font-family:monospace;color:var(--cyan)">${c.code}</span></td>
+      <td><span class="${c.used?'status-used':'status-unused'}">${c.used?'已使用':'可用'}</span></td>
+      <td style="color:var(--sub)">${c.used_at ? c.used_at.slice(0,16) : '—'}</td>
+      <td style="color:var(--sub)">${c.note||'—'}</td>
+      <td style="color:var(--sub)">${c.created_at.slice(0,16)}</td>
+    </tr>`).join('');
+}
+
+// ── 联系方式 ──────────────────────────────────
+async function loadContacts() {
+  const res = await fetch('/api/admin/contacts', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ password: adminPwd })
+  });
+  const data = await res.json();
+  if (data.success) { allContacts = data.contacts; renderContacts(); renderStats(); }
+}
+
+function renderContacts() {
+  const tbody = document.getElementById('contacts-tbody');
+  tbody.innerHTML = allContacts.map(c=>{
+    const rLabel = c.rating||'';
+    const rClass = rLabel.includes('天才')?'rating-genius':rLabel.includes('潜力')?'rating-pro':'rating-normal';
+    return `<tr>
+      <td>${c.name||'—'}</td>
+      <td><strong style="font-family:monospace">${c.contact}</strong></td>
+      <td style="color:var(--sub)">${c.contact_type||'—'}</td>
+      <td><span class="rating-pill ${rClass}">${(rLabel.replace(/^[^\s]+\s/,''))||'—'}</span></td>
+      <td style="color:var(--sub)">${c.created_at.slice(0,16)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── 统计 ──────────────────────────────────────
+function renderStats() {
+  const total = allCodes.length;
+  const used = allCodes.filter(c=>c.used).length;
+  const unused = total - used;
+  const contacts = allContacts.length;
+  const geniusCount = allContacts.filter(c=>(c.rating||'').includes('天才')).length;
+
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">总邀请码</div></div>
+    <div class="stat-card"><div class="stat-num">${used}</div><div class="stat-label">已使用</div></div>
+    <div class="stat-card"><div class="stat-num">${unused}</div><div class="stat-label">剩余可用</div></div>
+    <div class="stat-card"><div class="stat-num">${contacts}</div><div class="stat-label">候选人</div></div>
+    <div class="stat-card"><div class="stat-num" style="color:#FCD34D">${geniusCount}</div><div class="stat-label">天才少年</div></div>`;
+}
+
+// ── 导出 ──────────────────────────────────────
+function exportCSV() {
+  const rows = [['姓名','联系方式','类型','评级','时间']];
+  allContacts.forEach(c=>rows.push([c.name||'',c.contact,c.contact_type||'',c.rating||'',c.created_at.slice(0,16)]));
+  downloadCSV(rows, 'VE候选人联系方式.csv');
+}
+
+function exportCodeCSV() {
+  const rows = [['邀请码','状态','使用时间','备注','生成时间']];
+  allCodes.forEach(c=>rows.push([c.code,c.used?'已使用':'可用',c.used_at||'',c.note||'',c.created_at.slice(0,16)]));
+  downloadCSV(rows, 'VE邀请码列表.csv');
+}
+
+function downloadCSV(rows, filename) {
+  const csv = rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename; a.click();
+}
+
+function copyAll() {
+  const codes = document.querySelectorAll('.code-chip');
+  const text = [...codes].map(c=>c.textContent).join('\n');
+  navigator.clipboard.writeText(text).then(()=>alert(`已复制 ${codes.length} 个邀请码`));
+}
+
+document.getElementById('pwd-input').addEventListener('keydown', e=>{if(e.key==='Enter')login();});
+</script>
+</body>
+</html>
