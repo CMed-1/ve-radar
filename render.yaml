@@ -4,6 +4,10 @@ services:
     env: node
     buildCommand: npm install
     startCommand: npm start
+    disk:
+      name: ve-data
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
       - key: MINIMAX_API_KEY
         sync: false
