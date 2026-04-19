@@ -503,9 +503,10 @@ function buildCriteriaContent() {
   `;
 }
 
-// ── 百分位计算（正态分布近似：均值50，标准差15） ──
+// ── 百分位计算（正态分布近似：均值55，标准差16）
+//    校准：普通测评者综合均分约55 → 第50百分位
 function scoreToPercentile(score) {
-  const z = (score - 50) / 15;
+  const z = (score - 55) / 16;
   const t = 1 / (1 + 0.3275911 * Math.abs(z));
   const poly = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
   const erfc = poly * Math.exp(-z * z);
