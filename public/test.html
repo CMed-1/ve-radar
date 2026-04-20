@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>VE天赋雷达 · 测评进行中</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/nipplejs/0.10.2/nipplejs.min.js"></script>
 <style>
   :root {
     --bg:#000000; --cyan:#76b900; --cyan-dim:rgba(118,185,0,0.1);
@@ -164,6 +165,16 @@
   .cp2-dot.hit{border-color:#10B981 !important;transform:scale(1.15);}
   .cp2-dot.wrong{border-color:#EF4444 !important;transform:scale(0.88);}
   @media(max-width:500px){.cp2-dot{width:44px;height:44px;}#cp2-grid{gap:8px;}}
+  /* ── RT Block 2 竞技场 ── */
+  #reaction2-arena{width:100%;max-width:640px;aspect-ratio:16/9;border-radius:4px;border:2px solid var(--border);background:#0a0a0a;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;transition:background .15s,border-color .15s;user-select:none;}
+  #reaction2-arena.wait{background:#0a0a0a;border-color:var(--border);}
+  #reaction2-arena.ready{background:#111111;border-color:var(--border);}
+  #reaction2-arena.go{background:rgba(118,185,0,0.08);border-color:var(--cyan);}
+  #reaction2-arena.early{background:rgba(239,68,68,0.08);border-color:var(--red);}
+
+  /* ── N-back 测试 ── */
+  #nback-display{width:180px;height:180px;background:var(--card);border:2px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:84px;font-weight:700;color:var(--cyan);margin:0 auto 20px;user-select:none;transition:border-color .15s;}
+
   /* ── 最终计算屏 ── */
   .calc-spinner{width:48px;height:48px;border:2px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:24px;}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -184,7 +195,7 @@
      TEST 1: 反应速度 - 说明
 ════════════════════════════════════════════ -->
 <div class="screen active" id="s-reaction-intro">
-  <div class="test-index">TEST 01 / 05</div>
+  <div class="test-index">TEST 01 / 08</div>
   <div class="test-title">反应速度测试</div>
   <div class="test-desc">测量你从看到刺激到做出反应的神经传导时间，这是电竞最核心的生理天赋指标。</div>
   <div class="tip-box">
@@ -203,7 +214,7 @@
      TEST 1: 反应速度 - 测试
 ════════════════════════════════════════════ -->
 <div class="screen" id="s-reaction-test">
-  <div class="test-index" style="margin-bottom:12px;">TEST 01 — 第 <span id="rt-round">1</span> / 8 轮</div>
+  <div class="test-index" style="margin-bottom:12px;">TEST 01 — 第 <span id="rt-round">1</span> / 10 轮</div>
   <div id="reaction-arena" onclick="handleReactionClick()">
     <div class="arena-text" id="arena-text">准备...</div>
     <div class="arena-sub" id="arena-sub">等待信号</div>
@@ -215,7 +226,7 @@
      TEST 2: 冲动抑制 - 说明
 ════════════════════════════════════════════ -->
 <div class="screen" id="s-gng-intro">
-  <div class="test-index">TEST 02 / 05</div>
+  <div class="test-index">TEST 02 / 08</div>
   <div class="test-title">冲动抑制测试</div>
   <div class="test-desc">在高速刺激下控制自身冲动的能力——职业玩家与普通玩家的关键分水岭。</div>
   <div class="tip-box">
@@ -234,7 +245,7 @@
      TEST 2: 冲动抑制 - 测试
 ════════════════════════════════════════════ -->
 <div class="screen" id="s-gng-test">
-  <div class="test-index" style="margin-bottom:16px;">TEST 02 — 第 <span id="gng-round">1</span> / 20 轮</div>
+  <div class="test-index" style="margin-bottom:16px;">TEST 02 — 第 <span id="gng-round">1</span> / 24 轮</div>
   <div id="gng-arena" class="blank" onclick="handleGNG()">等待...</div>
   <div class="gng-stats">
     <div class="gng-stat"><div class="gng-stat-num" id="gng-hits">0</div><div class="gng-stat-label">命中</div></div>
@@ -247,7 +258,7 @@
      TEST 3: 动态视力 - 说明
 ════════════════════════════════════════════ -->
 <div class="screen" id="s-vision-intro">
-  <div class="test-index">TEST 03 / 05</div>
+  <div class="test-index">TEST 03 / 08</div>
   <div class="test-title">动态视力测试</div>
   <div class="test-desc">在极短的闪现中捕获数字序列，检测你处理瞬间视觉信息的能力。</div>
   <div class="tip-box">
@@ -266,7 +277,7 @@
      TEST 3: 动态视力 - 测试
 ════════════════════════════════════════════ -->
 <div class="screen" id="s-vision-test">
-  <div class="test-index" style="margin-bottom:8px;">TEST 03 — 第 <span id="vision-round">1</span> / 6 轮</div>
+  <div class="test-index" style="margin-bottom:8px;">TEST 03 — 第 <span id="vision-round">1</span> / 8 轮</div>
   <div class="vision-round-info" id="vision-info">准备好后点击下方按钮显示数字</div>
   <div id="vision-display">···</div>
   <input type="number" id="vision-input" placeholder="输入数字" disabled autocomplete="off">
@@ -275,10 +286,42 @@
 </div>
 
 <!-- ═══════════════════════════════════════════
-     TEST 4: 数字方格 - 说明
+     TEST 4: 工作记忆 N-back - 说明
+════════════════════════════════════════════ -->
+<div class="screen" id="s-nback-intro">
+  <div class="test-index">TEST 04 / 08</div>
+  <div class="test-title">工作记忆测试</div>
+  <div class="test-desc">职业选手能同时追踪多个目标——这项测试检测你动态更新信息、追踪前序状态的能力。</div>
+  <div class="tip-box">
+    <h4>📋 测试说明</h4>
+    <ul>
+      <li>屏幕依次出现字母，每个持续约 700ms</li>
+      <li>当当前字母与 <strong style="color:var(--cyan)">前 2 个字母</strong> 相同时，立即点击 SAME</li>
+      <li>共 20 个字母，节奏较快，保持专注</li>
+      <li>第 1、2 个字母无需判断（2-back 不存在）</li>
+    </ul>
+  </div>
+  <button class="btn-start" onclick="startNback()">开始测试</button>
+</div>
+
+<!-- TEST 4: 工作记忆 N-back - 测试 -->
+<div class="screen" id="s-nback-test">
+  <div class="test-index" style="margin-bottom:12px;">TEST 04 — 第 <span id="nb-current">0</span> / 20 个</div>
+  <div id="nback-display"></div>
+  <div id="nback-feedback" style="height:22px;font-size:14px;color:var(--sub);margin-bottom:20px;font-weight:600;"></div>
+  <button class="btn-start" style="font-size:18px;padding:18px 64px;letter-spacing:3px;" onclick="nbackSame()">SAME</button>
+  <div style="margin-top:24px;display:flex;gap:32px;justify-content:center;">
+    <div style="text-align:center;"><div id="nb-hits" style="font-size:24px;font-weight:700;color:var(--cyan);font-variant-numeric:tabular-nums;">0</div><div style="font-size:11px;color:var(--sub);margin-top:4px;">正确命中</div></div>
+    <div style="text-align:center;"><div id="nb-fa" style="font-size:24px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums;">0</div><div style="font-size:11px;color:var(--sub);margin-top:4px;">误触</div></div>
+    <div style="text-align:center;"><div id="nb-progress" style="font-size:24px;font-weight:700;color:var(--sub);font-variant-numeric:tabular-nums;">0/20</div><div style="font-size:11px;color:var(--sub);margin-top:4px;">进度</div></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TEST 5: 数字方格 - 说明
 ════════════════════════════════════════════ -->
 <div class="screen" id="s-grid-intro">
-  <div class="test-index">TEST 04 / 05</div>
+  <div class="test-index">TEST 05 / 08</div>
   <div class="test-title">认知处理速度测试</div>
   <div class="test-desc">在随机排列的数字方格中，按从小到大顺序点击数字，测试你的信息处理与空间认知速度。</div>
   <div class="tip-box">
@@ -297,17 +340,43 @@
      TEST 4: 数字方格 - 测试
 ════════════════════════════════════════════ -->
 <div class="screen" id="s-grid-test">
-  <div class="test-index" style="margin-bottom:4px;">TEST 04 — <span id="grid-level-label">3×3</span></div>
+  <div class="test-index" style="margin-bottom:4px;">TEST 05 — <span id="grid-level-label">3×3</span></div>
   <div class="grid-timer" id="grid-timer">0.0</div>
   <div class="grid-info" id="grid-info">下一个：<span id="grid-next" style="color:var(--cyan);font-weight:700;">1</span></div>
   <div id="grid-container"></div>
 </div>
 
 <!-- ═══════════════════════════════════════════
-     TEST 5: Aim - 说明
+     TEST 6: Aim 灵敏度校准（移动端）
+════════════════════════════════════════════ -->
+<div class="screen" id="s-aim-sensitivity">
+  <div class="test-index">TEST 06 / 08 — 灵敏度校准</div>
+  <div class="test-title">调整灵敏度</div>
+  <div class="test-desc">移动摇杆控制准星，命中目标后点击确认开始正式测试。调整滑块找到最适合你的手感。</div>
+  <div id="sens-arena" style="width:100%;max-width:520px;height:220px;background:#0a0a0a;border:1px solid var(--border);border-radius:4px;position:relative;overflow:hidden;margin:0 auto 20px;touch-action:none;">
+    <div id="sens-crosshair" style="position:absolute;width:36px;height:36px;pointer-events:none;z-index:10;transform:translate(-50%,-50%);display:none;">
+      <div style="position:absolute;width:100%;height:2px;top:50%;left:0;transform:translateY(-50%);background:rgba(118,185,0,.9);border-radius:1px;"></div>
+      <div style="position:absolute;width:2px;height:100%;left:50%;top:0;transform:translateX(-50%);background:rgba(118,185,0,.9);border-radius:1px;"></div>
+      <div style="position:absolute;width:14px;height:14px;border-radius:50%;border:2px solid rgba(118,185,0,.9);top:50%;left:50%;transform:translate(-50%,-50%);"></div>
+    </div>
+    <div id="sens-target" style="position:absolute;width:54px;height:54px;border-radius:50%;background:radial-gradient(circle at 38% 38%,rgba(255,255,255,0.9) 0%,rgba(118,185,0,0.9) 20%,rgba(118,185,0,0.35) 55%,transparent 100%);border:2px solid var(--cyan);transform:translate(-50%,-50%);top:50%;left:50%;transition:transform .15s;"></div>
+  </div>
+  <div style="width:100%;max-width:520px;margin:0 auto 12px;display:flex;align-items:center;gap:16px;">
+    <span style="font-size:13px;color:var(--sub);white-space:nowrap;">灵敏度</span>
+    <input type="range" id="sens-slider" min="1" max="10" value="5" style="flex:1;accent-color:var(--cyan);" oninput="updateSensitivity(this.value)">
+    <span id="sens-value" style="font-size:16px;font-weight:700;color:var(--cyan);min-width:20px;text-align:right;">5</span>
+  </div>
+  <div style="font-size:14px;color:var(--sub);margin-bottom:24px;">已命中 <span id="sens-hits-count" style="color:var(--cyan);font-weight:700;">0</span> 个目标 · 命中 3 个后可开始</div>
+  <!-- 摇杆放在底部 -->
+  <div id="sens-joy-wrap" style="margin:0 auto 20px;"><div id="sens-joy-zone" style="width:120px;height:120px;"></div></div>
+  <button id="sens-start-btn" class="btn-start" onclick="startAimFromSensitivity()" disabled>确认灵敏度，开始正式测试</button>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TEST 6: Aim - 说明
 ════════════════════════════════════════════ -->
 <div class="screen" id="s-aim-intro">
-  <div class="test-index">TEST 05 / 05</div>
+  <div class="test-index">TEST 06 / 08</div>
   <div class="test-title">手眼协调测试</div>
   <div class="test-desc">参考 Aim Lab Gridshot 模式，屏幕上同时出现 3 个目标，快速点击命中后立刻在新位置生成，持续 30 秒。</div>
   <div class="tip-box">
@@ -320,14 +389,14 @@
       <li>评分综合：命中率 + 每分钟命中数 + 平均反应速度</li>
     </ul>
   </div>
-  <button class="btn-start" onclick="startAim()">开始测试</button>
+  <button class="btn-start" onclick="isMobile ? startSensitivityCal() : startAim()">开始测试</button>
 </div>
 
 <!-- ═══════════════════════════════════════════
-     TEST 5: Aim - 测试
+     TEST 6: Aim - 测试
 ════════════════════════════════════════════ -->
 <div class="screen" id="s-aim-test">
-  <div class="test-index" style="margin-bottom:10px;">TEST 05 — GRIDSHOT · 3 目标同屏</div>
+  <div class="test-index" style="margin-bottom:10px;">TEST 06 — GRIDSHOT · 3 目标同屏</div>
   <div id="aim-arena">
     <div class="aim-timer-bar" id="aim-timer-bar" style="width:100%"></div>
     <div class="aim-miss-flash" id="aim-miss-flash"></div>
@@ -348,7 +417,7 @@
      TEST 5: Aim - 结果
 ════════════════════════════════════════════ -->
 <div class="screen" id="s-aim-result">
-  <div class="test-index">TEST 05 — 手眼协调 · 结果</div>
+  <div class="test-index">TEST 06 — 手眼协调 · 结果</div>
   <div class="aim-score-badge" id="aim-final-score">—</div>
   <div style="font-size:13px;color:var(--sub);margin:8px 0 4px;letter-spacing:2px;">综合得分 / 100</div>
   <div class="aim-result-grid">
@@ -384,7 +453,7 @@
      TEST 6: 颜色感知 - 说明
 ════════════════════════════════════════════ -->
 <div class="screen" id="s-color-intro">
-  <div class="test-index">TEST 06 / 06</div>
+  <div class="test-index">TEST 07 / 08</div>
   <div class="test-title">色觉感知测试</div>
   <div class="test-desc">电竞俱乐部选材必测项目。测量你快速识别特定颜色的能力——在 FPS 中，0.1秒的敌我颜色辨别差距可以决定胜负。</div>
   <div class="tip-box">
@@ -402,7 +471,7 @@
      TEST 6: 颜色感知 - 阶段一
 ════════════════════════════════════════════ -->
 <div class="screen" id="s-color-p1">
-  <div class="test-index" style="margin-bottom:10px;">TEST 06 — 阶段一：颜色反应 · 第 <span id="cp1-round">1</span>/20 轮</div>
+  <div class="test-index" style="margin-bottom:10px;">TEST 07 — 阶段一：颜色反应 · 第 <span id="cp1-round">1</span>/20 轮</div>
   <div id="color-arena" onclick="handleColorClick()">
     <div id="color-arena-text">等待...</div>
     <div id="color-arena-sub">屏幕变红时点击</div>
@@ -428,11 +497,38 @@
      TEST 6: 颜色感知 - 阶段二
 ════════════════════════════════════════════ -->
 <div class="screen" id="s-color-p2">
-  <div class="test-index" style="margin-bottom:8px;">TEST 06 — 阶段二：目标识别 · 第 <span id="cp2-round">1</span>/8 轮</div>
+  <div class="test-index" style="margin-bottom:8px;">TEST 07 — 阶段二：目标识别 · 第 <span id="cp2-round">1</span>/8 轮</div>
   <div class="vision-round-info">快速点击所有 <span style="color:#EF4444;font-weight:700;">红色</span> 目标，别误触其他颜色！</div>
   <div id="cp2-timer-wrap"><div id="cp2-timer-bar"></div></div>
   <div id="cp2-grid"></div>
   <div class="vision-feedback" id="cp2-feedback"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TEST 8: 专注稳定性 - 说明
+════════════════════════════════════════════ -->
+<div class="screen" id="s-reaction2-intro">
+  <div class="test-index">TEST 08 / 08</div>
+  <div class="test-title">专注稳定性测试</div>
+  <div class="test-desc">经历一系列高强度测试后，你的反应速度是否依然稳定？这项测试与第一项对比，量化你的持续专注能力。</div>
+  <div class="tip-box">
+    <h4>📋 测试说明</h4>
+    <ul>
+      <li>与第一项相同——等待屏幕变亮，立即点击</li>
+      <li>共 6 轮，结合初始数据分析专注稳定性</li>
+      <li>放松心态，按正常状态来即可</li>
+    </ul>
+  </div>
+  <button class="btn-start" onclick="startReaction2()">最后一项，开始</button>
+</div>
+
+<div class="screen" id="s-reaction2-test">
+  <div class="test-index" style="margin-bottom:12px;">TEST 08 — 第 <span id="rt2-round">1</span> / 6 轮</div>
+  <div id="reaction2-arena" class="wait" onclick="handleReaction2Click()">
+    <div class="arena-text" id="arena2-text">准备...</div>
+    <div class="arena-sub" id="arena2-sub">等待信号</div>
+  </div>
+  <div class="reaction-results" id="reaction2-results"></div>
 </div>
 
 <!-- ═══════════════════════════════════════════
@@ -460,9 +556,9 @@ const TESTS = ['reaction','gng','vision','grid','aim'];
 let currentTest = 0;
 
 function setProgress(step) {
-  const pct = (step / 6) * 100;
+  const pct = (step / 8) * 100;
   document.getElementById('progress-bar').style.width = pct + '%';
-  document.getElementById('progress-text').textContent = `测试 ${step}/6`;
+  document.getElementById('progress-text').textContent = `测试 ${step}/8`;
 }
 
 function showScreen(id) {
@@ -474,7 +570,7 @@ function showScreen(id) {
 // TEST 1: 反应速度
 // ════════════════════════════════════════════
 const RT = {
-  round: 0, total: 8, times: [], state: 'idle',
+  round: 0, total: 10, times: [], state: 'idle',
   timer: null, startTime: 0
 };
 
@@ -543,6 +639,8 @@ function handleReactionClick() {
 
 function addRTChip(text, cls) {
   const wrap = document.getElementById('reaction-results');
+  const existing = wrap.querySelectorAll('.rt-chip');
+  if (existing.length >= 3) existing[0].remove();
   const chip = document.createElement('div');
   chip.className = 'rt-chip ' + cls;
   chip.textContent = text;
@@ -569,17 +667,17 @@ function finishReaction() {
 // TEST 2: 冲动抑制 (Go/No-Go)
 // ════════════════════════════════════════════
 const GNG = {
-  round:0, total:20, state:'idle',
+  round:0, total:24, state:'idle',
   hits:0, falseAlarms:0, misses:0,
   isGo:false, timer:null, startTime:0,
   rtTimes:[]
 };
-// 20轮中 14个Go, 6个No-Go，随机排列
+// 24轮中 17个Go, 7个No-Go，随机排列
 let gngSequence = [];
 
 function startGNG() {
   setProgress(2);
-  gngSequence = shuffle([...Array(14).fill(true), ...Array(6).fill(false)]);
+  gngSequence = shuffle([...Array(17).fill(true), ...Array(7).fill(false)]);
   GNG.round=0; GNG.hits=0; GNG.falseAlarms=0; GNG.misses=0; GNG.rtTimes=[];
   showScreen('s-gng-test');
   setTimeout(nextGNGRound, 800);
@@ -648,10 +746,10 @@ function finishGNG() {
 // TEST 3: 动态视力
 // ════════════════════════════════════════════
 const VIS = {
-  round:0, total:6, correct:0, currentDigits:'', state:'idle'
+  round:0, total:8, correct:0, currentDigits:'', state:'idle'
 };
 // 轮次配置：[位数, 显示时间ms]
-const VIS_CONFIG = [[4,350],[4,300],[5,300],[5,250],[6,250],[6,220]];
+const VIS_CONFIG = [[4,350],[4,300],[5,300],[5,250],[6,250],[6,220],[6,200],[6,180]];
 
 function startVision() {
   setProgress(3);
@@ -729,11 +827,115 @@ function finishVision() {
   const rate = VIS.correct / VIS.total;
   scores.vision = Math.round(rate * 100);
   currentTest = 3;
+  showScreen('s-nback-intro');
+}
+
+// ════════════════════════════════════════════
+// TEST 4: 工作记忆 N-back (2-back 字母任务)
+// ════════════════════════════════════════════
+const NBACK_LETTERS = ['A','B','C','D','F','H','L','M','P','R'];
+const NBACK_N = 2;
+const NBACK_TOTAL = 20;
+const NB = { sequence:[], idx:0, hits:0, misses:0, falseAlarms:0, responded:false, displayTimer:null, pauseTimer:null };
+
+function buildNbackSequence() {
+  const seq = [];
+  for (let i = 0; i < NBACK_TOTAL; i++) {
+    if (i >= NBACK_N && Math.random() < 0.28 && seq[i-NBACK_N] !== seq[i-1]) {
+      seq.push(seq[i - NBACK_N]); // 强制目标
+    } else {
+      let letter;
+      do { letter = NBACK_LETTERS[Math.floor(Math.random() * NBACK_LETTERS.length)]; }
+      while (i >= NBACK_N && letter === seq[i - NBACK_N]); // 避免意外匹配
+      seq.push(letter);
+    }
+  }
+  return seq;
+}
+
+function startNback() {
+  setProgress(4);
+  NB.sequence = buildNbackSequence();
+  NB.idx = 0; NB.hits = 0; NB.misses = 0; NB.falseAlarms = 0;
+  showScreen('s-nback-test');
+  document.getElementById('nb-hits').textContent = '0';
+  document.getElementById('nb-fa').textContent = '0';
+  document.getElementById('nb-progress').textContent = '0/20';
+  document.getElementById('nback-feedback').textContent = '';
+  document.getElementById('nback-display').textContent = '';
+  document.getElementById('nback-display').style.borderColor = 'var(--border)';
+  setTimeout(showNbackStimulus, 600);
+}
+
+function showNbackStimulus() {
+  if (NB.idx >= NBACK_TOTAL) { finishNback(); return; }
+  NB.responded = false;
+  const letter = NB.sequence[NB.idx];
+  const display = document.getElementById('nback-display');
+  display.textContent = letter;
+  display.style.borderColor = 'var(--border)';
+  document.getElementById('nback-feedback').textContent = '';
+  document.getElementById('nb-progress').textContent = (NB.idx + 1) + '/20';
+
+  // 显示 700ms 后隐藏，再等 1600ms 后下一个
+  NB.displayTimer = setTimeout(() => {
+    // 检查漏触
+    const isTarget = NB.idx >= NBACK_N && NB.sequence[NB.idx] === NB.sequence[NB.idx - NBACK_N];
+    if (isTarget && !NB.responded) {
+      NB.misses++;
+      document.getElementById('nback-feedback').textContent = '漏触了！';
+      document.getElementById('nback-feedback').style.color = 'var(--yellow)';
+    }
+    display.textContent = '';
+    NB.idx++;
+    NB.pauseTimer = setTimeout(showNbackStimulus, 1600);
+  }, 700);
+}
+
+function nbackSame() {
+  if (NB.idx >= NBACK_TOTAL) return;
+  if (NB.responded) return; // 已经响应过
+  NB.responded = true;
+  const isTarget = NB.idx >= NBACK_N && NB.sequence[NB.idx] === NB.sequence[NB.idx - NBACK_N];
+  const display = document.getElementById('nback-display');
+  const fb = document.getElementById('nback-feedback');
+  if (isTarget) {
+    NB.hits++;
+    display.style.borderColor = 'var(--cyan)';
+    fb.textContent = '✓ 正确！';
+    fb.style.color = 'var(--cyan)';
+    document.getElementById('nb-hits').textContent = NB.hits;
+  } else {
+    NB.falseAlarms++;
+    display.style.borderColor = 'var(--red)';
+    fb.textContent = '✗ 误触';
+    fb.style.color = 'var(--red)';
+    document.getElementById('nb-fa').textContent = NB.falseAlarms;
+  }
+}
+
+function finishNback() {
+  clearTimeout(NB.displayTimer);
+  clearTimeout(NB.pauseTimer);
+  // 计算目标数量
+  let targets = 0;
+  for (let i = NBACK_N; i < NBACK_TOTAL; i++) {
+    if (NB.sequence[i] === NB.sequence[i - NBACK_N]) targets++;
+  }
+  const nonTargets = NBACK_TOTAL - NBACK_N - targets;
+  const hitRate = targets > 0 ? NB.hits / targets : 0;
+  const faRate = nonTargets > 0 ? NB.falseAlarms / nonTargets : 0;
+  const nbScore = Math.max(0, Math.min(100, Math.round(hitRate * 80 - faRate * 40 + 20)));
+  rawData.nbScore = nbScore;
+  rawData.nbHits = NB.hits;
+  rawData.nbMisses = NB.misses;
+  rawData.nbFalseAlarms = NB.falseAlarms;
+  rawData.nbTargets = targets;
   showScreen('s-grid-intro');
 }
 
 // ════════════════════════════════════════════
-// TEST 4: 数字方格
+// TEST 5: 数字方格
 // ════════════════════════════════════════════
 const GRID = {
   level: 0, levels: [3,4,5],
@@ -743,7 +945,7 @@ const GRID = {
 };
 
 function startGrid() {
-  setProgress(4);
+  setProgress(5);
   GRID.level=0; GRID.times=[]; GRID.allErrors=0;
   showScreen('s-grid-test');
   renderGridLevel();
@@ -823,7 +1025,10 @@ function finishGrid() {
     s -= errors * 5;
     totalScore += Math.max(0, s);
   });
-  scores.cognition = Math.min(100, Math.max(0, Math.round(totalScore / GRID.times.length)));
+  const gridScore = Math.min(100, Math.max(0, Math.round(totalScore / GRID.times.length)));
+  // 融合 N-back 工作记忆分数 (60% grid, 40% n-back)
+  const nbScoreVal = rawData.nbScore !== undefined ? rawData.nbScore : 50;
+  scores.cognition = Math.min(100, Math.max(0, Math.round(gridScore * 0.6 + nbScoreVal * 0.4)));
   currentTest = 4;
   showScreen('s-aim-intro');
 }
@@ -832,17 +1037,21 @@ function finishGrid() {
 // TEST 5: Aim 瞄准 (Gridshot 模式)
 // ════════════════════════════════════════════
 const SIMULTANEOUS = 3; // 始终保持3个目标在屏幕上
+let AIM_SENSITIVITY = 5; // 1-10，由灵敏度校准设置
+const AIM_GRID = { cols: 8, rows: 5 };
+const aimOccupied = new Set(); // 已占用的格子
 const AIM = {
   hits: 0, shots: 0, expired: 0,
   hitTimes: [], streak: 0, bestStreak: 0,
-  duration: 30000, endTime: 0,
-  targetSize: isMobile ? 62 : 46,
+  duration: 45000, endTime: 0,
+  targetSize: isMobile ? 58 : 44,
   timerInterval: null, finished: false,
-  activeTargets: 0 // 当前屏幕上的目标数
+  activeTargets: 0
 };
 
 function startAim() {
-  setProgress(5);
+  setProgress(6);
+  aimOccupied.clear();
   Object.assign(AIM, {
     hits:0, shots:0, expired:0,
     hitTimes:[], streak:0, bestStreak:0,
@@ -874,17 +1083,26 @@ function spawnOneTarget() {
 
   const arena = document.getElementById('aim-arena');
   const rect = arena.getBoundingClientRect();
-  // 随机大小：±12px 变化，使目标有大有小
-  const size = AIM.targetSize + Math.round((Math.random() - 0.5) * 24);
-  const margin = size * 0.9;
-  const areaW = Math.max(margin * 2, rect.width);
-  const areaH = Math.max(margin * 2, rect.height);
+  const size = AIM.targetSize;
+
+  // 网格定位（仿真实AimLab Gridshot固定格子位置）
+  const totalCells = AIM_GRID.cols * AIM_GRID.rows;
+  let cellId, attempts = 0;
+  do {
+    cellId = Math.floor(Math.random() * totalCells);
+    attempts++;
+  } while (aimOccupied.has(cellId) && attempts < 30);
+  aimOccupied.add(cellId);
+  const col = cellId % AIM_GRID.cols;
+  const row = Math.floor(cellId / AIM_GRID.cols);
+  const cellW = rect.width / AIM_GRID.cols;
+  const cellH = rect.height / AIM_GRID.rows;
 
   const target = document.createElement('div');
   target.className = 'aim-target';
   target.style.width = target.style.height = size + 'px';
-  target.style.left = (margin + Math.random() * (areaW - 2 * margin)) + 'px';
-  target.style.top = (margin + Math.random() * (areaH - 2 * margin)) + 'px';
+  target.style.left = ((col + 0.5) * cellW) + 'px';
+  target.style.top  = ((row + 0.5) * cellH) + 'px';
 
   const spawnTime = Date.now();
   AIM.activeTargets++;
@@ -892,6 +1110,7 @@ function spawnOneTarget() {
   // 3秒未击中自动消失
   const expireTimer = setTimeout(() => {
     if (!target.isConnected) return;
+    aimOccupied.delete(cellId);
     target.style.opacity = '0';
     target.style.transform = 'translate(-50%,-50%) scale(0.5)';
     setTimeout(() => { if (target.isConnected) target.remove(); }, 200);
@@ -907,6 +1126,7 @@ function spawnOneTarget() {
     e.stopPropagation();
     if (!target.isConnected) return;
     clearTimeout(expireTimer);
+    aimOccupied.delete(cellId);
     const dt = Date.now() - spawnTime;
     AIM.hits++;
     AIM.shots++;
@@ -978,6 +1198,7 @@ function finishAim() {
   // 移动端清理
   if (isMobile) {
     cancelAnimationFrame(JOY.raf);
+    if (joyManager) { joyManager.destroy(); joyManager = null; }
     document.getElementById('mobile-joy-wrap').style.display = 'none';
     document.getElementById('fire-btn').style.display = 'none';
     document.getElementById('aim-crosshair').style.display = 'none';
@@ -1020,35 +1241,129 @@ function finishAim() {
   document.getElementById('ar-streak').textContent = AIM.bestStreak;
   document.getElementById('ar-misses').textContent = misses;
 
-  calculateFocusScore();
   showScreen('s-aim-result');
 }
 
 // ════════════════════════════════════════════
-// 专注稳定性：从反应时间方差计算
+// 灵敏度校准（移动端 TEST 6 前置）
 // ════════════════════════════════════════════
-function calculateFocusScore() {
-  const times = rawData.reactionTimes.filter(t => t !== null);
-  if (times.length < 4) { scores.focus = 60; return; }
-  const avg = times.reduce((a,b)=>a+b,0)/times.length;
-  const variance = times.reduce((a,b)=>a+(b-avg)**2,0)/times.length;
-  const stdDev = Math.sqrt(variance);
-  // 比较前半与后半
-  const firstHalf = times.slice(0, Math.floor(times.length/2));
-  const secondHalf = times.slice(Math.floor(times.length/2));
-  const avgFirst = firstHalf.reduce((a,b)=>a+b,0)/firstHalf.length;
-  const avgSecond = secondHalf.reduce((a,b)=>a+b,0)/secondHalf.length;
-  const degradation = Math.max(0, avgSecond - avgFirst); // 后半变慢了多少ms
+const SENS = { ch:{x:0,y:0}, raf:null, joyMgr:null, dx:0, dy:0, hits:0 };
+let sensTargetTimer = null;
 
-  // 校准：stdDev=28ms且无衰退≈55分(略高于普通人); stdDev=40ms≈25分
-  let s = 100 - (stdDev / 28) * 45 - (degradation / 100) * 35;
-  scores.focus = Math.min(100, Math.max(0, Math.round(s)));
+function startSensitivityCal() {
+  setProgress(6);
+  SENS.hits = 0;
+  SENS.dx = 0; SENS.dy = 0;
+  document.getElementById('sens-hits-count').textContent = '0';
+  document.getElementById('sens-value').textContent = AIM_SENSITIVITY;
+  document.getElementById('sens-slider').value = AIM_SENSITIVITY;
+  document.getElementById('sens-start-btn').disabled = true;
+  showScreen('s-aim-sensitivity');
+
+  const arena = document.getElementById('sens-arena');
+  const rect = arena.getBoundingClientRect();
+  SENS.ch.x = rect.width / 2;
+  SENS.ch.y = rect.height / 2;
+
+  const ch = document.getElementById('sens-crosshair');
+  ch.style.display = 'block';
+  ch.style.left = SENS.ch.x + 'px';
+  ch.style.top  = SENS.ch.y + 'px';
+
+  // nipplejs 校准用摇杆
+  document.getElementById('sens-joy-wrap').style.display = 'block';
+  if (SENS.joyMgr) { SENS.joyMgr.destroy(); SENS.joyMgr = null; }
+  SENS.joyMgr = nipplejs.create({
+    zone: document.getElementById('sens-joy-zone'),
+    mode:'static', position:{left:'50%', top:'50%'},
+    size:100, color:'rgba(118,185,0,0.85)', dynamicPage:true
+  });
+  SENS.joyMgr.on('move', (e, data) => {
+    const f = Math.min(data.force, 1);
+    SENS.dx = data.vector.x * 54 * f;
+    SENS.dy = data.vector.y * 54 * f;
+  });
+  SENS.joyMgr.on('end', () => { SENS.dx = 0; SENS.dy = 0; });
+
+  // FIRE 按钮也显示（触发 sensFire）
+  const fireBtn = document.getElementById('fire-btn');
+  fireBtn.style.display = 'flex';
+  fireBtn.ontouchstart = (e) => { e.preventDefault(); sensFire(); };
+  fireBtn.onclick = () => sensFire();
+
+  SENS.raf = requestAnimationFrame(animateSensCH);
+  moveSensTarget();
+}
+
+function updateSensitivity(val) {
+  AIM_SENSITIVITY = parseInt(val);
+  document.getElementById('sens-value').textContent = AIM_SENSITIVITY;
+}
+
+function animateSensCH() {
+  const arena = document.getElementById('sens-arena');
+  if (!arena) return;
+  const rect = arena.getBoundingClientRect();
+  const speed = AIM_SENSITIVITY * 0.7;
+  SENS.ch.x = Math.max(0, Math.min(rect.width,  SENS.ch.x + (SENS.dx / 54) * speed));
+  SENS.ch.y = Math.max(0, Math.min(rect.height, SENS.ch.y + (SENS.dy / 54) * speed));
+  const ch = document.getElementById('sens-crosshair');
+  if (ch) { ch.style.left = SENS.ch.x + 'px'; ch.style.top = SENS.ch.y + 'px'; }
+  // 目标高亮
+  const tgt = document.getElementById('sens-target');
+  if (tgt) {
+    const tx = parseFloat(tgt.style.left), ty = parseFloat(tgt.style.top);
+    const dist = Math.sqrt((SENS.ch.x - tx)**2 + (SENS.ch.y - ty)**2);
+    tgt.style.boxShadow = dist < 35 ? '0 0 0 4px rgba(239,68,68,.5)' : '';
+  }
+  SENS.raf = requestAnimationFrame(animateSensCH);
+}
+
+function moveSensTarget() {
+  if (sensTargetTimer) clearTimeout(sensTargetTimer);
+  const arena = document.getElementById('sens-arena');
+  const rect = arena.getBoundingClientRect();
+  const margin = 36;
+  const tx = margin + Math.random() * (rect.width  - 2 * margin);
+  const ty = margin + Math.random() * (rect.height - 2 * margin);
+  const tgt = document.getElementById('sens-target');
+  tgt.style.left = tx + 'px';
+  tgt.style.top  = ty + 'px';
+  sensTargetTimer = setTimeout(moveSensTarget, 4000);
+}
+
+function sensFire() {
+  const tgt = document.getElementById('sens-target');
+  if (!tgt) return;
+  const tx = parseFloat(tgt.style.left), ty = parseFloat(tgt.style.top);
+  const dist = Math.sqrt((SENS.ch.x - tx)**2 + (SENS.ch.y - ty)**2);
+  if (dist < 35) {
+    SENS.hits++;
+    document.getElementById('sens-hits-count').textContent = SENS.hits;
+    if (SENS.hits >= 3) document.getElementById('sens-start-btn').disabled = false;
+    tgt.style.transform = 'translate(-50%,-50%) scale(0.4)';
+    setTimeout(() => { tgt.style.transform = 'translate(-50%,-50%) scale(1)'; moveSensTarget(); }, 180);
+  }
+}
+
+function startAimFromSensitivity() {
+  // 清理校准资源
+  cancelAnimationFrame(SENS.raf);
+  if (sensTargetTimer) clearTimeout(sensTargetTimer);
+  if (SENS.joyMgr) { SENS.joyMgr.destroy(); SENS.joyMgr = null; }
+  document.getElementById('sens-joy-wrap').style.display = 'none';
+  document.getElementById('sens-crosshair').style.display = 'none';
+  document.getElementById('fire-btn').style.display = 'none';
+  document.getElementById('fire-btn').ontouchstart = null;
+  document.getElementById('fire-btn').onclick = null;
+  startAim(); // 直接开始正式测试
 }
 
 // ════════════════════════════════════════════
-// 移动端摇杆系统
+// 移动端摇杆系统（nipplejs）
 // ════════════════════════════════════════════
-const JOY = { active:false, cx:0, cy:0, dx:0, dy:0, radius:54, raf:null, touchId:-1 };
+const JOY = { dx:0, dy:0, radius:54, raf:null };
+let joyManager = null;
 let CH = { x:0, y:0 }; // 准星在 arena 内坐标
 
 function initJoystick() {
@@ -1065,57 +1380,30 @@ function initJoystick() {
   document.getElementById('mobile-joy-wrap').style.display = 'block';
   const fireBtn = document.getElementById('fire-btn');
   fireBtn.style.display = 'flex';
+  fireBtn.addEventListener('touchstart', fireTap, {passive:false});
 
-  const joyOuter = document.getElementById('joy-outer');
-  joyOuter.addEventListener('touchstart', joyStart, {passive:false});
-  document.addEventListener('touchmove',  joyMove,  {passive:false});
-  document.addEventListener('touchend',   joyEnd,   {passive:false});
-  fireBtn.addEventListener('touchstart',  fireTap,  {passive:false});
+  // nipplejs：零延迟硬件级摇杆
+  const zone = document.getElementById('joy-outer');
+  joyManager = nipplejs.create({
+    zone, mode:'static',
+    position:{ left:'50%', top:'50%' },
+    size: 100,
+    color: 'rgba(118,185,0,0.85)',
+    dynamicPage: true
+  });
+  joyManager.on('move', (evt, data) => {
+    const force = Math.min(data.force, 1);
+    JOY.dx = data.vector.x * JOY.radius * force;
+    JOY.dy = data.vector.y * JOY.radius * force; // nipplejs y: positive=down
+  });
+  joyManager.on('end', () => { JOY.dx = 0; JOY.dy = 0; });
 
   JOY.raf = requestAnimationFrame(animateCH);
 }
 
-function joyStart(e) {
-  e.preventDefault();
-  const t = e.touches[0];
-  const r = document.getElementById('joy-outer').getBoundingClientRect();
-  JOY.active  = true;
-  JOY.touchId = t.identifier;
-  JOY.cx = r.left + r.width  / 2;
-  JOY.cy = r.top  + r.height / 2;
-}
-
-function joyMove(e) {
-  if (!JOY.active) return;
-  e.preventDefault();
-  let t = null;
-  for (const touch of e.touches) {
-    if (touch.identifier === JOY.touchId) { t = touch; break; }
-  }
-  if (!t) return;
-  let dx = t.clientX - JOY.cx;
-  let dy = t.clientY - JOY.cy;
-  const dist = Math.sqrt(dx*dx + dy*dy);
-  if (dist > JOY.radius) { dx = dx/dist*JOY.radius; dy = dy/dist*JOY.radius; }
-  JOY.dx = dx; JOY.dy = dy;
-  document.getElementById('joy-nub').style.transform =
-    `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-}
-
-function joyEnd(e) {
-  let stillActive = false;
-  for (const t of e.touches) {
-    if (t.identifier === JOY.touchId) { stillActive = true; break; }
-  }
-  if (!stillActive) {
-    JOY.active = false; JOY.dx = 0; JOY.dy = 0;
-    document.getElementById('joy-nub').style.transform = 'translate(-50%,-50%)';
-  }
-}
-
 function animateCH() {
   if (AIM.finished) return;
-  const speed = 5;
+  const speed = AIM_SENSITIVITY * 0.8; // 灵敏度调节
   const arena = document.getElementById('aim-arena');
   const rect  = arena.getBoundingClientRect();
   CH.x = Math.max(0, Math.min(rect.width,  CH.x + (JOY.dx / JOY.radius) * speed));
@@ -1183,7 +1471,7 @@ const CP1 = {
 };
 
 function startColor() {
-  setProgress(6);
+  setProgress(7);
   CP1.round=0; CP1.hits=0; CP1.falseAlarms=0; CP1.misses=0; CP1.hitTimes=[];
   CP1.sequence = buildCP1Sequence();
   showScreen('s-color-p1');
@@ -1409,6 +1697,106 @@ function finishColor() {
   p2Score = Math.max(0, p2Score);
 
   scores.color = Math.min(100, Math.max(0, Math.round(p1Score * 0.6 + p2Score * 0.4)));
+  showScreen('s-reaction2-intro'); // 专注稳定性测试
+}
+
+// ════════════════════════════════════════════
+// TEST 8: 专注稳定性 — RT Block 2
+// ════════════════════════════════════════════
+const RT2 = { round:0, total:6, times:[], state:'idle', timer:null, startTime:0 };
+
+function startReaction2() {
+  setProgress(8);
+  RT2.round = 0; RT2.times = []; RT2.state = 'idle';
+  document.getElementById('reaction2-results').innerHTML = '';
+  showScreen('s-reaction2-test');
+  nextReaction2Round();
+}
+
+function nextReaction2Round() {
+  if (RT2.round >= RT2.total) { finishReaction2(); return; }
+  RT2.round++;
+  document.getElementById('rt2-round').textContent = RT2.round;
+  const arena = document.getElementById('reaction2-arena');
+  arena.className = 'wait';
+  document.getElementById('arena2-text').textContent = '等待...';
+  document.getElementById('arena2-text').style.color = '';
+  document.getElementById('arena2-sub').textContent = '不要点击';
+  RT2.state = 'waiting';
+  const delay = 1500 + Math.random() * 3000;
+  RT2.timer = setTimeout(() => {
+    if (RT2.state !== 'waiting') return;
+    RT2.state = 'go';
+    arena.className = 'go';
+    document.getElementById('arena2-text').textContent = '现在！';
+    document.getElementById('arena2-text').style.color = 'var(--cyan)';
+    document.getElementById('arena2-sub').textContent = '点击！';
+    RT2.startTime = performance.now();
+    RT2.timer = setTimeout(() => {
+      if (RT2.state === 'go') {
+        RT2.times.push(null);
+        addRT2Chip('超时', 'err');
+        RT2.state = 'idle';
+        setTimeout(nextReaction2Round, 800);
+      }
+    }, 2000);
+  }, delay);
+}
+
+function handleReaction2Click() {
+  if (RT2.state === 'waiting') {
+    clearTimeout(RT2.timer);
+    document.getElementById('reaction2-arena').className = 'early';
+    document.getElementById('arena2-text').textContent = '抢跑！';
+    document.getElementById('arena2-text').style.color = 'var(--red)';
+    document.getElementById('arena2-sub').textContent = '请等待信号变亮';
+    addRT2Chip('抢跑', 'err');
+    RT2.state = 'idle';
+    setTimeout(nextReaction2Round, 1200);
+  } else if (RT2.state === 'go') {
+    clearTimeout(RT2.timer);
+    const t = Math.round(performance.now() - RT2.startTime);
+    RT2.times.push(t);
+    const quality = t < 200 ? 'good' : t < 280 ? 'ok' : 'slow';
+    addRT2Chip(t + 'ms', quality);
+    document.getElementById('reaction2-arena').className = 'ready';
+    document.getElementById('arena2-text').textContent = t + ' ms';
+    document.getElementById('arena2-sub').textContent = t < 200 ? '极快！' : t < 280 ? '不错' : '继续加油';
+    RT2.state = 'idle';
+    setTimeout(nextReaction2Round, 900);
+  }
+}
+
+function addRT2Chip(text, cls) {
+  const wrap = document.getElementById('reaction2-results');
+  const existing = wrap.querySelectorAll('.rt-chip');
+  if (existing.length >= 3) existing[0].remove();
+  const chip = document.createElement('div');
+  chip.className = 'rt-chip ' + cls;
+  chip.textContent = text;
+  wrap.appendChild(chip);
+}
+
+function finishReaction2() {
+  const valid1 = rawData.reactionTimes.filter(t => t !== null);
+  const valid2 = RT2.times.filter(t => t !== null);
+  rawData.rt2Times = valid2;
+
+  let s = 65;
+  if (valid1.length >= 4 && valid2.length >= 2) {
+    const avg1 = valid1.reduce((a,b)=>a+b,0) / valid1.length;
+    const avg2 = valid2.reduce((a,b)=>a+b,0) / valid2.length;
+    const var1 = valid1.reduce((a,b)=>a+(b-avg1)**2,0) / valid1.length;
+    const var2 = valid2.reduce((a,b)=>a+(b-avg2)**2,0) / valid2.length;
+    const avgStd = (Math.sqrt(var1) + Math.sqrt(var2)) / 2;
+    const drift  = Math.max(0, avg2 - avg1); // Block2 比 Block1 慢了多少
+    s = 100 - (avgStd / 28) * 45 - (drift / 100) * 40;
+  } else if (valid1.length >= 4) {
+    const avg = valid1.reduce((a,b)=>a+b,0) / valid1.length;
+    const variance = valid1.reduce((a,b)=>a+(b-avg)**2,0) / valid1.length;
+    s = 100 - (Math.sqrt(variance) / 28) * 45;
+  }
+  scores.focus = Math.min(100, Math.max(0, Math.round(s)));
   showFinalScreen();
 }
 
