@@ -175,12 +175,26 @@
   /* ── N-back 测试 ── */
   #nback-display{width:180px;height:180px;background:var(--card);border:2px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:84px;font-weight:700;color:var(--cyan);margin:0 auto 20px;user-select:none;transition:border-color .15s;}
 
+  /* ── 横屏提示遮罩 ── */
+  #landscape-prompt{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.97);flex-direction:column;align-items:center;justify-content:center;gap:20px;text-align:center;padding:32px;}
+  #landscape-prompt .lp-icon{font-size:64px;animation:lpRotate 1.5s ease-in-out infinite;}
+  @keyframes lpRotate{0%,100%{transform:rotate(0deg)}40%{transform:rotate(90deg)}60%{transform:rotate(90deg)}}
+  #landscape-prompt h2{font-size:22px;font-weight:700;color:var(--text);}
+  #landscape-prompt p{font-size:14px;color:var(--sub);line-height:1.8;max-width:280px;}
+
   /* ── 最终计算屏 ── */
   .calc-spinner{width:48px;height:48px;border:2px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:24px;}
   @keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
+
+<!-- 横屏提示遮罩（移动端瞄准测试专用） -->
+<div id="landscape-prompt">
+  <div class="lp-icon">📱</div>
+  <h2>请旋转手机横屏</h2>
+  <p>手眼协调测试需要横屏进行，<br>旋转后将自动继续</p>
+</div>
 
 <!-- 顶部进度条 -->
 <div class="top-bar">
@@ -277,7 +291,7 @@
      TEST 3: 动态视力 - 测试
 ════════════════════════════════════════════ -->
 <div class="screen" id="s-vision-test">
-  <div class="test-index" style="margin-bottom:8px;">TEST 03 — 第 <span id="vision-round">1</span> / 8 轮</div>
+  <div class="test-index" style="margin-bottom:8px;">TEST 03 — 第 <span id="vision-round">1</span> / 10 轮</div>
   <div class="vision-round-info" id="vision-info">准备好后点击下方按钮显示数字</div>
   <div id="vision-display">···</div>
   <input type="number" id="vision-input" placeholder="输入数字" disabled autocomplete="off">
@@ -297,7 +311,7 @@
     <ul>
       <li>屏幕依次出现字母，每个持续约 700ms</li>
       <li>当当前字母与 <strong style="color:var(--cyan)">前 2 个字母</strong> 相同时，立即点击 SAME</li>
-      <li>共 20 个字母，节奏较快，保持专注</li>
+      <li>共 24 个字母，节奏较快，保持专注</li>
       <li>第 1、2 个字母无需判断（2-back 不存在）</li>
     </ul>
   </div>
@@ -306,7 +320,7 @@
 
 <!-- TEST 4: 工作记忆 N-back - 测试 -->
 <div class="screen" id="s-nback-test">
-  <div class="test-index" style="margin-bottom:12px;">TEST 04 — 第 <span id="nb-current">0</span> / 20 个</div>
+  <div class="test-index" style="margin-bottom:12px;">TEST 04 — 第 <span id="nb-current">0</span> / 24 个</div>
   <div id="nback-display"></div>
   <div id="nback-feedback" style="height:22px;font-size:14px;color:var(--sub);margin-bottom:20px;font-weight:600;"></div>
   <button class="btn-start" style="font-size:18px;padding:18px 64px;letter-spacing:3px;" onclick="nbackSame()">SAME</button>
@@ -382,13 +396,14 @@
   <div class="tip-box">
     <h4>📋 测试说明</h4>
     <ul>
-      <li>屏幕始终保持 3 个目标同时出现</li>
-      <li>命中一个，立刻在新位置生成一个</li>
+      <li>屏幕同时保持 3 个目标，目标位置固定于网格（仿 AimLab Gridshot）</li>
+      <li>命中一个，立刻在新格子位置生成一个</li>
       <li>点击空白区域算一次 miss，影响命中率</li>
       <li>目标 3 秒未被命中自动消失（也算 miss）</li>
-      <li>评分综合：命中率 + 每分钟命中数 + 平均反应速度</li>
+      <li>测试持续 <strong style="color:var(--cyan)">60 秒</strong>，评分：命中率 + KPM + 响应速度</li>
     </ul>
   </div>
+  <div id="aim-landscape-tip" style="display:none;background:var(--card);border:1px solid var(--cyan);border-radius:4px;padding:12px 16px;font-size:13px;color:var(--cyan);margin-bottom:20px;text-align:center;">📱 建议横屏进行，以获得最佳体验</div>
   <button class="btn-start" onclick="isMobile ? startSensitivityCal() : startAim()">开始测试</button>
 </div>
 
@@ -523,7 +538,7 @@
 </div>
 
 <div class="screen" id="s-reaction2-test">
-  <div class="test-index" style="margin-bottom:12px;">TEST 08 — 第 <span id="rt2-round">1</span> / 6 轮</div>
+  <div class="test-index" style="margin-bottom:12px;">TEST 08 — 第 <span id="rt2-round">1</span> / 8 轮</div>
   <div id="reaction2-arena" class="wait" onclick="handleReaction2Click()">
     <div class="arena-text" id="arena2-text">准备...</div>
     <div class="arena-sub" id="arena2-sub">等待信号</div>
@@ -561,9 +576,59 @@ function setProgress(step) {
   document.getElementById('progress-text').textContent = `测试 ${step}/8`;
 }
 
+// 需要横屏的测试屏幕（移动端）
+const LANDSCAPE_SCREENS = new Set(['s-aim-sensitivity','s-aim-test']);
+
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  const screen = document.getElementById(id);
+  screen.classList.add('active');
+
+  // 横屏提示（移动端瞄准测试）
+  if (isMobile && LANDSCAPE_SCREENS.has(id)) {
+    checkLandscape();
+  } else {
+    document.getElementById('landscape-prompt').style.display = 'none';
+  }
+  // aim intro 的横屏小提示（仅移动端）
+  const aimTip = document.getElementById('aim-landscape-tip');
+  if (aimTip) aimTip.style.display = (isMobile && id === 's-aim-intro') ? 'block' : 'none';
+
+  // 强制阅读倒计时（仅 intro 说明屏）
+  if (id.endsWith('-intro')) {
+    const btn = screen.querySelector('.btn-start:not([disabled])');
+    if (btn) startReadCountdown(btn);
+  }
+}
+
+// ── 横屏检测 ──
+const LANDSCAPE_SCREENS_CHECK = ['s-aim-sensitivity','s-aim-test'];
+function checkLandscape() {
+  const isPortrait = window.innerWidth <= window.innerHeight;
+  const lp = document.getElementById('landscape-prompt');
+  lp.style.display = isPortrait ? 'flex' : 'none';
+}
+window.addEventListener('resize', () => {
+  const active = document.querySelector('.screen.active');
+  if (active && isMobile && LANDSCAPE_SCREENS.has(active.id)) checkLandscape();
+});
+
+// ── 强制阅读 5 秒倒计时 ──
+function startReadCountdown(btn) {
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  let secs = 5;
+  btn.textContent = `请先阅读说明… ${secs}s`;
+  const t = setInterval(() => {
+    secs--;
+    if (secs <= 0) {
+      clearInterval(t);
+      btn.disabled = false;
+      btn.textContent = originalText;
+    } else {
+      btn.textContent = `请先阅读说明… ${secs}s`;
+    }
+  }, 1000);
 }
 
 // ════════════════════════════════════════════
@@ -746,10 +811,10 @@ function finishGNG() {
 // TEST 3: 动态视力
 // ════════════════════════════════════════════
 const VIS = {
-  round:0, total:8, correct:0, currentDigits:'', state:'idle'
+  round:0, total:10, correct:0, currentDigits:'', state:'idle'
 };
 // 轮次配置：[位数, 显示时间ms]
-const VIS_CONFIG = [[4,350],[4,300],[5,300],[5,250],[6,250],[6,220],[6,200],[6,180]];
+const VIS_CONFIG = [[4,350],[4,300],[5,300],[5,250],[6,250],[6,220],[6,200],[6,180],[6,160],[7,200]];
 
 function startVision() {
   setProgress(3);
@@ -835,7 +900,7 @@ function finishVision() {
 // ════════════════════════════════════════════
 const NBACK_LETTERS = ['A','B','C','D','F','H','L','M','P','R'];
 const NBACK_N = 2;
-const NBACK_TOTAL = 20;
+const NBACK_TOTAL = 24;
 const NB = { sequence:[], idx:0, hits:0, misses:0, falseAlarms:0, responded:false, displayTimer:null, pauseTimer:null };
 
 function buildNbackSequence() {
@@ -860,7 +925,7 @@ function startNback() {
   showScreen('s-nback-test');
   document.getElementById('nb-hits').textContent = '0';
   document.getElementById('nb-fa').textContent = '0';
-  document.getElementById('nb-progress').textContent = '0/20';
+  document.getElementById('nb-progress').textContent = '0/24';
   document.getElementById('nback-feedback').textContent = '';
   document.getElementById('nback-display').textContent = '';
   document.getElementById('nback-display').style.borderColor = 'var(--border)';
@@ -875,7 +940,7 @@ function showNbackStimulus() {
   display.textContent = letter;
   display.style.borderColor = 'var(--border)';
   document.getElementById('nback-feedback').textContent = '';
-  document.getElementById('nb-progress').textContent = (NB.idx + 1) + '/20';
+  document.getElementById('nb-progress').textContent = (NB.idx + 1) + '/24';
 
   // 显示 700ms 后隐藏，再等 1600ms 后下一个
   NB.displayTimer = setTimeout(() => {
@@ -1043,7 +1108,7 @@ const aimOccupied = new Set(); // 已占用的格子
 const AIM = {
   hits: 0, shots: 0, expired: 0,
   hitTimes: [], streak: 0, bestStreak: 0,
-  duration: 45000, endTime: 0,
+  duration: 60000, endTime: 0,
   targetSize: isMobile ? 58 : 44,
   timerInterval: null, finished: false,
   activeTargets: 0
@@ -1703,7 +1768,7 @@ function finishColor() {
 // ════════════════════════════════════════════
 // TEST 8: 专注稳定性 — RT Block 2
 // ════════════════════════════════════════════
-const RT2 = { round:0, total:6, times:[], state:'idle', timer:null, startTime:0 };
+const RT2 = { round:0, total:8, times:[], state:'idle', timer:null, startTime:0 };
 
 function startReaction2() {
   setProgress(8);
