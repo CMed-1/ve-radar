@@ -929,7 +929,7 @@ function buildCriteriaContent() {
         <tr><td>冲动抑制</td><td>85 − 误触×32 − 漏触×7；若 Go 轮平均反应 &lt;260ms，再 +3 分</td></tr>
         <tr><td>动态视力</td><td>10 轮正确率 × 100，难度按位数和闪现时长递增</td></tr>
         <tr><td>认知处理</td><td>数字方格均分 × 60% + 2-back 分数 × 40%；方格基准 3×3=8s、4×4=25s、5×5=60s，错 1 次 −5 分；2-back = 命中率×80 − 误触率×40 + 20</td></tr>
-        <tr><td>手眼协调</td><td>两轮各 30 秒，合计 60 秒后计算：命中率 × 40% + KPM × 40% + 平均命中时间 × 20%</td></tr>
+        <tr><td>手眼协调</td><td>两轮各 60 秒，合计 120 秒后计算：命中率 × 40% + KPM × 40% + 平均命中时间 × 20%</td></tr>
         <tr><td>专注稳定</td><td>RT 稳定性 × 70% + 双次 Aim 一致性 × 30%；Aim 一致性由两轮命中率、KPM、平均命中时间差值共同决定</td></tr>
         <tr><td>色觉感知</td><td>P1 颜色反应 × 60% + P2 红色搜索 × 40%；两阶段都包含误触惩罚和速度奖励</td></tr>
       </tbody>
@@ -1101,20 +1101,21 @@ function renderLockedCard(containerId, title, sub) {
 // ── 主流程 ────────────────────────────────────
 let reportMode = 'advanced'; // 'basic' | 'advanced'
 
+function hasReportAccess() {
+  return sessionStorage.getItem('ve_invited') === 'true' || sessionStorage.getItem('ve_paid') === 'true';
+}
+
 async function init() {
   scores = JSON.parse(sessionStorage.getItem('ve_scores') || '{}');
   if (!Object.keys(scores).length) { window.location.href='/'; return; }
 
-  // 访问门控：未经 preview.html 授权则跳回（仅生产模式）
-  const REPORT_GATE = false; // 与 preview.html 的 PAYMENT_ENABLED 同步修改
   const isInvited = sessionStorage.getItem('ve_invited') === 'true';
-  const hasMode = !!sessionStorage.getItem('ve_report_mode');
-  if (REPORT_GATE && !isInvited && !hasMode) {
+  if (!hasReportAccess()) {
     window.location.href = '/preview.html'; return;
   }
 
   // 读取报告模式
-  reportMode = sessionStorage.getItem('ve_report_mode') || 'advanced';
+  reportMode = isInvited ? 'advanced' : (sessionStorage.getItem('ve_report_mode') || 'basic');
   const vtag = document.getElementById('version-tag');
   vtag.style.display = 'inline-block';
   vtag.className = 'version-tag ' + reportMode;

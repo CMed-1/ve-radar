@@ -68,7 +68,7 @@
   - else → 上单
 
 ## MiniMax 配置
-- 进阶版: tokens_to_generate=2000, 约600字5段
+- 进阶版: tokens_to_generate=2400, 约700-900字，6段结构化评估意见
 - 基础版: tokens_to_generate=400, 约150字3段
 - 支付开关: `PAYMENT_ENABLED = false` in preview.html
 
@@ -93,12 +93,13 @@
 - `RENDER_DOMAIN = 'https://ve-radar.onrender.com'` 常量
 
 ## 访问门控（Feature B，2026-04已实现）
-- preview.html：`PAYMENT_ENABLED=true` 且无邀请码时调用 `applyGate(scores)`
-  - 雷达图模糊（CSS blur + 锁图标 overlay）
-  - 显示 gate-teasers：7维分数、AI摘要、角色方向（均模糊）
-  - 支付卡片按钮改为"解锁基础版 ¥6.9 / 解锁进阶版 ¥19.9"
-- report.html：`REPORT_GATE=false` 常量，true 时未授权直接访问跳回 preview
-- 两个开关均默认 false（测试模式），上线时改为 true
+- preview.html：无邀请码且 `ve_paid !== true` 时，一律调用 `applyGate(scores)`
+  - 评级徽章 / 内部参考分位 / 雷达图统一锁定，避免结果侧漏
+  - `club-section` 未解锁前不展示，避免通过推荐通道反推评级
+  - 支付卡片按钮显示“解锁基础版 ¥6.9 / 解锁进阶版 ¥19.9”
+  - 支付接口未接时，点击按钮只提示“暂不可解锁”，不能直接跳 report
+- report.html：只有 `ve_invited === true` 或 `ve_paid === true` 才允许访问；否则直接跳回 preview
+- 后续支付接入时，只需要在成功回跳后写入 `sessionStorage.ve_paid = 'true'` 与 `ve_report_mode`
 
 ## 推荐追踪（Feature C，2026-04已实现）
 - `?ref=CODE` → index.html 读取 → sessionStorage `ve_ref_code` + POST `/api/referral/click`
@@ -108,13 +109,13 @@
 
 ## Aim 双轮与分位采样（2026-04）
 - Aim 顺序：Reaction → GNG → Vision → N-back → Aim1 → Grid → Color → Aim2 → RT2
-- Aim 每轮 30 秒，两轮合计 60 秒后再计算 `scores.aim`
+- Aim 每轮 60 秒，两轮合计 120 秒后再计算 `scores.aim`
 - `rawData.aimRounds[0/1]` 保存两轮数据；`rawData.aimConsistency` 保存二测-一测差值
 - 首页手游端要提示：**不要在微信内打开**，否则横竖屏切换可能异常
 - 后端新增 `test_results` 表和 `/api/test-result`，用于匿名累计经验分位样本
 
 ## 待办/已知问题
-- [ ] 真实支付接入（preview.html PAYMENT_ENABLED + report.html REPORT_GATE 均改 true）
+- [ ] 真实支付接入（支付成功后写入 `sessionStorage.ve_paid='true'` 和 `ve_report_mode`，打通 preview → pay → report）
 - [ ] 评分基准可能仍偏高（后续收集更多用户数据后再校准）
 - [ ] 色觉感知测试无学术验证，已在评分细则中标注
 

@@ -4,7 +4,7 @@ const AIM_PHASES = {
     introIndex: 'TEST 05 / 09',
     sensitivityIndex: 'TEST 05 / 09 — 灵敏度校准',
     introTitle: '手眼协调测试（一测）',
-    introDesc: '第一轮先测基础瞄准效率。本轮持续 30 秒，记录你的基础命中率、KPM 和响应速度。',
+    introDesc: '第一轮先测基础瞄准效率。本轮持续 60 秒，记录你的基础命中率、KPM 和响应速度。',
     roundRule: '这是第一轮，第二轮会在后面再次出现，系统会比较两次的前后稳定性。',
     resultIndex: 'TEST 05 — 手眼协调（一测）· 本轮结果',
     resultNote: '这是第一轮表现。后面还会再做一次同样的测试，用来判断你的瞄准稳定性。',
@@ -16,7 +16,7 @@ const AIM_PHASES = {
     introIndex: 'TEST 08 / 09',
     sensitivityIndex: 'TEST 08 / 09 — 灵敏度校准',
     introTitle: '手眼协调测试（二测）',
-    introDesc: '第二轮仍然是 30 秒 Gridshot。系统会把这轮和第一轮对比，用来衡量你在后程的专注稳定性。',
+    introDesc: '第二轮仍然是 60 秒 Gridshot。系统会把这轮和第一轮对比，用来衡量你在后程的专注稳定性。',
     roundRule: '这轮结束后，系统会把两次 aim 的差值纳入「专注稳定性」评分。',
     resultIndex: 'TEST 08 — 手眼协调（二测）· 对比结果',
     resultNote: '',
@@ -44,7 +44,7 @@ const AIM = {
   hitTimes: [],
   streak: 0,
   bestStreak: 0,
-  duration: 30000,
+  duration: 60000,
   endTime: 0,
   targetSize: isMobile ? 52 : 44,
   timerInterval: null,
@@ -112,7 +112,7 @@ function startAim() {
   showScreen('s-aim-test');
 
   document.getElementById('aim-test-index').textContent =
-    `TEST ${AIM.currentPhase === 1 ? '05' : '08'} — GRIDSHOT · 第 ${AIM.currentPhase} 轮 / 30 秒`;
+    `TEST ${AIM.currentPhase === 1 ? '05' : '08'} — GRIDSHOT · 第 ${AIM.currentPhase} 轮 / 60 秒`;
   document.getElementById('aim-time').textContent = Math.ceil(AIM.duration / 1000);
   document.getElementById('aim-accuracy').textContent = '—';
   document.getElementById('aim-kpm').textContent = '—';
