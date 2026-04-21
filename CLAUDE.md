@@ -66,8 +66,21 @@
 - 基础版: tokens_to_generate=400, 约150字3段
 - 支付开关: `PAYMENT_ENABLED = false` in preview.html
 
+## test.html 拆分规则（用户指令 2026-04）
+**触发条件**：接下来如果有需要改动 test.html 且工程量较大的任务，自动先拆分再修改。
+拆分方案：
+- `public/js/tests/reaction.js` — 反应速度测试逻辑
+- `public/js/tests/impulse.js` — 冲动抑制(GNG)逻辑
+- `public/js/tests/vision.js` — 动态视力逻辑
+- `public/js/tests/cognition.js` — 认知处理(Grid+Nback)逻辑
+- `public/js/tests/aim.js` — 瞄准测试逻辑
+- `public/js/tests/focus.js` — 专注稳定性(RT2)逻辑
+- `public/js/tests/color.js` — 色觉感知逻辑
+- `public/js/scores.js` — 共享评分计算 + showFinalScreen()
+- `test.html` 只保留 HTML 骨架 + `<script src>` 引用
+
 ## 待办/已知问题
-- [ ] test.html 拆分（将来做，不急）
+- [ ] test.html 拆分（大工程量时自动执行）
 - [ ] 真实支付接入（PAYMENT_ENABLED 改 true）
 - [ ] 评分基准可能仍偏高（后续收集更多用户数据后再校准）
 - [ ] 色觉感知测试无学术验证，已在评分细则中标注
