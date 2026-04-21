@@ -1263,12 +1263,11 @@ function finishAim() {
   AIM.finished = true;
   clearInterval(AIM.timerInterval);
   document.querySelectorAll('.aim-target').forEach(t => t.remove());
-  // 移动端清理
+  // 移动端清理（Look Zone 模式）
   if (isMobile) {
     cancelAnimationFrame(JOY.raf);
-    if (joyManager) { joyManager.destroy(); joyManager = null; }
-    document.getElementById('mobile-joy-wrap').style.display = 'none';
-    document.getElementById('fire-btn').style.display = 'none';
+    if (AIM._cleanLook) { AIM._cleanLook(); AIM._cleanLook = null; }
+    if (AIM._cleanFire) { AIM._cleanFire(); AIM._cleanFire = null; }
     document.getElementById('aim-crosshair').style.display = 'none';
   }
 
@@ -1338,26 +1337,84 @@ function startSensitivityCal() {
   ch.style.left = SENS.ch.x + 'px';
   ch.style.top  = SENS.ch.y + 'px';
 
-  // nipplejs 校准用摇杆
-  document.getElementById('sens-joy-wrap').style.display = 'block';
-  if (SENS.joyMgr) { SENS.joyMgr.destroy(); SENS.joyMgr = null; }
-  SENS.joyMgr = nipplejs.create({
-    zone: document.getElementById('sens-joy-zone'),
-    mode:'static', position:{left:'50%', top:'50%'},
-    size:100, color:'rgba(118,185,0,0.85)', dynamicPage:true
-  });
-  SENS.joyMgr.on('move', (e, data) => {
-    const f = Math.min(data.force, 1);
-    SENS.dx = data.vector.x * 54 * f;
-    SENS.dy = data.vector.y * 54 * f;
-  });
-  SENS.joyMgr.on('end', () => { SENS.dx = 0; SENS.dy = 0; });
+  // 隐藏摇杆控件，改用 Look Zone
+  document.getElementById('sens-joy-wrap').style.display = 'none';
 
-  // FIRE 按钮也显示（触发 sensFire）
+  // ── Look Zone：arena拖动控制准星 ─────────────────────
+  let sensLookId = null, sensLX = 0, sensLY = 0;
+  function onSensMove(e) {
+    e.preventDefault();
+    const r = arena.getBoundingClientRect();
+    for (const t of e.changedTouches) {
+      if (t.identifier !== sensLookId) continue;
+      const dx = t.clientX - sensLX, dy = t.clientY - sensLY;
+      sensLX = t.clientX; sensLY = t.clientY;
+      const spd = AIM_SENSITIVITY * 0.18;
+      SENS.ch.x = Math.max(0, Math.min(r.width,  SENS.ch.x + dx * spd));
+      SENS.ch.y = Math.max(0, Math.min(r.height, SENS.ch.y + dy * spd));
+      const ch = document.getElementById('sens-crosshair');
+      if (ch) { ch.style.left = SENS.ch.x + 'px'; ch.style.top = SENS.ch.y + 'px'; }
+      const tgt = document.getElementById('sens-target');
+      if (tgt) {
+        const d = Math.hypot(SENS.ch.x - parseFloat(tgt.style.left), SENS.ch.y - parseFloat(tgt.style.top));
+        tgt.style.boxShadow = d < 35 ? '0 0 0 4px rgba(239,68,68,.5)' : '';
+      }
+    }
+  }
+  arena.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (sensLookId === null) { const t = e.changedTouches[0]; sensLookId = t.identifier; sensLX = t.clientX; sensLY = t.clientY; }
+  }, {passive:false});
+  arena.addEventListener('touchmove', onSensMove, {passive:false});
+  arena.addEventListener('touchend', (e) => {
+    for (const t of e.changedTouches) if (t.identifier === sensLookId) sensLookId = null;
+  });
+  SENS._cleanArena = () => {
+    arena.removeEventListener('touchmove', onSensMove);
+  };
+
+  // FIRE 按钮：tap=sensFire，drag=瞄准
   const fireBtn = document.getElementById('fire-btn');
   fireBtn.style.display = 'flex';
-  fireBtn.ontouchstart = (e) => { e.preventDefault(); sensFire(); };
-  fireBtn.onclick = () => sensFire();
+  let sensFireId = null, sensFPX = 0, sensFPY = 0;
+  let sensFAX = 0, sensFAY = 0, sensFDrag = false, sensFT0 = 0;
+  fireBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (sensFireId === null) {
+      const t = e.changedTouches[0];
+      sensFireId = t.identifier;
+      sensFPX = sensFAX = t.clientX; sensFPY = sensFAY = t.clientY;
+      sensFDrag = false; sensFT0 = Date.now();
+      if (sensLookId === null) { sensLookId = t.identifier; sensLX = t.clientX; sensLY = t.clientY; }
+    }
+  }, {passive:false});
+  fireBtn.addEventListener('touchmove', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const r = arena.getBoundingClientRect();
+    for (const t of e.changedTouches) {
+      if (t.identifier !== sensFireId) continue;
+      if (Math.hypot(t.clientX - sensFAX, t.clientY - sensFAY) > 8) sensFDrag = true;
+      if (sensFDrag) {
+        const dx = t.clientX - sensFPX, dy = t.clientY - sensFPY;
+        const spd = AIM_SENSITIVITY * 0.18;
+        SENS.ch.x = Math.max(0, Math.min(r.width,  SENS.ch.x + dx * spd));
+        SENS.ch.y = Math.max(0, Math.min(r.height, SENS.ch.y + dy * spd));
+        const ch = document.getElementById('sens-crosshair');
+        if (ch) { ch.style.left = SENS.ch.x + 'px'; ch.style.top = SENS.ch.y + 'px'; }
+      }
+      sensFPX = t.clientX; sensFPY = t.clientY;
+    }
+  }, {passive:false});
+  fireBtn.addEventListener('touchend', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    for (const t of e.changedTouches) {
+      if (t.identifier !== sensFireId) continue;
+      sensFireId = null;
+      if (sensLookId === t.identifier) sensLookId = null;
+      if (!sensFDrag && Date.now() - sensFT0 < 200) sensFire();
+      sensFDrag = false;
+    }
+  }, {passive:false});
 
   SENS.raf = requestAnimationFrame(animateSensCH);
   moveSensTarget();
@@ -1369,21 +1426,7 @@ function updateSensitivity(val) {
 }
 
 function animateSensCH() {
-  const arena = document.getElementById('sens-arena');
-  if (!arena) return;
-  const rect = arena.getBoundingClientRect();
-  const speed = AIM_SENSITIVITY * 0.7;
-  SENS.ch.x = Math.max(0, Math.min(rect.width,  SENS.ch.x + (SENS.dx / 54) * speed));
-  SENS.ch.y = Math.max(0, Math.min(rect.height, SENS.ch.y + (SENS.dy / 54) * speed));
-  const ch = document.getElementById('sens-crosshair');
-  if (ch) { ch.style.left = SENS.ch.x + 'px'; ch.style.top = SENS.ch.y + 'px'; }
-  // 目标高亮
-  const tgt = document.getElementById('sens-target');
-  if (tgt) {
-    const tx = parseFloat(tgt.style.left), ty = parseFloat(tgt.style.top);
-    const dist = Math.sqrt((SENS.ch.x - tx)**2 + (SENS.ch.y - ty)**2);
-    tgt.style.boxShadow = dist < 35 ? '0 0 0 4px rgba(239,68,68,.5)' : '';
-  }
+  // Look Zone 模式：准星由 touchmove 直接更新，RAF 仅保持循环
   SENS.raf = requestAnimationFrame(animateSensCH);
 }
 
@@ -1415,78 +1458,145 @@ function sensFire() {
 }
 
 function startAimFromSensitivity() {
-  // 清理校准资源
+  // 清理校准资源（Look Zone 模式）
   cancelAnimationFrame(SENS.raf);
   if (sensTargetTimer) clearTimeout(sensTargetTimer);
-  if (SENS.joyMgr) { SENS.joyMgr.destroy(); SENS.joyMgr = null; }
-  document.getElementById('sens-joy-wrap').style.display = 'none';
+  if (SENS._cleanArena) { SENS._cleanArena(); SENS._cleanArena = null; }
   document.getElementById('sens-crosshair').style.display = 'none';
   document.getElementById('fire-btn').style.display = 'none';
-  document.getElementById('fire-btn').ontouchstart = null;
-  document.getElementById('fire-btn').onclick = null;
   startAim(); // 直接开始正式测试
 }
 
 // ════════════════════════════════════════════
-// 移动端摇杆系统（nipplejs）
 // ════════════════════════════════════════════
-const JOY = { dx:0, dy:0, radius:54, raf:null };
+// 移动端 Look Zone 系统（手游FPS风格）
+// 原理：arena整体=拖动控制准星，fire-btn双功能(tap=射/drag=瞄)
+// 参考：max-mapper/fps-touch-controls + MDN Touch Events
+// ════════════════════════════════════════════
+const JOY = { raf: null }; // 保留兼容性
 let joyManager = null;
-let CH = { x:0, y:0 }; // 准星在 arena 内坐标
+let CH = { x:0, y:0 };
+
+// 更新准星位置 + 目标高亮
+function updateCH() {
+  const ch = document.getElementById('aim-crosshair');
+  if (!ch) return;
+  ch.style.left = CH.x + 'px';
+  ch.style.top  = CH.y + 'px';
+  document.querySelectorAll('.aim-target').forEach(t => {
+    const tx = parseFloat(t.style.left), ty = parseFloat(t.style.top);
+    t.classList.toggle('aim-target-lit', Math.hypot(CH.x-tx, CH.y-ty) < parseInt(t.style.width)/2 + 8);
+  });
+}
 
 function initJoystick() {
   const arena = document.getElementById('aim-arena');
-  const rect  = arena.getBoundingClientRect();
+  let rect = arena.getBoundingClientRect();
   CH.x = rect.width / 2;
   CH.y = rect.height / 2;
 
   const ch = document.getElementById('aim-crosshair');
   ch.style.display = 'block';
-  ch.style.left = CH.x + 'px';
-  ch.style.top  = CH.y + 'px';
+  updateCH();
 
-  document.getElementById('mobile-joy-wrap').style.display = 'block';
+  // 不显示摇杆控件，arena整体作为 Look Zone
+  document.getElementById('mobile-joy-wrap').style.display = 'none';
+
+  // ── Look Zone：arena全屏拖动控制准星 ─────────────────
+  let lookId = null, lastLX = 0, lastLY = 0;
+
+  function onLookStart(e) {
+    e.preventDefault();
+    if (lookId === null) {
+      const t = e.changedTouches[0];
+      lookId = t.identifier; lastLX = t.clientX; lastLY = t.clientY;
+    }
+  }
+  function onLookMove(e) {
+    e.preventDefault();
+    rect = arena.getBoundingClientRect();
+    for (const t of e.changedTouches) {
+      if (t.identifier !== lookId) continue;
+      const dx = t.clientX - lastLX, dy = t.clientY - lastLY;
+      lastLX = t.clientX; lastLY = t.clientY;
+      const spd = AIM_SENSITIVITY * 0.18;
+      CH.x = Math.max(0, Math.min(rect.width,  CH.x + dx * spd));
+      CH.y = Math.max(0, Math.min(rect.height, CH.y + dy * spd));
+      updateCH();
+    }
+  }
+  function onLookEnd(e) {
+    for (const t of e.changedTouches) if (t.identifier === lookId) lookId = null;
+  }
+  arena.addEventListener('touchstart', onLookStart, {passive:false});
+  arena.addEventListener('touchmove',  onLookMove,  {passive:false});
+  arena.addEventListener('touchend',   onLookEnd);
+  AIM._cleanLook = () => {
+    arena.removeEventListener('touchstart', onLookStart);
+    arena.removeEventListener('touchmove',  onLookMove);
+    arena.removeEventListener('touchend',   onLookEnd);
+  };
+
+  // ── Fire Button：tap=射击，drag=瞄准（dual-function）──
   const fireBtn = document.getElementById('fire-btn');
   fireBtn.style.display = 'flex';
-  fireBtn.addEventListener('touchstart', fireTap, {passive:false});
+  let fireId = null, firePX = 0, firePY = 0;
+  let fireAX = 0, fireAY = 0, fireDrag = false, fireT0 = 0;
+  const DRAG_THR = 8, TAP_THR = 200;
 
-  // nipplejs：零延迟硬件级摇杆
-  const zone = document.getElementById('joy-outer');
-  joyManager = nipplejs.create({
-    zone, mode:'static',
-    position:{ left:'50%', top:'50%' },
-    size: 100,
-    color: 'rgba(118,185,0,0.85)',
-    dynamicPage: true
-  });
-  joyManager.on('move', (evt, data) => {
-    const force = Math.min(data.force, 1);
-    JOY.dx = data.vector.x * JOY.radius * force;
-    JOY.dy = data.vector.y * JOY.radius * force; // nipplejs y: positive=down
-  });
-  joyManager.on('end', () => { JOY.dx = 0; JOY.dy = 0; });
+  function onFireStart(e) {
+    e.preventDefault(); e.stopPropagation();
+    if (fireId === null) {
+      const t = e.changedTouches[0];
+      fireId = t.identifier;
+      firePX = fireAX = t.clientX; firePY = fireAY = t.clientY;
+      fireDrag = false; fireT0 = Date.now();
+      // 防止 arena 同时处理同一触点
+      if (lookId === null) { lookId = t.identifier; lastLX = t.clientX; lastLY = t.clientY; }
+    }
+  }
+  function onFireMove(e) {
+    e.preventDefault(); e.stopPropagation();
+    rect = arena.getBoundingClientRect();
+    for (const t of e.changedTouches) {
+      if (t.identifier !== fireId) continue;
+      if (Math.hypot(t.clientX - fireAX, t.clientY - fireAY) > DRAG_THR) fireDrag = true;
+      if (fireDrag) {
+        const dx = t.clientX - firePX, dy = t.clientY - firePY;
+        const spd = AIM_SENSITIVITY * 0.18;
+        CH.x = Math.max(0, Math.min(rect.width,  CH.x + dx * spd));
+        CH.y = Math.max(0, Math.min(rect.height, CH.y + dy * spd));
+        updateCH();
+      }
+      firePX = t.clientX; firePY = t.clientY;
+    }
+  }
+  function onFireEnd(e) {
+    e.preventDefault(); e.stopPropagation();
+    for (const t of e.changedTouches) {
+      if (t.identifier !== fireId) continue;
+      fireId = null;
+      if (lookId === t.identifier) lookId = null;
+      if (!fireDrag && Date.now() - fireT0 < TAP_THR) fireTap(e);
+      fireDrag = false;
+    }
+  }
+  fireBtn.addEventListener('touchstart', onFireStart, {passive:false});
+  fireBtn.addEventListener('touchmove',  onFireMove,  {passive:false});
+  fireBtn.addEventListener('touchend',   onFireEnd,   {passive:false});
+  AIM._cleanFire = () => {
+    fireBtn.removeEventListener('touchstart', onFireStart);
+    fireBtn.removeEventListener('touchmove',  onFireMove);
+    fireBtn.removeEventListener('touchend',   onFireEnd);
+    fireBtn.style.display = 'none';
+  };
 
   JOY.raf = requestAnimationFrame(animateCH);
 }
 
 function animateCH() {
-  if (AIM.finished) return;
-  const speed = AIM_SENSITIVITY * 0.8; // 灵敏度调节
-  const arena = document.getElementById('aim-arena');
-  const rect  = arena.getBoundingClientRect();
-  CH.x = Math.max(0, Math.min(rect.width,  CH.x + (JOY.dx / JOY.radius) * speed));
-  CH.y = Math.max(0, Math.min(rect.height, CH.y + (JOY.dy / JOY.radius) * speed));
-  const ch = document.getElementById('aim-crosshair');
-  ch.style.left = CH.x + 'px';
-  ch.style.top  = CH.y + 'px';
-  // 目标高亮
-  document.querySelectorAll('.aim-target').forEach(t => {
-    const tx = parseFloat(t.style.left);
-    const ty = parseFloat(t.style.top);
-    const r  = parseInt(t.style.width) / 2;
-    t.classList.toggle('aim-target-lit', Math.sqrt((CH.x-tx)**2+(CH.y-ty)**2) < r+8);
-  });
-  JOY.raf = requestAnimationFrame(animateCH);
+  // Look Zone 模式下准星由 touchmove 直接更新，RAF仅保持循环
+  if (!AIM.finished) JOY.raf = requestAnimationFrame(animateCH);
 }
 
 function fireTap(e) {
