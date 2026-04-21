@@ -79,9 +79,30 @@
 - `public/js/scores.js` — 共享评分计算 + showFinalScreen()
 - `test.html` 只保留 HTML 骨架 + `<script src>` 引用
 
+## 分享图（Feature A，2026-04已实现）
+- report.html 新增 "生成分享图" 按钮（紫色边框）
+- 卡片内容：VE logo、SVG徽章、评级+百分位、雷达图、7维分数格、AI首句、QR码
+- QR URL：`https://ve-radar.onrender.com/?ref=CODE`（有邀请码则带 ref 参数）
+- html2canvas + qrcodejs 实现，modal 弹出展示 + 下载按钮
+- `RENDER_DOMAIN = 'https://ve-radar.onrender.com'` 常量
+
+## 访问门控（Feature B，2026-04已实现）
+- preview.html：`PAYMENT_ENABLED=true` 且无邀请码时调用 `applyGate(scores)`
+  - 雷达图模糊（CSS blur + 锁图标 overlay）
+  - 显示 gate-teasers：7维分数、AI摘要、角色方向（均模糊）
+  - 支付卡片按钮改为"解锁基础版 ¥6.9 / 解锁进阶版 ¥19.9"
+- report.html：`REPORT_GATE=false` 常量，true 时未授权直接访问跳回 preview
+- 两个开关均默认 false（测试模式），上线时改为 true
+
+## 推荐追踪（Feature C，2026-04已实现）
+- `?ref=CODE` → index.html 读取 → sessionStorage `ve_ref_code` + POST `/api/referral/click`
+- preview.html `unlockReport()` → POST `/api/referral/convert` with mode
+- DB：referral_clicks + referral_conversions 两张表
+- Admin API：POST `/api/admin/referral-stats` 返回每个 code 的 clicks + conversions
+
 ## 待办/已知问题
 - [ ] test.html 拆分（大工程量时自动执行）
-- [ ] 真实支付接入（PAYMENT_ENABLED 改 true）
+- [ ] 真实支付接入（preview.html PAYMENT_ENABLED + report.html REPORT_GATE 均改 true）
 - [ ] 评分基准可能仍偏高（后续收集更多用户数据后再校准）
 - [ ] 色觉感知测试无学术验证，已在评分细则中标注
 
