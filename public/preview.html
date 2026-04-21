@@ -500,6 +500,15 @@ function scoreToPercentile(score) {
 }
 
 function unlockReport(mode) {
+  // 推荐转化追踪（静默，不阻塞导航）
+  const refCode = sessionStorage.getItem('ve_ref_code');
+  if (refCode) {
+    fetch('/api/referral/convert', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: refCode, mode })
+    }).catch(() => {});
+  }
   if (PAYMENT_ENABLED) {
     window.location.href = `/pay.html?mode=${mode}`;
   } else {

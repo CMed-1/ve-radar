@@ -509,6 +509,19 @@
       startTestWithCode();
     }
   });
+
+  // ── 推荐追踪：读取 ?ref= 参数 ──
+  (function() {
+    const ref = new URLSearchParams(window.location.search).get('ref');
+    if (ref) {
+      sessionStorage.setItem('ve_ref_code', ref.trim());
+      fetch('/api/referral/click', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: ref.trim() })
+      }).catch(() => {}); // 静默失败
+    }
+  })();
 </script>
 </body>
 </html>

@@ -28,6 +28,17 @@ function initDB() {
     scores TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   )`);
+  db.exec(`CREATE TABLE IF NOT EXISTS referral_clicks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL,
+    clicked_at TEXT DEFAULT (datetime('now'))
+  )`);
+  db.exec(`CREATE TABLE IF NOT EXISTS referral_conversions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL,
+    mode TEXT,
+    converted_at TEXT DEFAULT (datetime('now'))
+  )`);
   console.log('数据库初始化完成');
 }
 
@@ -59,4 +70,31 @@ function getAllContacts() {
   return db.prepare('SELECT * FROM contacts ORDER BY created_at DESC').all();
 }
 
-module.exports = { initDB, generateCode, verifyCode, getAllCodes, saveContact, getAllContacts };
+function recordReferralClick(code) {
+  db.prepare('INSERT INTO referral_clicks (code) VALUES (?)').run(code.toUpperCase());
+}
+
+function recordReferralConversion(code, mode) {
+  db.prepare('INSERT INTO referral_conversions (code, mode) VALUES (?, ?)').run(code.toUpperCase(), mode || 'unknown');
+}
+
+function getReferralStats() {
+  // Per-code stats: clicks + conversions
+  const clicks = db.prepare(
+    'SELECT code, COUNT(*) as clicks FROM referral_clicks GROUP BY code ORDER BY clicks DESC'
+  ).all();
+  const convs = db.prepare(
+    'SELECT code, COUNT(*) as conversions, mode FROM referral_conversions GROUP BY code, mode'
+  ).all();
+  // Merge into map
+  const map = {};
+  clicks.forEach(r => { map[r.code] = { code: r.code, clicks: r.clicks, conversions: 0, modes: {} }; });
+  convs.forEach(r => {
+    if (!map[r.code]) map[r.code] = { code: r.code, clicks: 0, conversions: 0, modes: {} };
+    map[r.code].conversions += r.conversions;
+    map[r.code].modes[r.mode] = r.conversions;
+  });
+  return Object.values(map).sort((a, b) => b.clicks - a.clicks);
+}
+
+module.exports = { initDB, generateCode, verifyCode, getAllCodes, saveContact, getAllContacts, recordReferralClick, recordReferralConversion, getReferralStats };

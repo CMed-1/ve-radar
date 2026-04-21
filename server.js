@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const axios = require('axios');
-const { initDB, generateCode, verifyCode, getAllCodes, saveContact, getAllContacts } = require('./db');
+const { initDB, generateCode, verifyCode, getAllCodes, saveContact, getAllContacts, recordReferralClick, recordReferralConversion, getReferralStats } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -67,6 +67,48 @@ app.post('/api/admin/contacts', async (req, res) => {
     res.json({ success: true, contacts: getAllContacts() });
   } catch (err) {
     console.error('[admin/contacts]', err.message);
+    res.status(500).json({ success: false, message: '服务器错误，请稍后重试' });
+  }
+});
+
+// ─── 推荐追踪：记录点击 ───────────────────────────────────────
+app.post('/api/referral/click', (req, res) => {
+  try {
+    const { code } = req.body;
+    if (code && typeof code === 'string' && code.length <= 32) {
+      recordReferralClick(code.trim());
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[referral/click]', err.message);
+    res.json({ ok: false });
+  }
+});
+
+// ─── 推荐追踪：记录转化 ───────────────────────────────────────
+app.post('/api/referral/convert', (req, res) => {
+  try {
+    const { code, mode } = req.body;
+    if (code && typeof code === 'string' && code.length <= 32) {
+      recordReferralConversion(code.trim(), mode);
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[referral/convert]', err.message);
+    res.json({ ok: false });
+  }
+});
+
+// ─── 管理员：推荐统计 ─────────────────────────────────────────
+app.post('/api/admin/referral-stats', (req, res) => {
+  try {
+    const { password } = req.body;
+    if (password !== process.env.ADMIN_PASSWORD) {
+      return res.json({ success: false, message: '管理员密码错误' });
+    }
+    res.json({ success: true, stats: getReferralStats() });
+  } catch (err) {
+    console.error('[admin/referral-stats]', err.message);
     res.status(500).json({ success: false, message: '服务器错误，请稍后重试' });
   }
 });
