@@ -342,8 +342,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',s
     <div id="rating-svg-wrap" style="margin-bottom:12px;"></div>
     <div><div class="rating-badge" id="rating-badge"></div></div>
     <div class="rating-sub" id="rating-sub"></div>
-    <div class="pct-display">超越了 <span id="pct-num">—</span>%</div>
-    <div class="pct-sub" id="pct-sub-text">的测评者</div>
+    <div class="pct-display">内部参考分位 <span id="pct-num">—</span></div>
+    <div class="pct-sub" id="pct-sub-text">基于内部临时校准，仅作参考</div>
   </div>
 
   <!-- 雷达图 -->
@@ -571,8 +571,8 @@ function init() {
 
   // 百分位
   document.getElementById('pct-num').textContent = pct >= 99.9 ? '99.9+' : pct.toFixed(1);
-  const pctDesc = pct >= 99 ? '· 顶尖天赋，极为罕见' : pct >= 90 ? '· 远超大多数测评者' : pct >= 70 ? '· 高于平均水平' : '· 接近平均水平';
-  document.getElementById('pct-sub-text').textContent = '的测评者 ' + pctDesc;
+  const pctDesc = pct >= 99 ? '· 内部最高档位' : pct >= 90 ? '· 内部较高档位' : pct >= 70 ? '· 高于内部均值' : pct >= 45 ? '· 接近内部均值' : '· 目前仍有提升空间';
+  document.getElementById('pct-sub-text').textContent = '基于内部临时校准，仅作参考 ' + pctDesc;
 
   // 雷达图
   renderRadar(scores);

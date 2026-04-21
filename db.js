@@ -47,6 +47,14 @@ function initDB() {
     mode TEXT,
     converted_at TEXT DEFAULT (datetime('now'))
   )`);
+  db.exec(`CREATE TABLE IF NOT EXISTS test_results (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    device TEXT,
+    avg_score REAL,
+    scores TEXT NOT NULL,
+    raw_data TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  )`);
   const inviteColumns = db.prepare(`PRAGMA table_info(invite_codes)`).all();
   if (!inviteColumns.some(col => col.name === 'used_at')) {
     db.exec(`ALTER TABLE invite_codes ADD COLUMN used_at TEXT`);
@@ -110,4 +118,28 @@ function getReferralStats() {
   return Object.values(map).sort((a, b) => b.clicks - a.clicks);
 }
 
-module.exports = { initDB, generateCode, verifyCode, getAllCodes, saveContact, getAllContacts, recordReferralClick, recordReferralConversion, getReferralStats };
+function saveTestResult({ device, scores, rawData }) {
+  const values = Object.values(scores || {});
+  const avg = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+  db.prepare(
+    'INSERT INTO test_results (device, avg_score, scores, raw_data) VALUES (?, ?, ?, ?)'
+  ).run(device || 'unknown', avg, JSON.stringify(scores || {}), JSON.stringify(rawData || {}));
+}
+
+function getTestResultCount() {
+  return db.prepare('SELECT COUNT(*) AS count FROM test_results').get().count;
+}
+
+module.exports = {
+  initDB,
+  generateCode,
+  verifyCode,
+  getAllCodes,
+  saveContact,
+  getAllContacts,
+  recordReferralClick,
+  recordReferralConversion,
+  getReferralStats,
+  saveTestResult,
+  getTestResultCount
+};

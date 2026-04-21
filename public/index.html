@@ -163,6 +163,19 @@
   .btn-secondary:hover { border-color: var(--green); color: var(--green); }
 
   .error-msg { color: var(--danger); font-size:13px; margin-top:10px; display:none; }
+  .mobile-browser-tip{
+    display:none;
+    margin-bottom:16px;
+    padding:12px 14px;
+    border-radius:4px;
+    border:1px solid rgba(248,183,60,0.35);
+    border-left:3px solid #F8B73C;
+    background:rgba(248,183,60,0.08);
+    color:#F8D48B;
+    font-size:13px;
+    line-height:1.8;
+    text-align:left;
+  }
 
   /* ── 统计区 ── */
   .stats {
@@ -322,7 +335,7 @@
   <div class="hero-sub-title">ESPORTS TALENT RADAR</div>
   <p class="hero-desc">
     通过七大维度科学测评，精准定位你的电竞潜能。<br>
-    测评约 15 分钟 · 完全免费开始<br>
+    测评约 8 分钟 · 完全免费开始<br>
     优秀者将由 VE 直接向合作俱乐部推荐参与职业试训
   </p>
 
@@ -341,6 +354,8 @@
         手机端
       </button>
     </div>
+
+    <div class="mobile-browser-tip" id="mobile-browser-tip"></div>
 
     <button class="btn-primary" id="start-btn" onclick="startTestDirect()" style="margin-bottom:12px;">立即开始测评 →</button>
 
@@ -440,11 +455,26 @@
 
 <script>
   let selectedDevice = 'pc';
+  const isWeChatBrowser = /MicroMessenger/i.test(navigator.userAgent);
 
   function selectDevice(type) {
     selectedDevice = type;
     document.getElementById('btn-pc').classList.toggle('active', type === 'pc');
     document.getElementById('btn-mobile').classList.toggle('active', type === 'mobile');
+    updateMobileBrowserTip();
+  }
+
+  function updateMobileBrowserTip() {
+    const tip = document.getElementById('mobile-browser-tip');
+    if (!tip) return;
+    if (selectedDevice !== 'mobile') {
+      tip.style.display = 'none';
+      return;
+    }
+    tip.style.display = 'block';
+    tip.textContent = isWeChatBrowser
+      ? '手游端测试请不要在微信内打开。微信内置浏览器容易影响横竖屏切换，请点右上角后用系统浏览器打开再开始。'
+      : '手游端测试请尽量在系统浏览器中打开，不要在微信内打开，否则可能无法正常横竖屏切换。';
   }
 
   function toggleCodeInput() {
@@ -522,6 +552,8 @@
       }).catch(() => {}); // 静默失败
     }
   })();
+
+  updateMobileBrowserTip();
 </script>
 </body>
 </html>

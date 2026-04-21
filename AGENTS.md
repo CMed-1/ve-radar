@@ -2,7 +2,9 @@
 
 ## 项目结构
 - `public/index.html` — 首页/邀请码入口（可选邀请码）
-- `public/test.html` — 测试主文件（~1900行，8项测试）
+- `public/test.html` — 测试页 HTML 骨架（9项流程，其中 Aim 做两轮）
+- `public/js/scores.js` — 共享状态、进度条、最终跳转
+- `public/js/tests/` — 各单项测试逻辑拆分文件
 - `public/preview.html` — 结果预览页（含支付占位）
 - `public/report.html` — 完整报告页（basic/advanced双模式）
 - `server.js` — Express后端 + MiniMax API
@@ -20,14 +22,17 @@
 ## 评分系统关键参数
 
 ### 百分位模型
-- `scoreToPercentile(score)`: 正态分布，mean=58, SD=16（2026-04修正）
-- 原值 mean=55 会导致60分用户看到73%分位，过于虚高
+- `scoreToPercentile(score)`: 仍用 mean=58, SD=16 的内部临时分布做“参考分位”
+- **不是正式常模百分位**；页面文案必须写“内部参考分位 / 仅作参考”
+- 已开始通过 `test_results` 表累计匿名完成样本，后续应切到经验分位
 
 ### 冲动抑制（impulse）评分公式
 - `s = 85 - FA*32 - miss*7` + 速度加成3（2026-04修正）
 - 旧版 `100 - FA*40` 太宽松，0误触即100分
 
 ### 专注稳定性（focus）
+- 主公式：`RT稳定性 * 70% + 双次Aim一致性 * 30%`
+- RT稳定性仍基于 RT 方差 + 后程变慢惩罚
 - 数据不足时默认50（旧版65，会虚高）
 
 ## Basic vs Advanced 报告差异
@@ -101,8 +106,14 @@
 - DB：referral_clicks + referral_conversions 两张表
 - Admin API：POST `/api/admin/referral-stats` 返回每个 code 的 clicks + conversions
 
+## Aim 双轮与分位采样（2026-04）
+- Aim 顺序：Reaction → GNG → Vision → N-back → Aim1 → Grid → Color → Aim2 → RT2
+- Aim 每轮 30 秒，两轮合计 60 秒后再计算 `scores.aim`
+- `rawData.aimRounds[0/1]` 保存两轮数据；`rawData.aimConsistency` 保存二测-一测差值
+- 首页手游端要提示：**不要在微信内打开**，否则横竖屏切换可能异常
+- 后端新增 `test_results` 表和 `/api/test-result`，用于匿名累计经验分位样本
+
 ## 待办/已知问题
-- [ ] test.html 拆分（大工程量时自动执行）
 - [ ] 真实支付接入（preview.html PAYMENT_ENABLED + report.html REPORT_GATE 均改 true）
 - [ ] 评分基准可能仍偏高（后续收集更多用户数据后再校准）
 - [ ] 色觉感知测试无学术验证，已在评分细则中标注
@@ -110,6 +121,7 @@
 ## 工作原则（用户指令 2026-04）
 - **先搜索再实现**：复杂功能先上网找现成方案，不要自己凭空写
 - 例：手游FPS触控 → 搜 max-mapper/fps-touch-controls → 直接参考标准实现
+- 默认上线约定：如果任务目标是修线上问题或让生产环境生效，完成验证后默认 `commit + push` 到 `origin/main`，触发 Render 部署；只有当用户明确说“不要上线 / 只改本地”时才停在本地
 
 ## Workspace Skills 约定（2026-04）
 - 以 `.agents/skills/` 下实际存在的 `SKILL.md` 为准；当前可用的是 `karpathy-guidelines`、`find-skills`、`memory-reflect`

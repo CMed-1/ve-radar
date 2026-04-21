@@ -556,8 +556,8 @@
   <!-- 百分位排名 -->
   <div class="percentile-section">
     <div class="percentile-label">你的综合天赋在测评人群中的位置</div>
-    <div class="percentile-main">超越了 <span id="pct-num">—</span>%</div>
-    <div class="percentile-sub" id="pct-sub">的测评者</div>
+    <div class="percentile-main">内部参考分位 <span id="pct-num">—</span></div>
+    <div class="percentile-sub" id="pct-sub">基于内部临时校准，仅作参考</div>
     <div class="percentile-bar-wrap">
       <div class="percentile-bar-fill" id="pct-bar-fill" style="width:50%"></div>
       <div class="percentile-marker" id="pct-marker" style="left:50%"></div>
@@ -780,17 +780,29 @@ function buildCriteriaContent() {
   const raw = JSON.parse(sessionStorage.getItem('ve_rawdata') || '{}');
   const avg = (DIM_KEYS.reduce((a,k)=>a+(scores[k]||0),0)/7).toFixed(1);
 
-  // 计算用户各项原始数据
   const myRT = raw.reactionTimes && raw.reactionTimes.length
     ? Math.round(raw.reactionTimes.reduce((a,b)=>a+b,0)/raw.reactionTimes.length) + 'ms'
     : '—';
   const myFA = raw.gngFalseAlarms !== undefined ? raw.gngFalseAlarms + '次误触' : '—';
   const myVis = raw.visionCorrect !== undefined ? raw.visionCorrect + '/' + raw.visionTotal + ' 题' : '—';
-  const myKpm = raw.aimKpm !== undefined ? 'KPM ' + raw.aimKpm + '，准确率 ' + raw.aimAccuracy + '%' : '—';
+  const myAim = raw.aimKpm !== undefined
+    ? `两轮合计 KPM ${raw.aimKpm}，准确率 ${raw.aimAccuracy}%${
+      raw.aimRounds && raw.aimRounds.length === 2
+        ? `<br><span style="font-size:12px;color:var(--sub);">一测 ${raw.aimRounds[0].accuracy}% / ${raw.aimRounds[0].kpm}，二测 ${raw.aimRounds[1].accuracy}% / ${raw.aimRounds[1].kpm}</span>`
+        : ''
+    }`
+    : '—';
 
-  // 专注稳定性：从reactionTimes推导
   let myFocusDesc = '—';
-  if (raw.reactionTimes && raw.reactionTimes.length >= 4) {
+  if (raw.focusBreakdown) {
+    myFocusDesc = `RT稳定 ${raw.focusBreakdown.rtStability} 分 + Aim稳定 ${raw.focusBreakdown.aimConsistency} 分`;
+    if (raw.aimConsistency) {
+      const accDelta = raw.aimConsistency.accuracyDelta || 0;
+      const kpmDelta = raw.aimConsistency.kpmDelta || 0;
+      const timeDelta = raw.aimConsistency.avgTimeDelta || 0;
+      myFocusDesc += `<br><span style="font-size:12px;color:var(--sub);">二测-一测：命中率 ${accDelta > 0 ? '+' : ''}${accDelta}% / KPM ${kpmDelta > 0 ? '+' : ''}${kpmDelta} / 平均命中时间 ${timeDelta > 0 ? '+' : ''}${timeDelta}ms</span>`;
+    }
+  } else if (raw.reactionTimes && raw.reactionTimes.length >= 4) {
     const times = raw.reactionTimes;
     const mean = times.reduce((a,b)=>a+b,0)/times.length;
     const sd = Math.round(Math.sqrt(times.reduce((a,b)=>a+(b-mean)**2,0)/times.length));
@@ -811,31 +823,31 @@ function buildCriteriaContent() {
     <div class="criteria-h2">综合评级标准</div>
     <table class="criteria-table">
       <thead><tr>
-        <th>评级</th><th>条件</th><th>约占人群</th><th>综合均分</th>
+        <th>评级</th><th>代码条件</th><th>规则档位</th><th>综合均分</th>
       </tr></thead>
       <tbody>
         <tr>
           <td class="tag-genius">👑 职业级天才少年</td>
           <td>均分 ≥90 且 4项以上 ≥90分 且最低项 ≥78</td>
-          <td class="tag-genius">top 0.3%</td>
+          <td class="tag-genius">内部最高阈值档</td>
           <td>90-100</td>
         </tr>
         <tr>
           <td class="tag-pro">🚀 有潜力的职业玩家</td>
           <td>均分 ≥76 且 3项以上 ≥80分</td>
-          <td class="tag-pro">top 5%</td>
+          <td class="tag-pro">内部进阶候选档</td>
           <td>76-89</td>
         </tr>
         <tr>
           <td class="tag-normal">🎮 普通玩家水平</td>
           <td>均分 ≥45</td>
-          <td style="color:#a78bfa;">30%-95%</td>
+          <td style="color:#a78bfa;">大众区间</td>
           <td>45-75</td>
         </tr>
         <tr>
           <td style="color:var(--sub);">📊 弱于普通人</td>
           <td>均分 &lt;45</td>
-          <td style="color:var(--sub);">bottom 30%</td>
+          <td style="color:var(--sub);">待提升区间</td>
           <td>0-44</td>
         </tr>
         <tr style="border-top:1px solid rgba(118,185,0,0.25);">
@@ -872,9 +884,9 @@ function buildCriteriaContent() {
         </tr>
         <tr>
           <td>👁 动态视力</td>
-          <td class="tag-genius">6/6 全对</td>
-          <td class="tag-pro">5/6</td>
-          <td style="color:#a78bfa;">3/6</td>
+          <td class="tag-genius">9-10 / 10</td>
+          <td class="tag-pro">7-8 / 10</td>
+          <td style="color:#a78bfa;">~5 / 10</td>
           <td class="tag-yours">${myVis}</td>
         </tr>
         <tr>
@@ -886,16 +898,16 @@ function buildCriteriaContent() {
         </tr>
         <tr>
           <td>🎯 手眼协调</td>
-          <td class="tag-genius">KPM≥100 准确≥90%</td>
-          <td class="tag-pro">KPM≥60 准确≥75%</td>
-          <td style="color:#a78bfa;">KPM~44 准确~65%</td>
-          <td class="tag-yours">${myKpm}</td>
+          <td class="tag-genius">两轮合计 KPM≥100 且准确≥90%</td>
+          <td class="tag-pro">两轮合计 KPM≥60 且准确≥75%</td>
+          <td style="color:#a78bfa;">两轮合计 KPM~44 准确~65%</td>
+          <td class="tag-yours">${myAim}</td>
         </tr>
         <tr>
           <td>🔋 专注稳定</td>
-          <td class="tag-genius">RT方差&lt;10ms 无衰退</td>
-          <td class="tag-pro">方差&lt;25ms 轻微衰退</td>
-          <td style="color:#a78bfa;">方差~30ms</td>
+          <td class="tag-genius">RT波动低 + 双次Aim差值很小</td>
+          <td class="tag-pro">RT较稳 + 双次Aim轻微波动</td>
+          <td style="color:#a78bfa;">会出现明显波动或后程下降</td>
           <td class="tag-yours">${myFocusDesc}</td>
         </tr>
         <tr>
@@ -913,30 +925,30 @@ function buildCriteriaContent() {
     <table class="criteria-table">
       <thead><tr><th>维度</th><th>计算逻辑</th></tr></thead>
       <tbody>
-        <tr><td>反应速度</td><td>平均反应时间线性映射：190ms=100分，260ms=50分，360ms=20分</td></tr>
-        <tr><td>冲动抑制</td><td>100 − 误触率×60 − 漏触率×40（误触惩罚更重）</td></tr>
-        <tr><td>动态视力</td><td>正确题数 / 6 × 100（难度递增：4位→5位→6位数字，显示220-350ms）</td></tr>
-        <tr><td>认知处理</td><td>各级方格完成时间与基准对比（3×3基准12s，4×4基准35s，5×5基准80s）</td></tr>
-        <tr><td>手眼协调</td><td>命中率×40% + KPM×40% + 平均命中时间×20%</td></tr>
-        <tr><td>专注稳定</td><td>从反应速度测试推导：100 − 方差惩罚×40 − 后期衰退惩罚×40</td></tr>
-        <tr><td>色觉感知</td><td>P1红色识别（命中率+速度）×60% + P2目标搜索（准确+速度）×40%</td></tr>
+        <tr><td>反应速度</td><td>分段映射：&lt;190ms=100分，210ms≈90分，260ms≈50分，350ms≈15分，500ms≈0分</td></tr>
+        <tr><td>冲动抑制</td><td>85 − 误触×32 − 漏触×7；若 Go 轮平均反应 &lt;260ms，再 +3 分</td></tr>
+        <tr><td>动态视力</td><td>10 轮正确率 × 100，难度按位数和闪现时长递增</td></tr>
+        <tr><td>认知处理</td><td>数字方格均分 × 60% + 2-back 分数 × 40%；方格基准 3×3=8s、4×4=25s、5×5=60s，错 1 次 −5 分；2-back = 命中率×80 − 误触率×40 + 20</td></tr>
+        <tr><td>手眼协调</td><td>两轮各 30 秒，合计 60 秒后计算：命中率 × 40% + KPM × 40% + 平均命中时间 × 20%</td></tr>
+        <tr><td>专注稳定</td><td>RT 稳定性 × 70% + 双次 Aim 一致性 × 30%；Aim 一致性由两轮命中率、KPM、平均命中时间差值共同决定</td></tr>
+        <tr><td>色觉感知</td><td>P1 颜色反应 × 60% + P2 红色搜索 × 40%；两阶段都包含误触惩罚和速度奖励</td></tr>
       </tbody>
     </table>
 
     <div class="criteria-note">
+      <strong>参考分位说明：</strong>页面里的“参考分位”目前是基于内部临时分布的展示值，不等同于严格心理测量里的正式百分位。要做正式百分位，必须有足够大的代表性匿名样本；系统现已开始累计匿名完成样本，后续应切换为经验分位。<br><br>
       数据参考来源：<br>
-      · <strong>反应速度：</strong>普通人均值 ~260ms（文献综述均值，Laming 1968; Brebner & Welford 1980; HumanBenchmark.com 大样本中位数~250ms）；职业FPS选手（CS2/Valorant）均值 160-180ms（ResearchGate, "Comparison of Reaction Time Between eSports Players", 2021）<br>
-      · <strong>冲动抑制：</strong>健康成人 Go/No-Go 误触率（commission error rate）约 10-15%，对应 6 次No-Go中约 0-1 次误触（PMC/NIH, "Impulsive Errors on a Go-NoGo Reaction Time Task", 2010）<br>
-      · <strong>专注稳定性：</strong>职业选手的核心优势在于反应时间低方差（intraindividual variability）与抗疲劳性，而非单纯速度优势（Nature Scientific Reports, 2022）<br>
-      · <strong>手眼协调：</strong>KPM 基准参考 AimLab 内部统计数据；无公开同行评审研究<br>
-      · <strong>动态视力 / 认知处理：</strong>内部测试校准，无直接学术验证<br>
-      · <strong>色觉感知：</strong>原创设计，基于 FPS 游戏敌人颜色识别机制，目前尚无直接学术验证
+      · <strong>反应速度：</strong>简单反应时和职业玩家更快的视觉运动反应有研究支持，但不同设备和网页延迟会带来偏差<br>
+      · <strong>冲动抑制：</strong>Go/No-Go 的 commission / omission error 是常见执行控制指标，方向上有学术支持<br>
+      · <strong>专注稳定性：</strong>RT 变异度和 time-on-task decline 是持续注意 / 警觉性研究中的常用指标，加入前后两轮 Aim 差值后更贴近“后程稳定性”<br>
+      · <strong>工作记忆：</strong>2-back 可以测到工作记忆更新，但它不是高精度临床量表，不宜过度解释<br>
+      · <strong>手眼协调：</strong>Aim 两轮规则主要参考 Aim 类训练产品和手游 FPS 交互逻辑，公开同行评审常模不足<br>
+      · <strong>动态视力 / 色觉感知：</strong>当前更多属于产品内校准指标，方向合理，但仍需更多真实样本继续修正
     </div>
   `;
 }
 
-// ── 百分位计算（正态分布近似：均值55，标准差16）
-//    校准：普通测评者综合均分约55 → 第50百分位
+// ── 参考分位估计（内部临时校准，不是正式常模百分位）────────
 function scoreToPercentile(score) {
   const z = (score - 58) / 16; // 修正：测试人群自选偏差，均值偏高
   const t = 1 / (1 + 0.3275911 * Math.abs(z));
@@ -957,9 +969,8 @@ function renderPercentile() {
   // Green fill bar
   const fillEl = document.getElementById('pct-bar-fill');
   if (fillEl) fillEl.style.width = markerLeft + '%';
-  // 子标题：加描述
-  const desc = pct >= 99 ? '· 顶尖天赋，极为罕见' : pct >= 90 ? '· 远超大多数人' : pct >= 70 ? '· 高于平均水平' : pct >= 45 ? '· 接近平均水平' : '· 仍有提升空间';
-  document.getElementById('pct-sub').textContent = '的测评者 ' + desc;
+  const desc = pct >= 99 ? '· 内部最高档位' : pct >= 90 ? '· 内部较高档位' : pct >= 70 ? '· 高于内部均值' : pct >= 45 ? '· 接近内部均值' : '· 目前仍有提升空间';
+  document.getElementById('pct-sub').textContent = '基于内部临时校准，仅作参考 ' + desc;
 }
 
 // ── 评级 SVG 勋章 ─────────────────────────────
@@ -1242,14 +1253,13 @@ function renderDataDetail() {
 
   // 冲动抑制
   if (raw.gngHits !== undefined) {
-    const total = raw.gngHits + raw.gngFalseAlarms + raw.gngMisses;
     items.push({ num: raw.gngFalseAlarms, label: 'Go/No-Go 误触次数', bench: '优秀：≤1次' });
-    items.push({ num: raw.gngHits + '/14', label: '正确命中', bench: '满分：14/14' });
+    items.push({ num: raw.gngHits + '/17', label: '正确命中', bench: '满分：17/17' });
   }
 
   // 动态视力
   if (raw.visionCorrect !== undefined) {
-    items.push({ num: raw.visionCorrect + '/' + raw.visionTotal, label: '动态视力正确率', bench: '普通人均值 ~3/6' });
+    items.push({ num: raw.visionCorrect + '/' + raw.visionTotal, label: '动态视力正确率', bench: '普通人均值 ~5/10' });
   }
 
   // Aim 详情
@@ -1258,6 +1268,19 @@ function renderDataDetail() {
     items.push({ num: (raw.aimAccuracy || 0) + '%', label: '命中率 (Accuracy)', bench: '普通人均值 ~65%' });
     items.push({ num: raw.aimKpm || '—', label: 'KPM (每分命中)', bench: '普通人均值 ~44' });
     if (raw.aimAvgTime) items.push({ num: raw.aimAvgTime + 'ms', label: '平均命中时间', bench: '优秀：<400ms' });
+    if (raw.aimRounds && raw.aimRounds.length === 2) {
+      items.push({ num: `${raw.aimRounds[0].accuracy}% / ${raw.aimRounds[0].kpm}`, label: 'Aim 一测 准确率 / KPM', bench: '用于后程稳定性对比' });
+      items.push({ num: `${raw.aimRounds[1].accuracy}% / ${raw.aimRounds[1].kpm}`, label: 'Aim 二测 准确率 / KPM', bench: '用于后程稳定性对比' });
+    }
+    if (raw.aimConsistency) {
+      const accDelta = raw.aimConsistency.accuracyDelta || 0;
+      const kpmDelta = raw.aimConsistency.kpmDelta || 0;
+      items.push({
+        num: `${accDelta > 0 ? '+' : ''}${accDelta}% / ${kpmDelta > 0 ? '+' : ''}${kpmDelta}`,
+        label: '二测 - 一测 差值',
+        bench: '差值越小，稳定性越好'
+      });
+    }
   }
 
   // 色觉感知
@@ -1265,7 +1288,7 @@ function renderDataDetail() {
     const p1Acc = raw.colorP1Total ? Math.round(raw.colorP1Hits / raw.colorP1Total * 100) : 0;
     items.push({ num: p1Acc + '%', label: '色觉识别准确率', bench: '普通人均值 ~72%' });
     if (raw.colorP1AvgRT) items.push({ num: raw.colorP1AvgRT + 'ms', label: '色觉平均反应时', bench: '优秀：<350ms' });
-    if (raw.colorP2Correct !== undefined) items.push({ num: raw.colorP2Correct + '/10', label: '色差辨别正确数', bench: '普通人均值 ~6/10' });
+    if (raw.colorP2Correct !== undefined) items.push({ num: raw.colorP2Correct + '/' + raw.colorP2Total, label: '色差辨别正确数', bench: '普通人均值：中等命中率' });
   }
 
   container.innerHTML = items.map(it => `
@@ -1558,17 +1581,21 @@ function buildPDFContent(radarImg, barImg, lineImg) {
     dataLines.push(`反应速度：平均 ${avgRT}ms（普通人均值 260ms）· 最快 ${bestRT}ms`);
   }
   if (raw.gngHits !== undefined) {
-    dataLines.push(`冲动抑制：命中 ${raw.gngHits}/14 · 误触 ${raw.gngFalseAlarms} 次`);
+    dataLines.push(`冲动抑制：命中 ${raw.gngHits}/17 · 误触 ${raw.gngFalseAlarms} 次`);
   }
   if (raw.visionCorrect !== undefined) {
-    dataLines.push(`动态视力：${raw.visionCorrect}/${raw.visionTotal} 题正确（普通人均值 ~3/6）`);
+    dataLines.push(`动态视力：${raw.visionCorrect}/${raw.visionTotal} 题正确（普通人均值 ~5/10）`);
   }
   if (raw.aimHits !== undefined) {
-    dataLines.push(`手眼协调：命中 ${raw.aimHits} 个 · 准确率 ${raw.aimAccuracy}% · KPM ${raw.aimKpm}（普通人均值 ~44）`);
+    let aimLine = `手眼协调：两轮合计命中 ${raw.aimHits} 个 · 准确率 ${raw.aimAccuracy}% · KPM ${raw.aimKpm}（普通人均值 ~44）`;
+    if (raw.aimRounds && raw.aimRounds.length === 2) {
+      aimLine += ` · 一测 ${raw.aimRounds[0].accuracy}%/${raw.aimRounds[0].kpm} · 二测 ${raw.aimRounds[1].accuracy}%/${raw.aimRounds[1].kpm}`;
+    }
+    dataLines.push(aimLine);
   }
   if (raw.colorP1Hits !== undefined) {
     const p1Acc = raw.colorP1Total ? Math.round(raw.colorP1Hits/raw.colorP1Total*100) : 0;
-    dataLines.push(`色觉感知：识别准确率 ${p1Acc}%${raw.colorP2Correct !== undefined ? ` · 色差辨别 ${raw.colorP2Correct}/10 正确` : ''}`);
+    dataLines.push(`色觉感知：识别准确率 ${p1Acc}%${raw.colorP2Correct !== undefined ? ` · 色差辨别 ${raw.colorP2Correct}/${raw.colorP2Total} 正确` : ''}`);
   }
 
   const dimRows = DIM_KEYS.map(k => {
@@ -1702,7 +1729,7 @@ async function generateShareImage() {
 
     document.getElementById('sc-rating').textContent = cfg.label;
     document.getElementById('sc-pct').textContent =
-      `超越了 ${pct >= 99.9 ? '99.9+' : pct.toFixed(1)}% 的测评者`;
+      `内部参考分位 ${pct >= 99.9 ? '99.9+' : pct.toFixed(1)}`;
     document.getElementById('sc-sub').textContent = cfg.subtitle;
     document.getElementById('sc-url').textContent = qrUrl.replace('https://','');
 

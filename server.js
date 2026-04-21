@@ -2,7 +2,18 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const axios = require('axios');
-const { initDB, generateCode, verifyCode, getAllCodes, saveContact, getAllContacts, recordReferralClick, recordReferralConversion, getReferralStats } = require('./db');
+const {
+  initDB,
+  generateCode,
+  verifyCode,
+  getAllCodes,
+  saveContact,
+  getAllContacts,
+  recordReferralClick,
+  recordReferralConversion,
+  getReferralStats,
+  saveTestResult
+} = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -126,6 +137,21 @@ app.post('/api/submit-contact', async (req, res) => {
   }
 });
 
+// ─── 匿名记录完整测评结果（用于后续经验分位校准）──────────────
+app.post('/api/test-result', (req, res) => {
+  try {
+    const { scores, rawData, device } = req.body;
+    if (!scores || typeof scores !== 'object') {
+      return res.json({ success: false });
+    }
+    saveTestResult({ scores, rawData, device });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[test-result]', err.message);
+    res.json({ success: false });
+  }
+});
+
 // ─── 生成 AI 报告文字 ─────────────────────────────────────────
 app.post('/api/generate-report', async (req, res) => {
   try {
@@ -171,7 +197,16 @@ async function callMiniMax(scores, rating, device, rawData) {
       const bestRT = Math.min(...rawData.reactionTimes);
       rawSummary += `\n反应速度原始数据：平均${avgRT}ms（普通人均值260ms，职业FPS选手均值160-180ms），最快${bestRT}ms`;
     }
-    if (rawData.aimHits !== undefined) {
+    if (rawData.aimRounds && rawData.aimRounds.length === 2) {
+      const [r1, r2] = rawData.aimRounds;
+      rawSummary += `\nAim双轮原始数据：第一轮 命中${r1.hits}个、命中率${r1.accuracy}%、KPM=${r1.kpm}、平均命中时间${r1.avgHitTime}ms；第二轮 命中${r2.hits}个、命中率${r2.accuracy}%、KPM=${r2.kpm}、平均命中时间${r2.avgHitTime}ms`;
+      if (rawData.aimConsistency) {
+        const accDelta = rawData.aimConsistency.accuracyDelta || 0;
+        const kpmDelta = rawData.aimConsistency.kpmDelta || 0;
+        const timeDelta = rawData.aimConsistency.avgTimeDelta || 0;
+        rawSummary += `；前后差值：命中率${accDelta > 0 ? '+' : ''}${accDelta}%，KPM${kpmDelta > 0 ? '+' : ''}${kpmDelta}，平均命中时间${timeDelta > 0 ? '+' : ''}${timeDelta}ms`;
+      }
+    } else if (rawData.aimHits !== undefined) {
       rawSummary += `\nAim测试原始数据：命中${rawData.aimHits}个，命中率${rawData.aimAccuracy}%，KPM=${rawData.aimKpm}（普通人均值约44），平均命中时间${rawData.aimAvgTime}ms`;
     }
     if (rawData.visionCorrect !== undefined) {
@@ -180,11 +215,14 @@ async function callMiniMax(scores, rating, device, rawData) {
     if (rawData.gngFalseAlarms !== undefined) {
       rawSummary += `\n冲动抑制：误触${rawData.gngFalseAlarms}次，漏触${rawData.gngMisses}次`;
     }
+    if (rawData.focusBreakdown) {
+      rawSummary += `\n专注稳定性拆解：RT稳定性 ${rawData.focusBreakdown.rtStability} 分，Aim前后稳定性 ${rawData.focusBreakdown.aimConsistency} 分`;
+    }
     if (rawData.colorP1Hits !== undefined) {
       const p1Acc = rawData.colorP1Total ? Math.round(rawData.colorP1Hits / rawData.colorP1Total * 100) : 0;
       rawSummary += `\n色觉感知：红色识别准确率${p1Acc}%`;
       if (rawData.colorP1AvgRT) rawSummary += `，平均反应时${rawData.colorP1AvgRT}ms（优秀基准<350ms）`;
-      if (rawData.colorP2Correct !== undefined) rawSummary += `，色差辨别${rawData.colorP2Correct}/10正确（普通人均值6/10）`;
+      if (rawData.colorP2Correct !== undefined) rawSummary += `，色差辨别${rawData.colorP2Correct}/${rawData.colorP2Total}正确`;
     }
   }
 
