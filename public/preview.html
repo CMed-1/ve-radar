@@ -66,7 +66,29 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',s
 .pct-sub{font-size:13px;color:var(--sub);}
 
 /* Radar */
-.radar-wrap{max-width:280px;margin:32px auto;}
+.radar-wrap{max-width:280px;margin:32px auto;position:relative;}
+
+/* ── 访问门控：模糊状态 ── */
+.radar-wrap.gate-blur canvas{filter:blur(7px);pointer-events:none;}
+.radar-blur-overlay{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.25);
+  border-radius:4px;
+}
+.radar-blur-overlay .lock-icon{font-size:28px;margin-bottom:6px;}
+.radar-blur-overlay .lock-text{font-size:12px;color:#a7a7a7;letter-spacing:1px;}
+.teaser-section{
+  background:#111;border:1px solid #1e1e1e;border-radius:4px;
+  padding:18px 20px;margin-bottom:12px;overflow:hidden;
+}
+.teaser-title{
+  font-size:10px;letter-spacing:2px;color:#555;
+  text-transform:uppercase;margin-bottom:12px;
+  font-family:'Inter',sans-serif;
+}
+.teaser-content{filter:blur(4px);user-select:none;pointer-events:none;}
+.teaser-bar{height:12px;background:#1e1e1e;border-radius:2px;margin-bottom:7px;}
 
 /* Divider — green accent line */
 .section-divider{border:none;border-top:1px solid var(--green);margin:36px 0;opacity:.35;}
@@ -325,8 +347,32 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',s
   </div>
 
   <!-- 雷达图 -->
-  <div class="radar-wrap">
+  <div class="radar-wrap" id="radar-wrap">
     <canvas id="radar-chart"></canvas>
+  </div>
+
+  <!-- 门控预览区（PAYMENT_ENABLED=true 且无邀请码时显示） -->
+  <div id="gate-teasers" style="display:none;margin-top:20px;">
+    <div class="teaser-section">
+      <div class="teaser-title">七维评分详情 · DIMENSION SCORES</div>
+      <div class="teaser-content" id="teaser-scores" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;"></div>
+    </div>
+    <div class="teaser-section">
+      <div class="teaser-title">AI 天赋分析摘要 · AI REPORT</div>
+      <div class="teaser-content">
+        <div class="teaser-bar" style="width:92%;"></div>
+        <div class="teaser-bar" style="width:78%;"></div>
+        <div class="teaser-bar" style="width:65%;"></div>
+        <div class="teaser-bar" style="width:80%;"></div>
+      </div>
+    </div>
+    <div class="teaser-section">
+      <div class="teaser-title">角色推荐方向 · ROLE ANALYSIS</div>
+      <div class="teaser-content">
+        <div class="teaser-bar" style="width:55%;"></div>
+        <div class="teaser-bar" style="width:70%;"></div>
+      </div>
+    </div>
   </div>
 
   <hr class="section-divider">
@@ -462,6 +508,40 @@ function unlockReport(mode) {
   }
 }
 
+function applyGate(scores) {
+  // 1. 模糊雷达图
+  const wrap = document.getElementById('radar-wrap');
+  wrap.classList.add('gate-blur');
+  wrap.insertAdjacentHTML('beforeend',
+    '<div class="radar-blur-overlay">' +
+    '<div class="lock-icon">🔒</div>' +
+    '<div class="lock-text">解锁后查看完整雷达图</div>' +
+    '</div>'
+  );
+  // 2. 填充并显示维度分数预览（模糊）
+  const scoresEl = document.getElementById('teaser-scores');
+  if (scoresEl) {
+    scoresEl.innerHTML = DIM_KEYS.map(k => {
+      const v = Math.round(scores[k] || 0);
+      return '<div style="background:#0a0a0a;padding:8px 4px;text-align:center;border-radius:2px;">' +
+        '<div style="font-size:9px;color:#444;margin-bottom:4px;">' + DIM_NAMES[k] + '</div>' +
+        '<div style="font-size:15px;font-weight:700;color:#333;">' + v + '</div>' +
+        '</div>';
+    }).join('');
+  }
+  // 3. 显示 teaser 区域
+  document.getElementById('gate-teasers').style.display = 'block';
+  // 4. 更新支付卡片按钮文案（改为付费）
+  const btns = document.querySelectorAll('.plan-btn');
+  btns.forEach(b => {
+    if (b.classList.contains('basic')) b.textContent = '解锁基础版 ¥6.9';
+    if (b.classList.contains('advanced')) b.textContent = '解锁进阶版 ¥19.9';
+  });
+  // 5. 隐藏测试阶段提示（付费时不应显示）
+  const note = document.querySelector('.test-mode-note');
+  if (note) note.style.display = 'none';
+}
+
 function init() {
   const scores = JSON.parse(sessionStorage.getItem('ve_scores') || '{}');
   if (!Object.keys(scores).length) { window.location.href = '/'; return; }
@@ -493,6 +573,8 @@ function init() {
   if (isInvited) {
     document.getElementById('invited-box').style.display = 'block';
     document.getElementById('plans-box').style.display = 'none';
+  } else if (PAYMENT_ENABLED) {
+    applyGate(scores);
   }
 
   // 俱乐部推荐区

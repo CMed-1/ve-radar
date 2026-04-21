@@ -1094,6 +1094,14 @@ async function init() {
   scores = JSON.parse(sessionStorage.getItem('ve_scores') || '{}');
   if (!Object.keys(scores).length) { window.location.href='/'; return; }
 
+  // 访问门控：未经 preview.html 授权则跳回（仅生产模式）
+  const REPORT_GATE = false; // 与 preview.html 的 PAYMENT_ENABLED 同步修改
+  const isInvited = sessionStorage.getItem('ve_invited') === 'true';
+  const hasMode = !!sessionStorage.getItem('ve_report_mode');
+  if (REPORT_GATE && !isInvited && !hasMode) {
+    window.location.href = '/preview.html'; return;
+  }
+
   // 读取报告模式
   reportMode = sessionStorage.getItem('ve_report_mode') || 'advanced';
   const vtag = document.getElementById('version-tag');
