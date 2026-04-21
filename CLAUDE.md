@@ -84,3 +84,16 @@
 - [ ] 真实支付接入（PAYMENT_ENABLED 改 true）
 - [ ] 评分基准可能仍偏高（后续收集更多用户数据后再校准）
 - [ ] 色觉感知测试无学术验证，已在评分细则中标注
+
+## 工作原则（用户指令 2026-04）
+- **先搜索再实现**：复杂功能先上网找现成方案，不要自己凭空写
+- 例：手游FPS触控 → 搜 max-mapper/fps-touch-controls → 直接参考标准实现
+
+## 移动端 Aim 测试触控（已实现 2026-04）
+- 方案：Look Zone（非摇杆），参考 fps-touch-controls 标准
+- arena 全屏 = Look Zone（touchmove delta 直接驱动准星，跟手无反转）
+- fire-btn 双功能：drag(>8px) = 瞄准，tap(<200ms,<8px) = 射击
+- Y轴：直接用 dx/dy，不需要反转（跟手模式天然正确）
+- 多指隔离：lookId / fireId 各自记录 touch.identifier
+- 清理：_cleanLook / _cleanFire / _cleanArena 函数，避免事件泄漏
+- nipplejs 保留在 HTML（避免引用报错）但不再创建摇杆实例
