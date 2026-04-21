@@ -47,6 +47,11 @@ function initDB() {
     mode TEXT,
     converted_at TEXT DEFAULT (datetime('now'))
   )`);
+  const inviteColumns = db.prepare(`PRAGMA table_info(invite_codes)`).all();
+  if (!inviteColumns.some(col => col.name === 'used_at')) {
+    db.exec(`ALTER TABLE invite_codes ADD COLUMN used_at TEXT`);
+    console.log('[DB] invite_codes 补充 used_at 字段');
+  }
   console.log('数据库初始化完成');
 }
 
@@ -60,7 +65,7 @@ function verifyCode(code) {
   const row = db.prepare('SELECT * FROM invite_codes WHERE code = ?').get(code.toUpperCase());
   if (!row) return { success: false, message: '邀请码无效' };
   if (row.used) return { success: false, message: '邀请码已使用' };
-  db.prepare('UPDATE invite_codes SET used = 1, used_at = datetime("now") WHERE code = ?').run(code.toUpperCase());
+  db.prepare("UPDATE invite_codes SET used = 1, used_at = datetime('now') WHERE code = ?").run(code.toUpperCase());
   return { success: true, message: '验证成功' };
 }
 
