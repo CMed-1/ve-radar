@@ -77,6 +77,39 @@
   .rating-badge.normal{border:2px solid rgba(167,139,250,.6);color:var(--purple);}
   .rating-badge.below{border:2px solid #444;color:var(--sub);}
   .rating-subtitle{font-size:14px;color:var(--sub);font-family:'Inter',sans-serif;}
+  /* ── SVG 勋章 ── */
+  .rating-svg-wrap{margin-bottom:16px;}
+  .rating-svg-wrap svg{filter:drop-shadow(0 0 14px rgba(255,255,255,0.15));}
+  /* ── 角色方向卡 ── */
+  .role-card{background:rgba(118,185,0,0.04);border:1px solid rgba(118,185,0,0.2);border-radius:8px;padding:28px 32px;margin-bottom:24px;}
+  .role-header{display:flex;align-items:center;gap:16px;margin-bottom:16px;}
+  .role-icon{font-size:42px;line-height:1;}
+  .role-title{font-family:'Orbitron',sans-serif;font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px;}
+  .role-sub{font-size:13px;color:var(--sub);font-family:'Inter',sans-serif;}
+  .role-game-tag{display:inline-block;padding:4px 14px;border:1px solid var(--green);border-radius:20px;font-size:11px;color:var(--green);margin-bottom:14px;letter-spacing:1px;font-family:'Inter',sans-serif;}
+  .role-reason{font-size:14px;color:var(--text);line-height:1.9;font-family:'Inter',sans-serif;border-left:3px solid var(--green);padding-left:16px;margin-top:4px;}
+  /* ── 训练计划卡 ── */
+  .training-card{background:rgba(167,139,250,0.04);border:1px solid rgba(167,139,250,0.2);border-radius:8px;padding:28px 32px;margin-bottom:24px;}
+  .training-focus{font-size:14px;font-weight:700;color:var(--purple);margin-bottom:18px;font-family:'Inter',sans-serif;}
+  .training-tool-box{background:rgba(167,139,250,0.08);border-radius:6px;padding:16px 20px;margin-bottom:14px;}
+  .training-tool-name{font-weight:700;color:var(--text);font-size:14px;margin-bottom:8px;}
+  .training-tool-detail{font-size:13px;color:var(--sub);line-height:1.8;font-family:'Inter',sans-serif;}
+  .training-target{font-size:13px;color:var(--purple);margin-top:8px;font-weight:600;}
+  .training-week-row{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;font-family:'Inter',sans-serif;line-height:1.6;}
+  .training-week-row:last-child{border-bottom:none;}
+  .week-label{color:var(--purple);font-weight:700;white-space:nowrap;min-width:40px;}
+  /* ── 锁定卡片 (basic模式) ── */
+  .locked-card{position:relative;border-radius:8px;border:1px solid var(--border);overflow:hidden;margin-bottom:24px;min-height:160px;}
+  .locked-blur-inner{padding:28px 32px;filter:blur(5px);user-select:none;pointer-events:none;opacity:0.35;}
+  .fake-row{height:11px;background:var(--border);border-radius:4px;margin-bottom:10px;}
+  .fake-row.w80{width:80%;}.fake-row.w60{width:60%;}.fake-row.w45{width:45%;}
+  .fake-block{height:72px;background:var(--border);border-radius:6px;margin-bottom:10px;}
+  .locked-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,10,10,0.72);gap:6px;}
+  .lock-icon-lg{font-size:28px;margin-bottom:4px;}
+  .lock-title{font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;color:var(--text);letter-spacing:1px;}
+  .lock-sub{font-size:12px;color:var(--sub);margin-bottom:10px;}
+  .lock-btn{padding:8px 22px;border:1px solid var(--green);border-radius:4px;color:var(--green);font-size:13px;font-weight:600;text-decoration:none;transition:background .2s;font-family:'Inter',sans-serif;}
+  .lock-btn:hover{background:rgba(118,185,0,0.1);}
 
   /* ── 百分位排名 ── */
   .percentile-section{text-align:center;margin-bottom:40px;}
@@ -438,6 +471,7 @@
 
   <!-- 评级 -->
   <div class="rating-section">
+    <div class="rating-svg-wrap" id="rating-svg-wrap"></div>
     <div class="rating-badge" id="rating-badge"></div>
     <div class="rating-subtitle" id="rating-subtitle"></div>
     <div style="margin-top:14px;">
@@ -484,6 +518,12 @@
     <div class="card-title">专业分析报告</div>
     <div class="report-text" id="report-text"><span class="loading-inline">正在生成专属分析...</span></div>
   </div>
+
+  <!-- 角色方向分析（进阶专属 / basic显示锁定卡） -->
+  <div id="sec-role-analysis"></div>
+
+  <!-- 专属训练计划（进阶专属 / basic显示锁定卡） -->
+  <div id="sec-training-plan"></div>
 
   <!-- 操作按钮 -->
   <div class="action-bar">
@@ -798,6 +838,131 @@ function renderPercentile() {
   document.getElementById('pct-sub').textContent = '的测评者 ' + desc;
 }
 
+// ── 评级 SVG 勋章 ─────────────────────────────
+const RATING_SVG = {
+  genius: `<svg width="100" height="110" viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="rsg-genius" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FCD34D"/><stop offset="100%" stop-color="#D97706"/></linearGradient><filter id="rsf-genius"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><polygon points="50,5 93,27.5 93,72.5 50,95 7,72.5 7,27.5" fill="rgba(252,211,77,0.1)" stroke="url(#rsg-genius)" stroke-width="2.5" filter="url(#rsf-genius)"/><polygon points="50,16 82,34 82,66 50,84 18,66 18,34" fill="none" stroke="rgba(252,211,77,0.25)" stroke-width="1"/><rect x="33" y="65" width="34" height="6" rx="1.5" fill="url(#rsg-genius)"/><path d="M33,65 L33,44 L42,54 L50,34 L58,54 L67,44 L67,65 Z" fill="url(#rsg-genius)" opacity="0.92"/><circle cx="50" cy="33" r="3.5" fill="#FCD34D"/><circle cx="32" cy="44" r="2.5" fill="#FCD34D"/><circle cx="68" cy="44" r="2.5" fill="#FCD34D"/><text x="50" y="108" text-anchor="middle" font-size="8.5" fill="rgba(252,211,77,0.65)" font-family="Orbitron,sans-serif" letter-spacing="1.5">GENIUS</text></svg>`,
+  pro: `<svg width="100" height="110" viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="rsg-pro" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#76B900"/><stop offset="100%" stop-color="#4A7C00"/></linearGradient><filter id="rsf-pro"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><polygon points="50,5 83,17 95,50 83,83 50,95 17,83 5,50 17,17" fill="rgba(118,185,0,0.1)" stroke="url(#rsg-pro)" stroke-width="2.5" filter="url(#rsf-pro)"/><polygon points="50,16 75,25 84,50 75,75 50,84 25,75 16,50 25,25" fill="none" stroke="rgba(118,185,0,0.2)" stroke-width="1"/><polygon points="50,28 55.5,43.5 72,44 59,53.5 63.5,69 50,60 36.5,69 41,53.5 28,44 44.5,43.5" fill="url(#rsg-pro)"/><text x="50" y="108" text-anchor="middle" font-size="8.5" fill="rgba(118,185,0,0.65)" font-family="Orbitron,sans-serif" letter-spacing="2">PRO</text></svg>`,
+  normal: `<svg width="100" height="110" viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="rsg-normal" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#A78BFA"/><stop offset="100%" stop-color="#7C3AED"/></linearGradient></defs><circle cx="50" cy="50" r="44" fill="rgba(167,139,250,0.1)" stroke="url(#rsg-normal)" stroke-width="2.5"/><circle cx="50" cy="50" r="36" fill="none" stroke="rgba(167,139,250,0.2)" stroke-width="1"/><rect x="22" y="38" width="56" height="26" rx="13" fill="rgba(167,139,250,0.15)" stroke="url(#rsg-normal)" stroke-width="2.5"/><rect x="29" y="47" width="10" height="3.5" rx="1" fill="rgba(167,139,250,0.8)"/><rect x="32.5" y="43.5" width="3.5" height="10" rx="1" fill="rgba(167,139,250,0.8)"/><circle cx="62" cy="47" r="3" fill="rgba(167,139,250,0.7)"/><circle cx="70" cy="47" r="3" fill="rgba(167,139,250,0.7)"/><circle cx="66" cy="53" r="3" fill="rgba(167,139,250,0.7)"/><rect x="38" y="30" width="4" height="8" rx="2" fill="url(#rsg-normal)"/><rect x="58" y="30" width="4" height="8" rx="2" fill="url(#rsg-normal)"/><text x="50" y="108" text-anchor="middle" font-size="8.5" fill="rgba(167,139,250,0.65)" font-family="Orbitron,sans-serif" letter-spacing="1">PLAYER</text></svg>`,
+  below: `<svg width="90" height="110" viewBox="0 0 90 110" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="rsg-below" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6B7280"/><stop offset="100%" stop-color="#374151"/></linearGradient></defs><path d="M45,5 L85,20 L85,58 Q85,88 45,105 Q5,88 5,58 L5,20 Z" fill="rgba(107,114,128,0.1)" stroke="url(#rsg-below)" stroke-width="2.5"/><path d="M45,16 L74,28 L74,57 Q74,79 45,93 Q16,79 16,57 L16,28 Z" fill="none" stroke="rgba(107,114,128,0.2)" stroke-width="1"/><circle cx="45" cy="57" r="18" fill="none" stroke="url(#rsg-below)" stroke-width="2" opacity="0.7"/><circle cx="45" cy="57" r="10" fill="none" stroke="url(#rsg-below)" stroke-width="1.5" opacity="0.6"/><circle cx="45" cy="57" r="3" fill="url(#rsg-below)"/><line x1="27" y1="57" x2="35" y2="57" stroke="#6B7280" stroke-width="1.5"/><line x1="55" y1="57" x2="63" y2="57" stroke="#6B7280" stroke-width="1.5"/><line x1="45" y1="39" x2="45" y2="47" stroke="#6B7280" stroke-width="1.5"/><line x1="45" y1="67" x2="45" y2="75" stroke="#6B7280" stroke-width="1.5"/><text x="45" y="108" text-anchor="middle" font-size="8.5" fill="rgba(107,114,128,0.65)" font-family="Orbitron,sans-serif" letter-spacing="1">RISING</text></svg>`
+};
+
+// ── 角色方向推荐（规则驱动）─────────────────────
+function calcRoleRec(s) {
+  const { reaction=0, impulse=0, vision=0, cognition=0, aim=0, focus=0, color=0 } = s;
+  const fpsTend = (reaction + aim) / 2 + color * 0.15;
+  const mobaTend = (cognition + impulse) / 2;
+  const isFPS = fpsTend >= mobaTend;
+  let role, icon, reason, gameName;
+  if (isFPS) {
+    gameName = 'Valorant / CS2';
+    if (reaction >= 65 && aim >= 58) {
+      role='入场手 · Duelist'; icon='⚡';
+      reason=`反应速度 ${reaction}分 + 手眼协调 ${aim}分 构成核心优势，适合第一个切入敌阵、在混乱中快速出手。Duelist 需要在0.2秒内完成"看见-决策-开枪"的闭环，你的数据组合正好覆盖这一需求。`;
+    } else if (focus >= 62 && reaction >= 55) {
+      role='狙击手 · Sniper'; icon='🎯';
+      reason=`专注稳定性 ${focus}分 代表你能在高压下维持持续专注，狙击所需的"守点-等待-精准击发"对注意力的要求远高于反应速度，你的数据在此位置有明显优势。`;
+    } else if (cognition >= 63 && impulse >= 58) {
+      role='控场 · Controller'; icon='🧠';
+      reason=`认知处理 ${cognition}分 + 冲动抑制 ${impulse}分，你更擅长战术规划和道具配合。Controller 角色用烟雾/闪光影响全局节奏，比拼的是读局能力而非纯粹枪法。`;
+    } else {
+      role='弹性位 · Flex'; icon='🎮';
+      reason=`各维度较为均衡，适合根据队伍需求灵活填补不同角色。弹性位是高段位组队中最受欢迎的存在，均衡的数据底盘让你有机会在不同站位中找到最适合自己的方向。`;
+    }
+  } else {
+    gameName = '英雄联盟 / 王者荣耀';
+    if (reaction >= 62 && cognition >= 60) {
+      role='打野 · Jungler'; icon='🗡️';
+      reason=`打野要求全图快速反应 + 战略时机判断，反应速度 ${reaction}分 与认知处理 ${cognition}分 的双高组合是理想匹配。抓人时机的把握既需要快速决策，也需要全局读图能力。`;
+    } else if (aim >= 60 && focus >= 58) {
+      role='ADC · 射手'; icon='🏹';
+      reason=`手眼协调 ${aim}分 保证精准持续输出，专注稳定性 ${focus}分 让你在长时间团战高压下不失误。ADC 对"稳定高输出"的要求与你的数据特征高度吻合。`;
+    } else if (cognition >= 65 && vision >= 55) {
+      role='中单 · Mid Lane'; icon='⭐';
+      reason=`认知处理 ${cognition}分 + 动态视力 ${vision}分，中路需要快速读取战场信息并做出支援决策，你的数据组合在这个位置能充分发挥大局控制优势。`;
+    } else if (impulse >= 65 && cognition >= 55) {
+      role='辅助 · Support'; icon='🛡️';
+      reason=`冲动抑制 ${impulse}分 意味着你能克制冲动、在关键时刻优先保护队友。辅助位的核心不是个人操作，而是策略决策和团队配合，这正是你的优势所在。`;
+    } else {
+      role='上单 · Top Lane'; icon='⚔️';
+      reason=`专注稳定性 ${focus}分 + 冲动抑制 ${impulse}分 适合独立对线和稳定输出。上单的孤岛作战需要高度专注和克制冲动的能力，不急不躁的打法正是你的竞争优势。`;
+    }
+  }
+  return { isFPS, gameName, role, icon, reason };
+}
+
+// ── 专属训练计划（针对最弱维度）──────────────────
+function calcTrainingPlan(s) {
+  const dNames = { reaction:'反应速度', impulse:'冲动抑制', vision:'动态视力', cognition:'认知处理速度', aim:'手眼协调', focus:'专注稳定性', color:'色觉感知' };
+  const plans = {
+    reaction:{ tool:'Human Benchmark', site:'humanbenchmark.com', task:'反应时间 + 数字点击模式', freq:'每日 10 分钟 · 持续 3 周', target:'目标：平均反应时降低 20-30ms' },
+    impulse: { tool:'BrainHQ Go/No-Go', site:'brainhq.com', task:'冲动控制专项练习', freq:'每日 15 分钟 · 持续 4 周', target:'目标：误触次数稳定降至 0-1 次' },
+    vision:  { tool:'Cambridge Brain Sciences', site:'cambridgebrainsciences.com', task:'动态视觉追踪 + 闪现识别', freq:'每日 10 分钟 · 持续 3 周', target:'目标：动态视力测试正确率提升 1-2 题' },
+    cognition:{ tool:'Dual N-Back（BrainWorkshop）', site:'brainworkshop.net', task:'N-back 工作记忆专项', freq:'每日 15 分钟 · 持续 4 周', target:'目标：从 2-back 稳定突破至 3-back' },
+    aim:     { tool:'AimLab · Gridshot 模式', site:'aimlab.gg', task:'基础靶场 + 追踪靶训练', freq:'每日 20 分钟 · 持续 4 周', target:'目标：KPM 提升 15，准确率提升 10%' },
+    focus:   { tool:'Stroop 任务 + 番茄工作法', site:'', task:'专注稳定性 + 抗干扰训练', freq:'25分钟专注+5分钟休息 × 3 组', target:'目标：反应时方差降低 20%（更稳定）' },
+    color:   { tool:'游戏内色觉校准 + 色彩辨别练习', site:'', task:'快速颜色辨别与反应训练', freq:'每日 10 分钟 · 持续 2 周', target:'目标：P1 阶段识别准确率达到 100%' }
+  };
+  const sorted = Object.entries(s).sort((a,b)=>a[1]-b[1]);
+  const [wk,wv] = sorted[0];
+  const [sk] = sorted[1] || [sorted[0][0]];
+  return { worstDim:dNames[wk], worstScore:wv, secDim:dNames[sk], main:plans[wk]||plans.reaction, sec:plans[sk]||plans.aim };
+}
+
+// ── 渲染角色卡（进阶） ─────────────────────────
+function renderRoleCard() {
+  const el = document.getElementById('sec-role-analysis');
+  if (!el) return;
+  const r = calcRoleRec(scores);
+  el.innerHTML = `<div class="card role-card">
+    <div class="card-title">角色方向分析 <span style="font-size:11px;color:var(--green);margin-left:8px;font-weight:400;letter-spacing:1px;">ADVANCED</span></div>
+    <div class="role-header"><div class="role-icon">${r.icon}</div><div><div class="role-title">${r.role}</div><div class="role-sub">${r.gameName} · 最适合你的位置</div></div></div>
+    <div class="role-game-tag">${r.isFPS?'FPS':'MOBA'} · ${r.gameName}</div>
+    <div class="role-reason">${r.reason}</div>
+  </div>`;
+}
+
+// ── 渲染训练卡（进阶） ─────────────────────────
+function renderTrainingCard() {
+  const el = document.getElementById('sec-training-plan');
+  if (!el) return;
+  const p = calcTrainingPlan(scores);
+  el.innerHTML = `<div class="card training-card">
+    <div class="card-title">专属训练计划 <span style="font-size:11px;color:var(--purple);margin-left:8px;font-weight:400;letter-spacing:1px;">ADVANCED</span></div>
+    <div class="training-focus">📍 重点强化：${p.worstDim}（当前 ${p.worstScore} 分）</div>
+    <div class="training-tool-box">
+      <div class="training-tool-name">🔧 主要工具：${p.main.tool}</div>
+      <div class="training-tool-detail">训练内容：${p.main.task}<br>建议频率：${p.main.freq}${p.main.site?'<br>网址：<span style="color:var(--sub)">'+p.main.site+'</span>':''}</div>
+      <div class="training-target">🎯 ${p.main.target}</div>
+    </div>
+    <div class="training-tool-name" style="margin-bottom:8px;font-size:14px;">📌 辅助强化：${p.secDim}　·　${p.sec.tool}</div>
+    <div class="training-tool-detail" style="margin-bottom:16px;">${p.sec.freq}</div>
+    <div>
+      <div class="training-week-row"><span class="week-label">第1周</span>每日使用 ${p.main.tool} 进行${p.main.task.split(' ')[0]}，专注单项建立基线数据</div>
+      <div class="training-week-row"><span class="week-label">第2-3周</span>主训练保持，加入 ${p.sec.tool} 交替练习，双短板同步提升</div>
+      <div class="training-week-row"><span class="week-label">第4周</span>结合实战游戏，有意识针对弱项练习，对比初始测评分数验证进步</div>
+    </div>
+  </div>`;
+}
+
+// ── 渲染锁定卡片（basic模式）─────────────────────
+function renderLockedCard(containerId, title, sub) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = `<div class="locked-card">
+    <div class="locked-blur-inner">
+      <div class="card-title" style="margin-bottom:14px;">${title}</div>
+      <div class="fake-block"></div>
+      <div class="fake-row w80"></div><div class="fake-row w60"></div><div class="fake-row w45"></div>
+    </div>
+    <div class="locked-overlay">
+      <div class="lock-icon-lg">🔒</div>
+      <div class="lock-title">${title}</div>
+      <div class="lock-sub">${sub}</div>
+      <a href="/preview.html" class="lock-btn">升级进阶版查看 →</a>
+    </div>
+  </div>`;
+}
+
 // ── 主流程 ────────────────────────────────────
 let reportMode = 'advanced'; // 'basic' | 'advanced'
 
@@ -824,25 +989,27 @@ async function init() {
   renderDataDetail();
   showContactSection();
 
-  // basic 模式：隐藏进阶专属内容，仅显示基础内容
   if (reportMode === 'basic') {
-    // 隐藏：实测原始数据详情
+    // 原始数据 → 锁定卡
     const rawSec = document.getElementById('sec-raw-data');
-    if (rawSec) rawSec.style.display = 'none';
-    // 隐藏：评分细则按钮（详细标准属进阶内容）
+    if (rawSec) {
+      rawSec.innerHTML = '';
+      renderLockedCard('sec-raw-data', '实测数据详情', '进阶版专属 · 含毫秒级原始测量数据');
+      rawSec.style.display = 'block';
+    }
+    // 角色分析 → 锁定卡
+    renderLockedCard('sec-role-analysis', '角色方向分析', '进阶版专属 · 含FPS/MOBA最适角色与理由');
+    // 训练计划 → 锁定卡
+    renderLockedCard('sec-training-plan', '专属训练计划', '进阶版专属 · 含具体工具、频率与4周计划');
+    // 隐藏评分细则 + PDF下载
     const critBtn = document.querySelector('.criteria-trigger');
     if (critBtn) critBtn.style.display = 'none';
-    // 修改PDF按钮文案
     const dlBtn = document.getElementById('btn-download');
-    if (dlBtn) dlBtn.textContent = '下载基础版PDF报告（2页）';
-    // 在报告标题下方插入升级引导
-    const actionBar = document.querySelector('.action-bar');
-    if (actionBar) {
-      const upsell = document.createElement('div');
-      upsell.style.cssText = 'text-align:center;margin-top:16px;padding:14px 20px;border:1px solid rgba(167,139,250,0.3);border-radius:6px;background:rgba(167,139,250,0.05);';
-      upsell.innerHTML = '<span style="color:var(--sub);font-size:13px;">想看<strong style="color:var(--purple)">实测数据详情、评分细则、角色方向分析</strong>？</span> <a href="/preview.html" style="color:var(--green);font-size:13px;margin-left:8px;text-decoration:none;font-weight:600;">升级进阶版 →</a>';
-      actionBar.after(upsell);
-    }
+    if (dlBtn) dlBtn.style.display = 'none';
+  } else {
+    // 进阶版：渲染角色分析和训练计划卡
+    renderRoleCard();
+    renderTrainingCard();
   }
 
   // 生成AI报告（异步）
@@ -851,6 +1018,10 @@ async function init() {
 
 function renderRating() {
   const cfg = RATING_CONFIG[ratingKey];
+  // SVG 勋章
+  const svgWrap = document.getElementById('rating-svg-wrap');
+  if (svgWrap && RATING_SVG[ratingKey]) svgWrap.innerHTML = RATING_SVG[ratingKey];
+  // 文字徽章
   const badge = document.getElementById('rating-badge');
   badge.textContent = cfg.label;
   badge.className = 'rating-badge ' + cfg.badgeClass;
