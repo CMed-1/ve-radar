@@ -255,7 +255,7 @@ async function callMiniMaxBasic(scores, rating, rawData) {
 
 要求：用具体数字，不写废话，不夸张，语言直接。`;
 
-  const response = await require('axios').post(
+  const response = await axios.post(
     'https://api.minimax.chat/v1/text/chatcompletion_pro',
     {
       model: 'abab6.5s-chat',
