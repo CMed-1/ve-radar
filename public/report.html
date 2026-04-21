@@ -8,6 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
   :root{
     --bg:#000000;
@@ -344,6 +345,77 @@
     transition:border-color .15s,color .15s;
   }
   .btn-outline:hover{border-color:var(--green);color:var(--green);}
+  .btn-share{
+    flex:1;min-width:160px;
+    padding:15px;
+    border-radius:4px;
+    background:transparent;
+    border:2px solid var(--purple);
+    color:var(--purple);
+    font-size:14px;
+    font-weight:600;
+    font-family:'Inter','Noto Sans SC',sans-serif;
+    cursor:pointer;
+    transition:background .15s,color .15s;
+    letter-spacing:.5px;
+  }
+  .btn-share:hover{background:var(--purple);color:#fff;}
+  .btn-share:disabled{opacity:.4;cursor:not-allowed;}
+
+  /* ── 分享图模态框 ── */
+  #share-modal{
+    display:none;
+    position:fixed;inset:0;
+    background:rgba(0,0,0,.85);
+    z-index:9000;
+    align-items:center;justify-content:center;
+    flex-direction:column;
+    padding:20px;
+  }
+  #share-modal .sm-inner{
+    background:#111;
+    border:1px solid #333;
+    border-radius:8px;
+    padding:24px;
+    max-width:95vw;
+    text-align:center;
+  }
+  #share-modal .sm-title{
+    font-size:16px;font-weight:600;color:#fff;
+    margin-bottom:8px;
+  }
+  #share-modal .sm-hint{
+    font-size:12px;color:#a7a7a7;margin-bottom:16px;
+  }
+  #share-modal img{
+    max-width:100%;max-height:60vh;
+    border-radius:6px;display:block;margin:0 auto 16px;
+  }
+  #share-modal .sm-actions{display:flex;gap:12px;justify-content:center;}
+  #share-modal .sm-dl{
+    padding:10px 20px;border-radius:4px;
+    background:var(--green);color:#000;
+    font-size:14px;font-weight:600;
+    border:none;cursor:pointer;
+    font-family:'Inter','Noto Sans SC',sans-serif;
+  }
+  #share-modal .sm-close{
+    padding:10px 20px;border-radius:4px;
+    background:transparent;color:#a7a7a7;
+    font-size:14px;border:1px solid #444;cursor:pointer;
+    font-family:'Inter','Noto Sans SC',sans-serif;
+  }
+
+  /* ── 隐藏分享卡片（用于html2canvas捕获） ── */
+  #share-card{
+    display:none;
+    position:fixed;left:-9999px;top:0;
+    width:750px;
+    background:#111111;
+    font-family:'Inter','Noto Sans SC',sans-serif;
+    padding:0;
+    overflow:hidden;
+  }
 
   /* ── 联系方式表单 ── */
   #contact-section{
@@ -528,6 +600,7 @@
   <!-- 操作按钮 -->
   <div class="action-bar">
     <button class="btn-dl" id="btn-download" onclick="downloadPDF()">下载完整PDF报告</button>
+    <button class="btn-share" id="btn-share" onclick="generateShareImage()">生成分享图</button>
     <button class="btn-outline" onclick="window.location.href='/'">返回首页</button>
   </div>
 
@@ -565,6 +638,57 @@
   </div>
 
 </div><!-- /container -->
+
+<!-- 分享图生成卡片（隐藏，用于html2canvas） -->
+<div id="share-card">
+  <!-- 顶部栏 -->
+  <div style="background:#0a0a0a;padding:22px 32px 18px;border-bottom:2px solid #76b900;">
+    <div style="font-family:'Orbitron',sans-serif;font-size:10px;color:#76b900;letter-spacing:4px;text-transform:uppercase;margin-bottom:4px;">VE ESPORTS TALENT RADAR</div>
+    <div style="font-size:11px;color:#555;letter-spacing:2px;">电竞天赋测评 · 官方报告</div>
+  </div>
+  <!-- 评级区 -->
+  <div style="display:flex;align-items:center;gap:24px;padding:28px 32px 20px;">
+    <div id="sc-badge" style="flex-shrink:0;width:96px;height:96px;display:flex;align-items:center;justify-content:center;"></div>
+    <div>
+      <div id="sc-rating" style="font-family:'Orbitron',sans-serif;font-size:18px;font-weight:700;color:#fff;margin-bottom:6px;"></div>
+      <div id="sc-pct" style="font-size:13px;color:#76b900;font-weight:600;margin-bottom:4px;"></div>
+      <div id="sc-sub" style="font-size:11px;color:#777;"></div>
+    </div>
+  </div>
+  <!-- 雷达图 -->
+  <div style="padding:0 32px 20px;text-align:center;">
+    <img id="sc-radar" style="width:280px;height:280px;display:inline-block;" src="" alt="">
+  </div>
+  <!-- 分数格 -->
+  <div id="sc-scores" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#222;margin:0 32px 20px;border:1px solid #222;border-radius:4px;overflow:hidden;"></div>
+  <!-- AI摘要 -->
+  <div id="sc-ai" style="padding:16px 32px;background:#0d0d0d;margin:0 32px 24px;border-left:3px solid #76b900;border-radius:2px;font-size:12px;color:#ccc;line-height:1.8;"></div>
+  <!-- 底部二维码 -->
+  <div style="padding:20px 32px 28px;display:flex;align-items:center;gap:20px;border-top:1px solid #1e1e1e;">
+    <div id="sc-qr" style="flex-shrink:0;"></div>
+    <div>
+      <div style="font-size:12px;color:#a7a7a7;margin-bottom:6px;">扫码测测你的电竞天赋</div>
+      <div id="sc-url" style="font-size:10px;color:#555;font-family:'Inter',monospace;"></div>
+    </div>
+    <div style="margin-left:auto;text-align:right;">
+      <div style="font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;color:#76b900;">VE</div>
+      <div style="font-size:9px;color:#444;letter-spacing:1px;">TALENT RADAR</div>
+    </div>
+  </div>
+</div>
+
+<!-- 分享图模态框 -->
+<div id="share-modal">
+  <div class="sm-inner">
+    <div class="sm-title">分享图已生成</div>
+    <div class="sm-hint">长按图片保存 · 分享到朋友圈/微信好友</div>
+    <img id="share-img" src="" alt="分享图">
+    <div class="sm-actions">
+      <button class="sm-dl" onclick="downloadShareImg()">保存图片</button>
+      <button class="sm-close" onclick="document.getElementById('share-modal').style.display='none'">关闭</button>
+    </div>
+  </div>
+</div>
 
 <!-- 评分细则浮层 -->
 <div class="criteria-overlay" id="criteria-overlay" onclick="closeCriteriaOutside(event)">
@@ -1537,6 +1661,106 @@ function buildPDFContent(radarImg, barImg, lineImg) {
       </div>
 
     </div>`;
+}
+
+// ── 分享图生成 ────────────────────────────────
+const RENDER_DOMAIN = 'https://ve-radar.onrender.com';
+
+function scScoreColor(v) {
+  if (v >= 80) return '#76b900';
+  if (v >= 60) return '#F8B73C';
+  return '#a78bfa';
+}
+
+async function generateShareImage() {
+  const btn = document.getElementById('btn-share');
+  btn.disabled = true; btn.textContent = '生成中...';
+  try {
+    // 1. QR URL（有邀请码则带 ref 参数）
+    const code = sessionStorage.getItem('ve_code');
+    const qrUrl = code ? `${RENDER_DOMAIN}/?ref=${encodeURIComponent(code)}` : RENDER_DOMAIN;
+
+    // 2. 填充卡片内容
+    const avg = DIM_KEYS.reduce((a,k)=>a+(scores[k]||0),0) / 7;
+    const pct = scoreToPercentile(avg);
+    const cfg = RATING_CONFIG[ratingKey];
+
+    // 评级徽章（复用已有SVG）
+    const badgeEl = document.getElementById('sc-badge');
+    badgeEl.innerHTML = RATING_SVG[ratingKey] || '';
+    // 缩小SVG到96px
+    const svgEl = badgeEl.querySelector('svg');
+    if (svgEl) { svgEl.style.width='96px'; svgEl.style.height='96px'; }
+
+    document.getElementById('sc-rating').textContent = cfg.label;
+    document.getElementById('sc-pct').textContent =
+      `超越了 ${pct >= 99.9 ? '99.9+' : pct.toFixed(1)}% 的测评者`;
+    document.getElementById('sc-sub').textContent = cfg.subtitle;
+    document.getElementById('sc-url').textContent = qrUrl.replace('https://','');
+
+    // 雷达图图片
+    const radarCanvas = document.getElementById('radar-chart');
+    document.getElementById('sc-radar').src = radarCanvas ? radarCanvas.toDataURL('image/png') : '';
+
+    // 分数格
+    const scoresEl = document.getElementById('sc-scores');
+    scoresEl.innerHTML = DIM_KEYS.map(k => {
+      const v = Math.round(scores[k] || 0);
+      return `<div style="background:#111;padding:10px 6px;text-align:center;">
+        <div style="font-size:9px;color:#666;margin-bottom:4px;letter-spacing:.5px;">${DIM_NAMES[k]}</div>
+        <div style="font-family:'Orbitron',sans-serif;font-size:16px;font-weight:700;color:${scScoreColor(v)};">${v}</div>
+      </div>`;
+    }).join('');
+
+    // AI摘要（第一句话）
+    const aiFirst = reportTextContent
+      ? reportTextContent.trim().split(/[。！？\n]/)[0].replace(/^[\s\r\n]+/,'') + '。'
+      : `综合7项能力测评，你的电竞天赋综合评级为 ${cfg.label}。`;
+    document.getElementById('sc-ai').textContent = aiFirst;
+
+    // 3. 生成二维码
+    const qrEl = document.getElementById('sc-qr');
+    qrEl.innerHTML = '';
+    new QRCode(qrEl, {
+      text: qrUrl,
+      width: 80, height: 80,
+      colorDark: '#ffffff',
+      colorLight: '#111111',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+
+    // 4. 显示卡片供截图
+    const card = document.getElementById('share-card');
+    card.style.display = 'block';
+    await new Promise(r => setTimeout(r, 400)); // 等QR渲染
+
+    // 5. html2canvas 截图
+    const canvas = await html2canvas(card, {
+      backgroundColor: '#111111',
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      width: 750,
+      windowWidth: 750
+    });
+    card.style.display = 'none';
+
+    // 6. 显示模态框
+    document.getElementById('share-img').src = canvas.toDataURL('image/png');
+    document.getElementById('share-modal').style.display = 'flex';
+  } catch(e) {
+    console.error('分享图生成失败', e);
+    alert('分享图生成失败，请稍后重试');
+  }
+  btn.disabled = false; btn.textContent = '生成分享图';
+}
+
+function downloadShareImg() {
+  const img = document.getElementById('share-img');
+  const a = document.createElement('a');
+  a.href = img.src;
+  a.download = `VE天赋雷达_${new Date().toLocaleDateString('zh-CN').replace(/\//g,'-')}.png`;
+  a.click();
 }
 
 // 启动
