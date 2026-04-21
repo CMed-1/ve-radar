@@ -473,9 +473,9 @@
     </div>
   </div>
 
-  <!-- 原始数据详情 -->
-  <div class="card data-detail-card">
-    <div class="card-title">实测数据详情</div>
+  <!-- 原始数据详情（进阶版专属） -->
+  <div class="card data-detail-card" id="sec-raw-data">
+    <div class="card-title">实测数据详情 <span style="font-size:11px;color:var(--green);margin-left:8px;font-weight:400;letter-spacing:1px;">ADVANCED</span></div>
     <div class="data-grid" id="data-grid"></div>
   </div>
 
@@ -749,7 +749,7 @@ function buildCriteriaContent() {
     <table class="criteria-table">
       <thead><tr><th>维度</th><th>计算逻辑</th></tr></thead>
       <tbody>
-        <tr><td>反应速度</td><td>平均反应时间线性映射：190ms=100分，273ms=50分，360ms=20分</td></tr>
+        <tr><td>反应速度</td><td>平均反应时间线性映射：190ms=100分，260ms=50分，360ms=20分</td></tr>
         <tr><td>冲动抑制</td><td>100 − 误触率×60 − 漏触率×40（误触惩罚更重）</td></tr>
         <tr><td>动态视力</td><td>正确题数 / 6 × 100（难度递增：4位→5位→6位数字，显示220-350ms）</td></tr>
         <tr><td>认知处理</td><td>各级方格完成时间与基准对比（3×3基准12s，4×4基准35s，5×5基准80s）</td></tr>
@@ -774,7 +774,7 @@ function buildCriteriaContent() {
 // ── 百分位计算（正态分布近似：均值55，标准差16）
 //    校准：普通测评者综合均分约55 → 第50百分位
 function scoreToPercentile(score) {
-  const z = (score - 55) / 16;
+  const z = (score - 58) / 16; // 修正：测试人群自选偏差，均值偏高
   const t = 1 / (1 + 0.3275911 * Math.abs(z));
   const poly = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
   const erfc = poly * Math.exp(-z * z);
@@ -824,12 +824,25 @@ async function init() {
   renderDataDetail();
   showContactSection();
 
-  // basic 模式：折叠部分深度内容
+  // basic 模式：隐藏进阶专属内容，仅显示基础内容
   if (reportMode === 'basic') {
-    // AI分析段落仍然显示，但文字会更短（由basic prompt控制）
-    // PDF按钮文案调整
+    // 隐藏：实测原始数据详情
+    const rawSec = document.getElementById('sec-raw-data');
+    if (rawSec) rawSec.style.display = 'none';
+    // 隐藏：评分细则按钮（详细标准属进阶内容）
+    const critBtn = document.querySelector('.criteria-trigger');
+    if (critBtn) critBtn.style.display = 'none';
+    // 修改PDF按钮文案
     const dlBtn = document.getElementById('btn-download');
     if (dlBtn) dlBtn.textContent = '下载基础版PDF报告（2页）';
+    // 在报告标题下方插入升级引导
+    const actionBar = document.querySelector('.action-bar');
+    if (actionBar) {
+      const upsell = document.createElement('div');
+      upsell.style.cssText = 'text-align:center;margin-top:16px;padding:14px 20px;border:1px solid rgba(167,139,250,0.3);border-radius:6px;background:rgba(167,139,250,0.05);';
+      upsell.innerHTML = '<span style="color:var(--sub);font-size:13px;">想看<strong style="color:var(--purple)">实测数据详情、评分细则、角色方向分析</strong>？</span> <a href="/preview.html" style="color:var(--green);font-size:13px;margin-left:8px;text-decoration:none;font-weight:600;">升级进阶版 →</a>';
+      actionBar.after(upsell);
+    }
   }
 
   // 生成AI报告（异步）
@@ -1192,7 +1205,7 @@ async function renderLineChartImage(reactionTimes) {
           pointBorderWidth: 2
         },
         {
-          label: '普通人均值 273ms',
+          label: '普通人均值 260ms',
           data: reactionTimes.map(() => avgBench),
           borderColor: 'rgba(248,183,60,0.7)',
           borderDash: [6, 4],
@@ -1239,7 +1252,7 @@ function buildPDFContent(radarImg, barImg, lineImg) {
   if (raw.reactionTimes && raw.reactionTimes.length) {
     const avgRT = Math.round(raw.reactionTimes.reduce((a,b)=>a+b,0)/raw.reactionTimes.length);
     const bestRT = Math.min(...raw.reactionTimes);
-    dataLines.push(`反应速度：平均 ${avgRT}ms（普通人均值 273ms）· 最快 ${bestRT}ms`);
+    dataLines.push(`反应速度：平均 ${avgRT}ms（普通人均值 260ms）· 最快 ${bestRT}ms`);
   }
   if (raw.gngHits !== undefined) {
     dataLines.push(`冲动抑制：命中 ${raw.gngHits}/14 · 误触 ${raw.gngFalseAlarms} 次`);

@@ -716,13 +716,14 @@ function finishReaction() {
   const valid = RT.times.filter(t => t !== null);
   rawData.reactionTimes = valid;
   const avg = valid.length ? valid.reduce((a,b)=>a+b,0)/valid.length : 400;
-  // 评分校准：300ms=50分(中位数) 400ms=37分(~20th pct) 220ms=90分 190ms=100分
+  // 评分校准：以人群中位数260ms为50分基准
+  // 190ms→100, 210ms→90, 260ms→50, 350ms→15, 500ms→0
   let s;
   if (avg < 190) s = 100;
-  else if (avg < 220) s = Math.round(90 + (220-avg)/30*10);      // 220→90, 190→100
-  else if (avg < 300) s = Math.round(50 + (300-avg)/80*40);      // 300→50, 220→90
-  else if (avg < 400) s = Math.round(37 + (400-avg)/100*13);     // 400→37, 300→50
-  else s = Math.max(0, Math.round(37 - (avg-400)/200*37));       // 600→0
+  else if (avg < 210) s = Math.round(90 + (210-avg)/20*10);   // 210→90, 190→100
+  else if (avg < 260) s = Math.round(50 + (260-avg)/50*40);   // 260→50, 210→90
+  else if (avg < 350) s = Math.round(15 + (350-avg)/90*35);   // 350→15, 260→50
+  else s = Math.max(0, Math.round(15 - (avg-350)/150*15));     // 500→0
   scores.reaction = Math.min(100, Math.max(0, s));
   currentTest = 1;
   showScreen('s-gng-intro');
@@ -796,11 +797,13 @@ function finishGNG() {
   rawData.gngHits = GNG.hits;
   rawData.gngFalseAlarms = GNG.falseAlarms;
   rawData.gngMisses = GNG.misses;
-  // 校准：0误触0漏=100; 1误触0漏=60; 1误触2漏≈50(普通人); 2误触=20
-  let s = 100 - GNG.falseAlarms * 40 - GNG.misses * 5;
+  // 重新校准（修正版）：普通人基准为1误触1漏≈50分
+  // 0误触0漏=85(优秀); 1误触0漏=53(均值); 1误触2漏=39(偏低); 2误触=21(差)
+  let s = 85 - GNG.falseAlarms * 32 - GNG.misses * 7;
+  // 反应速度加成（快速正确响应+3分）
   if (GNG.rtTimes.length) {
     const avgRT = GNG.rtTimes.reduce((a,b)=>a+b,0)/GNG.rtTimes.length;
-    if (avgRT < 280) s = Math.min(100, s + 5);
+    if (avgRT < 260) s = Math.min(100, s + 3);
   }
   scores.impulse = Math.min(100, Math.max(0, Math.round(s)));
   currentTest = 2;
@@ -1847,7 +1850,7 @@ function finishReaction2() {
   const valid2 = RT2.times.filter(t => t !== null);
   rawData.rt2Times = valid2;
 
-  let s = 65;
+  let s = 50; // 默认：数据不足时给平均分
   if (valid1.length >= 4 && valid2.length >= 2) {
     const avg1 = valid1.reduce((a,b)=>a+b,0) / valid1.length;
     const avg2 = valid2.reduce((a,b)=>a+b,0) / valid2.length;

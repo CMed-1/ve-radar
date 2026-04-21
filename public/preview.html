@@ -438,7 +438,7 @@ function calcRating(s) {
 }
 
 function scoreToPercentile(score) {
-  const z = (score - 55) / 16;
+  const z = (score - 58) / 16; // 修正：测试人群自选偏差，均值偏高
   const t = 1 / (1 + 0.3275911 * Math.abs(z));
   const poly = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
   const erfc = poly * Math.exp(-z * z);
