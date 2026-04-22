@@ -111,6 +111,51 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',s
 }
 .teaser-content{filter:blur(4px);user-select:none;pointer-events:none;}
 .teaser-bar{height:12px;background:#1e1e1e;border-radius:2px;margin-bottom:7px;}
+.method-box{
+  background:#0d0d0d;
+  border:1px solid rgba(118,185,0,0.18);
+  border-radius:4px;
+  padding:18px 20px;
+  margin:20px 0 28px;
+}
+.method-title{
+  font-size:10px;
+  letter-spacing:2px;
+  color:#76b900;
+  text-transform:uppercase;
+  margin-bottom:14px;
+  font-family:'Inter',sans-serif;
+}
+.method-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+  margin-bottom:12px;
+}
+.method-chip{
+  border:1px solid #1f1f1f;
+  background:#111;
+  border-radius:4px;
+  padding:10px 12px;
+}
+.method-chip-label{
+  display:block;
+  font-size:10px;
+  color:#666;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  margin-bottom:4px;
+}
+.method-chip-value{
+  font-size:13px;
+  color:var(--text);
+  line-height:1.5;
+}
+.method-note{
+  font-size:12px;
+  color:var(--sub);
+  line-height:1.7;
+}
 
 /* Divider — green accent line */
 .section-divider{border:none;border-top:1px solid var(--green);margin:36px 0;opacity:.35;}
@@ -163,6 +208,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',s
 /* Plan cards */
 .plans-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
 @media(max-width:560px){.plans-grid{grid-template-columns:1fr;}}
+@media(max-width:560px){.method-grid{grid-template-columns:1fr;}}
 
 .plan-card{
   background:var(--card);
@@ -365,12 +411,23 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',s
     <div><div class="rating-badge" id="rating-badge"></div></div>
     <div class="rating-sub" id="rating-sub"></div>
     <div class="pct-display">内部参考分位 <span id="pct-num">—</span></div>
-    <div class="pct-sub" id="pct-sub-text">基于内部临时校准，仅作参考</div>
+    <div class="pct-sub" id="pct-sub-text">基于内部匿名有效样本持续校准，仅作站内相对参考</div>
   </div>
 
   <!-- 雷达图 -->
   <div class="radar-wrap" id="radar-wrap">
     <canvas id="radar-chart"></canvas>
+  </div>
+
+  <div class="method-box">
+    <div class="method-title">评估依据 · Methodology</div>
+    <div class="method-grid">
+      <div class="method-chip"><span class="method-chip-label">评分模型</span><span class="method-chip-value">VE-M7 版本化评分模型</span></div>
+      <div class="method-chip"><span class="method-chip-label">指标结构</span><span class="method-chip-value">7 项核心行为指标联合计算</span></div>
+      <div class="method-chip"><span class="method-chip-label">稳定性校验</span><span class="method-chip-value">Aim 双轮复测 + RT 波动拆解</span></div>
+      <div class="method-chip"><span class="method-chip-label">参考区间</span><span class="method-chip-value">内部匿名有效样本持续校准</span></div>
+    </div>
+    <div class="method-note">当前页面展示的是公开预览。内部参考分位反映你在本站样本中的相对位置，不等同于正式常模百分位，更适合用于筛查、复测对比和训练优先级判断。</div>
   </div>
 
   <!-- 门控预览区（无邀请码且未付费时显示） -->
@@ -389,7 +446,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',s
       </div>
     </div>
     <div class="teaser-section">
-      <div class="teaser-title">角色推荐方向 · ROLE ANALYSIS</div>
+      <div class="teaser-title">双赛道角色方向 · ROLE ANALYSIS</div>
       <div class="teaser-content">
         <div class="teaser-bar" style="width:55%;"></div>
         <div class="teaser-bar" style="width:70%;"></div>
@@ -402,7 +459,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',s
   <!-- 解锁区域 -->
   <div class="unlock-header">
     <div class="unlock-title">解锁你的完整报告</div>
-    <div class="unlock-sub">查看七维详细分析、AI专业解读和PDF下载</div>
+    <div class="unlock-sub">查看评分依据、双赛道角色匹配、完整能力解释与 PDF 下载</div>
   </div>
 
   <!-- 邀请码用户：直接进入 -->
@@ -424,7 +481,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',s
           <li>综合评级 + 七维评分</li>
           <li>七维战力雷达图</li>
           <li>天赋标签</li>
-          <li>游戏 / 角色方向建议</li>
+          <li>FPS / MOBA 双赛道方向</li>
           <li>简版训练建议</li>
           <li>基础 PDF 报告（2页）</li>
         </ul>
@@ -439,9 +496,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',s
           <li>基础版全部内容</li>
           <li class="extra">七维能力深度拆解</li>
           <li class="extra">能力结构分析</li>
-          <li class="extra">职业潜力评估</li>
-          <li class="extra">角色 / 项目细化方向</li>
-          <li class="extra">短板风险分析</li>
+          <li class="extra">职业潜力与兑现门槛</li>
+          <li class="extra">双赛道角色细化匹配</li>
+          <li class="extra">结构短板与风险点</li>
           <li class="extra">个性化训练计划</li>
           <li class="extra">进阶 PDF 报告（4-5页）</li>
         </ul>
@@ -450,7 +507,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',s
     </div>
     <div class="test-mode-note" id="payment-note">📌 支付接口接入中，当前非邀请码用户暂不可解锁完整报告</div>
     <div class="plan-note" style="margin-top:12px;">
-      <strong>关于俱乐部推荐：</strong>推荐资格与购买版本<strong>无关</strong>，仅与测评成绩有关。达到前 5% 或前 0.1% 评级的用户，VE 将主动向合作俱乐部推送你的报告，无论是否购买报告。
+      <strong>关于合作通道：</strong>推荐资格与购买版本<strong>无关</strong>，高评级报告会先进入人工复核，再决定是否进入合作俱乐部 / 青训观察通道。
     </div>
   </div>
 
@@ -495,10 +552,10 @@ const RATING_SVG = {
 };
 
 const RATING_CONFIG = {
-  genius:{ label:'👑 职业级天才少年', sub:'你拥有十万里挑一的电竞天赋', cls:'genius', clubTitle:'你的天赋已触发俱乐部定向邀请', clubDesc:'恭喜！你达到了「职业级天才少年」的顶级评级，VE已将你的完整报告推送至合作俱乐部青训团队。俱乐部将在 <strong style="color:#FCD34D">3-7个工作日内</strong> 主动联系，邀请参加专业试训。', clubBadge:'俱乐部定向邀请 · 顶级通道' },
-  pro:{    label:'🚀 有潜力的电竞职业玩家', sub:'你具备突破职业门槛的潜力', cls:'pro', clubTitle:'俱乐部已收到你的天赋数据', clubDesc:'你的测评结果表明具备冲击职业的潜力。VE将把你纳入合作俱乐部人才储备库，如有适合机会，俱乐部将第一时间联系你。', clubBadge:'俱乐部人才储备 · 持续关注' },
-  normal:{ label:'🎮 普通玩家水平', sub:'具备一定游戏基础，通过训练可持续提升', cls:'normal' },
-  below:{  label:'📊 弱于普通人水平', sub:'基础能力有提升空间，坚持训练即可进步', cls:'below' }
+  genius:{ label:'👑 职业级天才少年', sub:'你在多项核心行为指标上进入内部最高阈值档', cls:'genius', clubTitle:'你的报告已进入优先复核队列', clubDesc:'恭喜！你的综合结构已达到内部最高阈值档。VE 会优先复核你的完整报告，并结合项目方向、稳定性与复测表现，决定是否进入合作俱乐部 / 青训通道。', clubBadge:'优先复核 · 最高阈值档' },
+  pro:{    label:'🚀 有潜力的电竞职业玩家', sub:'你已进入内部进阶候选区间', cls:'pro', clubTitle:'你的报告已进入观察名单', clubDesc:'你的测评结果显示出较明确的职业潜力，但是否进入进一步通道仍取决于能力结构完整度和后续兑现表现。VE 会将你纳入持续观察名单。', clubBadge:'持续观察 · 进阶候选区间' },
+  normal:{ label:'🎮 普通玩家水平', sub:'能力结构已成型，仍有明确提升空间', cls:'normal' },
+  below:{  label:'📊 弱于普通人水平', sub:'当前基础链路仍需继续补强', cls:'below' }
 };
 
 function hasReportAccess() {
@@ -638,7 +695,7 @@ function init() {
   // 百分位
   document.getElementById('pct-num').textContent = pct >= 99.9 ? '99.9+' : pct.toFixed(1);
   const pctDesc = pct >= 99 ? '· 内部最高档位' : pct >= 90 ? '· 内部较高档位' : pct >= 70 ? '· 高于内部均值' : pct >= 45 ? '· 接近内部均值' : '· 目前仍有提升空间';
-  document.getElementById('pct-sub-text').textContent = '基于内部临时校准，仅作参考 ' + pctDesc;
+  document.getElementById('pct-sub-text').textContent = '基于内部匿名有效样本持续校准，仅作站内相对参考 ' + pctDesc;
 
   // 雷达图
   renderRadar(scores);

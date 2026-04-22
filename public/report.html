@@ -83,12 +83,23 @@
   .rating-svg-wrap svg{filter:drop-shadow(0 0 14px rgba(255,255,255,0.15));}
   /* ── 角色方向卡 ── */
   .role-card{background:rgba(118,185,0,0.04);border:1px solid rgba(118,185,0,0.2);border-radius:8px;padding:28px 32px;margin-bottom:24px;}
-  .role-header{display:flex;align-items:center;gap:16px;margin-bottom:16px;}
+  .role-summary{margin-bottom:18px;padding:14px 16px;border:1px solid rgba(118,185,0,0.14);background:rgba(118,185,0,0.05);border-radius:6px;}
+  .role-summary-title{font-size:11px;color:var(--green);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-family:'Inter',sans-serif;}
+  .role-summary-text{font-size:13px;line-height:1.8;color:var(--text);}
+  .role-track-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .role-track-card{border-radius:8px;padding:20px;border:1px solid rgba(118,185,0,0.16);background:rgba(118,185,0,0.03);}
+  .role-track-card.moba{border-color:rgba(167,139,250,0.22);background:rgba(167,139,250,0.04);}
+  .role-track-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--sub);margin-bottom:12px;font-family:'Inter',sans-serif;}
+  .role-header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:14px;flex-wrap:wrap;}
+  .role-fit{font-size:11px;color:var(--green);border:1px solid rgba(118,185,0,0.35);padding:4px 10px;border-radius:20px;white-space:nowrap;}
+  .role-track-card.moba .role-fit{color:var(--purple);border-color:rgba(167,139,250,0.35);}
   .role-icon{font-size:42px;line-height:1;}
   .role-title{font-family:'Orbitron',sans-serif;font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px;}
   .role-sub{font-size:13px;color:var(--sub);font-family:'Inter',sans-serif;}
   .role-game-tag{display:inline-block;padding:4px 14px;border:1px solid var(--green);border-radius:20px;font-size:11px;color:var(--green);margin-bottom:14px;letter-spacing:1px;font-family:'Inter',sans-serif;}
+  .role-track-card.moba .role-game-tag{border-color:var(--purple);color:var(--purple);}
   .role-reason{font-size:14px;color:var(--text);line-height:1.9;font-family:'Inter',sans-serif;border-left:3px solid var(--green);padding-left:16px;margin-top:4px;}
+  .role-track-card.moba .role-reason{border-left-color:var(--purple);}
   /* ── 训练计划卡 ── */
   .training-card{background:rgba(167,139,250,0.04);border:1px solid rgba(167,139,250,0.2);border-radius:8px;padding:28px 32px;margin-bottom:24px;}
   .training-focus{font-size:14px;font-weight:700;color:var(--purple);margin-bottom:18px;font-family:'Inter',sans-serif;}
@@ -145,10 +156,16 @@
     transform:translateX(-50%);
   }
   .percentile-axis{display:flex;justify-content:space-between;max-width:480px;margin:0 auto;font-size:10px;color:var(--muted);letter-spacing:.5px;font-family:'Inter',sans-serif;}
+  .methodology-card{margin-bottom:16px;}
+  .methodology-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px;}
+  .methodology-item{border:1px solid var(--border);border-radius:4px;padding:14px 14px 12px;background:#0d0d0d;}
+  .methodology-label{font-size:10px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;}
+  .methodology-value{font-size:13px;color:var(--text);line-height:1.6;}
+  .methodology-note{font-size:13px;color:var(--sub);line-height:1.8;}
 
   /* ── 两栏布局 ── */
   .report-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
-  @media(max-width:620px){.report-grid{grid-template-columns:1fr;}}
+  @media(max-width:620px){.report-grid,.methodology-grid,.role-track-grid{grid-template-columns:1fr;}}
 
   /* ── 卡片 — solid, no blur ── */
   .card{
@@ -555,9 +572,9 @@
 
   <!-- 百分位排名 -->
   <div class="percentile-section">
-    <div class="percentile-label">你的综合天赋在测评人群中的位置</div>
+    <div class="percentile-label">你的综合能力在当前站内样本中的相对位置</div>
     <div class="percentile-main">内部参考分位 <span id="pct-num">—</span></div>
-    <div class="percentile-sub" id="pct-sub">基于内部临时校准，仅作参考</div>
+    <div class="percentile-sub" id="pct-sub">基于内部匿名有效样本持续校准，仅作站内相对参考</div>
     <div class="percentile-bar-wrap">
       <div class="percentile-bar-fill" id="pct-bar-fill" style="width:50%"></div>
       <div class="percentile-marker" id="pct-marker" style="left:50%"></div>
@@ -565,6 +582,17 @@
     <div class="percentile-axis">
       <span>0%</span><span>普通人水平 (50%)</span><span>99%+</span>
     </div>
+  </div>
+
+  <div class="card methodology-card">
+    <div class="card-title">评估依据</div>
+    <div class="methodology-grid">
+      <div class="methodology-item"><div class="methodology-label">评分模型</div><div class="methodology-value">VE-M7 版本化评分模型</div></div>
+      <div class="methodology-item"><div class="methodology-label">指标结构</div><div class="methodology-value">7 项核心行为指标联合计算</div></div>
+      <div class="methodology-item"><div class="methodology-label">稳定性校验</div><div class="methodology-value">Aim 双轮复测 + RT 波动拆解</div></div>
+      <div class="methodology-item"><div class="methodology-label">参考区间</div><div class="methodology-value">内部匿名有效样本持续校准</div></div>
+    </div>
+    <div class="methodology-note">这份报告更适合用于电竞能力筛查、复测对比和训练优先级判断，不等同于正式心理测量常模或职业录用结论。真正有价值的不是单次高分，而是能力结构、稳定性与后续兑现表现。</div>
   </div>
 
   <!-- 雷达图 + 维度分数 -->
@@ -748,20 +776,20 @@ function calcRating(s) {
 const RATING_CONFIG = {
   genius: {
     label:'👑 职业级天才少年',
-    subtitle:'你拥有十万里挑一的电竞天赋',
+    subtitle:'你在多项核心行为指标上进入内部最高阈值档',
     badgeClass:'genius',
-    contactTitle:'你的天赋已触发俱乐部定向邀请',
-    contactDesc:'恭喜！你达到了「职业级天才少年」的顶级评级，VE已将你的完整报告推送至合作俱乐部青训团队。<br><br>请留下联系方式，俱乐部将在 <strong style="color:#FCD34D">3-7个工作日内</strong> 主动联系你，邀请参加专业试训。'
+    contactTitle:'你的报告已进入优先复核队列',
+    contactDesc:'恭喜！你已达到内部最高阈值档。VE 会优先复核你的完整报告，并结合项目方向、稳定性与复测表现，决定是否进入合作俱乐部 / 青训通道。<br><br>请留下联系方式，便于后续人工复核时与你联系。'
   },
   pro: {
     label:'🚀 有潜力的电竞职业玩家',
-    subtitle:'你具备突破职业门槛的潜力',
+    subtitle:'你已进入内部进阶候选区间',
     badgeClass:'pro',
-    contactTitle:'俱乐部已收到你的雷达数据',
-    contactDesc:'你的测评结果表明你具备冲击职业的潜力。留下联系方式后，VE将把你纳入合作俱乐部的人才储备库。<br><br>如俱乐部有适合的机会，将第一时间与你取得联系。'
+    contactTitle:'你的报告已进入观察名单',
+    contactDesc:'你的测评结果显示出较明确的职业潜力，但是否进入进一步通道仍取决于能力结构完整度和后续兑现表现。<br><br>留下联系方式后，VE 会将你纳入持续观察名单。'
   },
-  normal: { label:'🎮 普通玩家水平', subtitle:'具备一定游戏基础，通过训练可持续提升', badgeClass:'normal' },
-  below:  { label:'📊 弱于普通人水平', subtitle:'基础能力有提升空间，坚持训练即可进步', badgeClass:'below' }
+  normal: { label:'🎮 普通玩家水平', subtitle:'能力结构已成型，仍有明确提升空间', badgeClass:'normal' },
+  below:  { label:'📊 弱于普通人水平', subtitle:'当前基础链路仍需继续补强', badgeClass:'below' }
 };
 
 // ── 评分细则面板 ──────────────────────────────
@@ -936,7 +964,7 @@ function buildCriteriaContent() {
     </table>
 
     <div class="criteria-note">
-      <strong>参考分位说明：</strong>页面里的“参考分位”目前是基于内部临时分布的展示值，不等同于严格心理测量里的正式百分位。要做正式百分位，必须有足够大的代表性匿名样本；系统现已开始累计匿名完成样本，后续应切换为经验分位。<br><br>
+      <strong>参考分位说明：</strong>页面里的“参考分位”目前是基于内部匿名有效样本持续校准的站内展示值，不等同于严格心理测量里的正式百分位。要做正式百分位，必须有足够大的代表性匿名样本；系统现已开始累计匿名完成样本，后续应切换为经验分位。<br><br>
       数据参考来源：<br>
       · <strong>反应速度：</strong>简单反应时和职业玩家更快的视觉运动反应有研究支持，但不同设备和网页延迟会带来偏差<br>
       · <strong>冲动抑制：</strong>Go/No-Go 的 commission / omission error 是常见执行控制指标，方向上有学术支持<br>
@@ -948,7 +976,7 @@ function buildCriteriaContent() {
   `;
 }
 
-// ── 参考分位估计（内部临时校准，不是正式常模百分位）────────
+// ── 参考分位估计（内部匿名样本持续校准，不是正式常模百分位）────────
 function scoreToPercentile(score) {
   const z = (score - 58) / 16; // 修正：测试人群自选偏差，均值偏高
   const t = 1 / (1 + 0.3275911 * Math.abs(z));
@@ -970,7 +998,7 @@ function renderPercentile() {
   const fillEl = document.getElementById('pct-bar-fill');
   if (fillEl) fillEl.style.width = markerLeft + '%';
   const desc = pct >= 99 ? '· 内部最高档位' : pct >= 90 ? '· 内部较高档位' : pct >= 70 ? '· 高于内部均值' : pct >= 45 ? '· 接近内部均值' : '· 目前仍有提升空间';
-  document.getElementById('pct-sub').textContent = '基于内部临时校准，仅作参考 ' + desc;
+  document.getElementById('pct-sub').textContent = '基于内部匿名有效样本持续校准，仅作站内相对参考 ' + desc;
 }
 
 // ── 评级 SVG 勋章 ─────────────────────────────
@@ -981,48 +1009,59 @@ const RATING_SVG = {
   below: `<svg width="90" height="110" viewBox="0 0 90 110" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="rsg-below" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6B7280"/><stop offset="100%" stop-color="#374151"/></linearGradient></defs><path d="M45,5 L85,20 L85,58 Q85,88 45,105 Q5,88 5,58 L5,20 Z" fill="rgba(107,114,128,0.1)" stroke="url(#rsg-below)" stroke-width="2.5"/><path d="M45,16 L74,28 L74,57 Q74,79 45,93 Q16,79 16,57 L16,28 Z" fill="none" stroke="rgba(107,114,128,0.2)" stroke-width="1"/><circle cx="45" cy="57" r="18" fill="none" stroke="url(#rsg-below)" stroke-width="2" opacity="0.7"/><circle cx="45" cy="57" r="10" fill="none" stroke="url(#rsg-below)" stroke-width="1.5" opacity="0.6"/><circle cx="45" cy="57" r="3" fill="url(#rsg-below)"/><line x1="27" y1="57" x2="35" y2="57" stroke="#6B7280" stroke-width="1.5"/><line x1="55" y1="57" x2="63" y2="57" stroke="#6B7280" stroke-width="1.5"/><line x1="45" y1="39" x2="45" y2="47" stroke="#6B7280" stroke-width="1.5"/><line x1="45" y1="67" x2="45" y2="75" stroke="#6B7280" stroke-width="1.5"/><text x="45" y="108" text-anchor="middle" font-size="8.5" fill="rgba(107,114,128,0.65)" font-family="Orbitron,sans-serif" letter-spacing="1">RISING</text></svg>`
 };
 
-// ── 角色方向推荐（规则驱动）─────────────────────
-function calcRoleRec(s) {
-  const { reaction=0, impulse=0, vision=0, cognition=0, aim=0, focus=0, color=0 } = s;
-  const fpsTend = (reaction + aim) / 2 + color * 0.15;
-  const mobaTend = (cognition + impulse) / 2;
-  const isFPS = fpsTend >= mobaTend;
-  let role, icon, reason, gameName;
-  if (isFPS) {
-    gameName = 'Valorant / CS2';
-    if (reaction >= 65 && aim >= 58) {
-      role='入场手 · Duelist'; icon='⚡';
-      reason=`反应速度 ${reaction}分 + 手眼协调 ${aim}分 构成核心优势，适合第一个切入敌阵、在混乱中快速出手。Duelist 需要在0.2秒内完成"看见-决策-开枪"的闭环，你的数据组合正好覆盖这一需求。`;
-    } else if (focus >= 62 && reaction >= 55) {
-      role='狙击手 · Sniper'; icon='🎯';
-      reason=`专注稳定性 ${focus}分 代表你能在高压下维持持续专注，狙击所需的"守点-等待-精准击发"对注意力的要求远高于反应速度，你的数据在此位置有明显优势。`;
-    } else if (cognition >= 63 && impulse >= 58) {
-      role='控场 · Controller'; icon='🧠';
-      reason=`认知处理 ${cognition}分 + 冲动抑制 ${impulse}分，你更擅长战术规划和道具配合。Controller 角色用烟雾/闪光影响全局节奏，比拼的是读局能力而非纯粹枪法。`;
-    } else {
-      role='弹性位 · Flex'; icon='🎮';
-      reason=`各维度较为均衡，适合根据队伍需求灵活填补不同角色。弹性位是高段位组队中最受欢迎的存在，均衡的数据底盘让你有机会在不同站位中找到最适合自己的方向。`;
-    }
-  } else {
-    gameName = '英雄联盟 / 王者荣耀';
-    if (reaction >= 62 && cognition >= 60) {
-      role='打野 · Jungler'; icon='🗡️';
-      reason=`打野要求全图快速反应 + 战略时机判断，反应速度 ${reaction}分 与认知处理 ${cognition}分 的双高组合是理想匹配。抓人时机的把握既需要快速决策，也需要全局读图能力。`;
-    } else if (aim >= 60 && focus >= 58) {
-      role='ADC · 射手'; icon='🏹';
-      reason=`手眼协调 ${aim}分 保证精准持续输出，专注稳定性 ${focus}分 让你在长时间团战高压下不失误。ADC 对"稳定高输出"的要求与你的数据特征高度吻合。`;
-    } else if (cognition >= 65 && vision >= 55) {
-      role='中单 · Mid Lane'; icon='⭐';
-      reason=`认知处理 ${cognition}分 + 动态视力 ${vision}分，中路需要快速读取战场信息并做出支援决策，你的数据组合在这个位置能充分发挥大局控制优势。`;
-    } else if (impulse >= 65 && cognition >= 55) {
-      role='辅助 · Support'; icon='🛡️';
-      reason=`冲动抑制 ${impulse}分 意味着你能克制冲动、在关键时刻优先保护队友。辅助位的核心不是个人操作，而是策略决策和团队配合，这正是你的优势所在。`;
-    } else {
-      role='上单 · Top Lane'; icon='⚔️';
-      reason=`专注稳定性 ${focus}分 + 冲动抑制 ${impulse}分 适合独立对线和稳定输出。上单的孤岛作战需要高度专注和克制冲动的能力，不急不躁的打法正是你的竞争优势。`;
-    }
+// ── 角色方向推荐（双赛道）─────────────────────
+function weightedFit(weights, s) {
+  return Object.entries(weights).reduce((sum, [key, weight]) => sum + (s[key] || 0) * weight, 0);
+}
+
+function buildRoleReason(track, key, s, avg, spread) {
+  const { reaction=0, impulse=0, vision=0, cognition=0, aim=0, focus=0 } = s;
+  if (track === 'fps') {
+    if (key === 'duelist') return `反应速度 ${reaction} 分和手眼协调 ${aim} 分是这条线的主驱动，更适合承担先手切入、抢第一枪和近距离换血。若要把这个位置真正打稳，后续仍要继续盯住专注稳定性 ${focus} 分。`;
+    if (key === 'sniper') return `手眼协调 ${aim} 分、专注稳定性 ${focus} 分和动态视力 ${vision} 分更适合长视距守点与精准击发。这类位置更看重“慢下来后仍能稳定命中”，而不是单纯拼第一反应。`;
+    if (key === 'controller') return `认知处理 ${cognition} 分与冲动抑制 ${impulse} 分更突出，说明你对节奏控制、信息判断和技能释放时机更敏感。这类位置更吃读局与控场，不必把全部价值压在枪法上。`;
+    return `七维均分 ${avg.toFixed(1)} 分，能力离散度约 ${spread.toFixed(0)} 分，说明你的结构并不偏科。弹性位更适合你按队伍需求切换职责，而不是被单一分工锁死。`;
   }
-  return { isFPS, gameName, role, icon, reason };
+  if (key === 'jungler') return `认知处理 ${cognition} 分、反应速度 ${reaction} 分和动态视力 ${vision} 分的组合，更适合打野这种需要找时机、看线权和快速切入的角色。它比纯对线位更依赖全图节奏判断。`;
+  if (key === 'adc') return `手眼协调 ${aim} 分与专注稳定性 ${focus} 分更适合持续输出位。ADC 需要在长团中保持稳定手感和安全站位，你的结构更接近这种“持续兑现”逻辑。`;
+  if (key === 'mid') return `认知处理 ${cognition} 分、动态视力 ${vision} 分和反应速度 ${reaction} 分组合较好，更适合需要快速读图、支援和切换资源判断的中路。它强调节奏判断，不只是对线压制。`;
+  if (key === 'support') return `冲动抑制 ${impulse} 分、认知处理 ${cognition} 分与专注稳定性 ${focus} 分更适合辅助位。你更像是先做正确判断、再执行协同的人，而不是盲目抢操作。`;
+  return `专注稳定性 ${focus} 分和冲动抑制 ${impulse} 分让你更适合独立对线、稳定换血和承担边路压力。上单位看重的是对线耐心和后程抗压，而不是全程高爆发。`;
+}
+
+function calcRoleTracks(s) {
+  const values = DIM_KEYS.map(k => s[k] || 0);
+  const avg = values.reduce((a, b) => a + b, 0) / values.length;
+  const spread = Math.max(...values) - Math.min(...values);
+  const pickRole = (track, list) => {
+    const ranked = list.map(item => {
+      let fit = weightedFit(item.weights, s);
+      if (item.key === 'flex') fit += spread <= 16 ? 6 : spread <= 24 ? 2 : -4;
+      return { ...item, fit: Math.round(fit), reason: buildRoleReason(track, item.key, s, avg, spread) };
+    }).sort((a, b) => b.fit - a.fit);
+    return ranked[0];
+  };
+  const fps = pickRole('fps', [
+    { key:'duelist', role:'突击手 · Duelist', icon:'⚡', gameName:'Valorant / CS2', weights:{ reaction:0.36, aim:0.34, vision:0.16, impulse:0.08, focus:0.06 } },
+    { key:'sniper', role:'狙击手 · Sniper', icon:'🎯', gameName:'Valorant / CS2', weights:{ aim:0.34, focus:0.30, reaction:0.18, vision:0.18 } },
+    { key:'controller', role:'控场 / 指挥 · Controller', icon:'🧠', gameName:'Valorant / CS2', weights:{ cognition:0.32, impulse:0.24, focus:0.18, vision:0.14, aim:0.12 } },
+    { key:'flex', role:'弹性位 · Flex', icon:'🎮', gameName:'Valorant / CS2', weights:{ reaction:0.18, aim:0.18, cognition:0.20, impulse:0.18, focus:0.18, vision:0.08 } }
+  ]);
+  const moba = pickRole('moba', [
+    { key:'jungler', role:'打野 · Jungler', icon:'🗡️', gameName:'英雄联盟 / 王者荣耀', weights:{ cognition:0.30, reaction:0.22, vision:0.18, focus:0.16, impulse:0.14 } },
+    { key:'adc', role:'ADC · 射手', icon:'🏹', gameName:'英雄联盟 / 王者荣耀', weights:{ aim:0.34, focus:0.24, reaction:0.18, impulse:0.12, vision:0.12 } },
+    { key:'mid', role:'中单 · Mid Lane', icon:'⭐', gameName:'英雄联盟 / 王者荣耀', weights:{ cognition:0.34, vision:0.22, reaction:0.18, impulse:0.16, focus:0.10 } },
+    { key:'support', role:'辅助 · Support', icon:'🛡️', gameName:'英雄联盟 / 王者荣耀', weights:{ impulse:0.34, cognition:0.26, focus:0.20, vision:0.10, reaction:0.10 } },
+    { key:'top', role:'上单 · Top Lane', icon:'⚔️', gameName:'英雄联盟 / 王者荣耀', weights:{ focus:0.28, impulse:0.24, reaction:0.20, cognition:0.18, aim:0.10 } }
+  ]);
+  const fpsFit = Math.round(weightedFit({ reaction:0.28, aim:0.28, vision:0.16, focus:0.12, color:0.08, cognition:0.05, impulse:0.03 }, s));
+  const mobaFit = Math.round(weightedFit({ cognition:0.28, impulse:0.22, focus:0.18, vision:0.12, reaction:0.10, aim:0.06, color:0.04 }, s));
+  const diff = fpsFit - mobaFit;
+  const primaryTrack = Math.abs(diff) <= 4 ? 'balanced' : (diff > 0 ? 'fps' : 'moba');
+  const profileText = primaryTrack === 'balanced'
+    ? `当前两条赛道的适配度接近，FPS 匹配度 ${fpsFit}，MOBA 匹配度 ${mobaFit}。更合理的做法不是只看单项高分，而是结合你后续复测的稳定性与真实对局偏好继续收敛方向。`
+    : `当前更建议优先尝试 ${primaryTrack === 'fps' ? 'FPS / 射击类' : 'MOBA / 策略对抗类'}。这是因为相关维度形成了更完整的能力链路：FPS 匹配度 ${fpsFit}，MOBA 匹配度 ${mobaFit}。`;
+  return { fps, moba, fpsFit, mobaFit, primaryTrack, profileText };
 }
 
 // ── 专属训练计划（针对最弱维度）──────────────────
@@ -1047,12 +1086,27 @@ function calcTrainingPlan(s) {
 function renderRoleCard() {
   const el = document.getElementById('sec-role-analysis');
   if (!el) return;
-  const r = calcRoleRec(scores);
+  const r = calcRoleTracks(scores);
   el.innerHTML = `<div class="card role-card">
     <div class="card-title">角色方向分析 <span style="font-size:11px;color:var(--green);margin-left:8px;font-weight:400;letter-spacing:1px;">ADVANCED</span></div>
-    <div class="role-header"><div class="role-icon">${r.icon}</div><div><div class="role-title">${r.role}</div><div class="role-sub">${r.gameName} · 最适合你的位置</div></div></div>
-    <div class="role-game-tag">${r.isFPS?'FPS':'MOBA'} · ${r.gameName}</div>
-    <div class="role-reason">${r.reason}</div>
+    <div class="role-summary">
+      <div class="role-summary-title">当前能力画像</div>
+      <div class="role-summary-text">${r.profileText}</div>
+    </div>
+    <div class="role-track-grid">
+      <div class="role-track-card fps">
+        <div class="role-track-label">FPS / 射击类方向</div>
+        <div class="role-header"><div style="display:flex;align-items:center;gap:16px;"><div class="role-icon">${r.fps.icon}</div><div><div class="role-title">${r.fps.role}</div><div class="role-sub">${r.fps.gameName} · 更匹配的定位</div></div></div><div class="role-fit">匹配度 ${r.fps.fit}</div></div>
+        <div class="role-game-tag">FPS · ${r.fps.gameName}</div>
+        <div class="role-reason">${r.fps.reason}</div>
+      </div>
+      <div class="role-track-card moba">
+        <div class="role-track-label">MOBA / 策略对抗类方向</div>
+        <div class="role-header"><div style="display:flex;align-items:center;gap:16px;"><div class="role-icon">${r.moba.icon}</div><div><div class="role-title">${r.moba.role}</div><div class="role-sub">${r.moba.gameName} · 更匹配的定位</div></div></div><div class="role-fit">匹配度 ${r.moba.fit}</div></div>
+        <div class="role-game-tag">MOBA · ${r.moba.gameName}</div>
+        <div class="role-reason">${r.moba.reason}</div>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -1142,7 +1196,7 @@ async function init() {
       rawSec.style.display = 'block';
     }
     // 角色分析 → 锁定卡
-    renderLockedCard('sec-role-analysis', '角色方向分析', '进阶版专属 · 含FPS/MOBA最适角色与理由');
+    renderLockedCard('sec-role-analysis', '角色方向分析', '进阶版专属 · 含 FPS / MOBA 双赛道角色与理由');
     // 训练计划 → 锁定卡
     renderLockedCard('sec-training-plan', '专属训练计划', '进阶版专属 · 含具体工具、频率与4周计划');
     // 隐藏评分细则 + PDF下载
@@ -1356,7 +1410,11 @@ function typewriterEffect(text) {
 function fallbackText() {
   const avg = (DIM_KEYS.reduce((a,k)=>a+(scores[k]||0),0)/7).toFixed(1);
   const cfg = RATING_CONFIG[ratingKey];
-  return `本次测评综合评分 ${avg} 分，综合评级为「${cfg.label.replace(/^[^\s]+ /,'')}」。\n\n你在七大核心维度上展现出了各具特色的能力表现，整体发挥${parseFloat(avg)>70?'稳定且出色':'有一定的提升空间'}。\n\n建议针对薄弱维度进行定向训练，结合Aim Lab等专业工具每日坚持练习，一般3-6个月内即可看到显著提升。\n\n感谢参与VE天赋雷达测评，期待你的成长！`;
+  const roleTracks = calcRoleTracks(scores);
+  const priority = roleTracks.primaryTrack === 'balanced'
+    ? '两条赛道目前都可以继续观察'
+    : `当前更建议优先尝试 ${roleTracks.primaryTrack === 'fps' ? 'FPS / 射击类' : 'MOBA / 策略对抗类'}`;
+  return `本次测评综合评分 ${avg} 分，综合评级为「${cfg.label.replace(/^[^\s]+ /,'')}」。\n\n当前能力结构${roleTracks.primaryTrack === 'balanced' ? '相对均衡' : roleTracks.primaryTrack === 'fps' ? '偏操作输出型' : '偏决策控制型'}，${priority}。\n\n若玩 FPS，更适合 ${roleTracks.fps.role.split(' · ')[0]}；若玩 MOBA，更适合 ${roleTracks.moba.role.split(' · ')[0]}。建议先围绕最弱维度做 3-4 周定向训练，再看复测表现是否改善。`;
 }
 
 // ── 联系方式 ──────────────────────────────────

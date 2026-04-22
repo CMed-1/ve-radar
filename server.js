@@ -167,6 +167,61 @@ app.post('/api/generate-report', async (req, res) => {
   }
 });
 
+function weightedFit(weights, scores) {
+  return Object.entries(weights).reduce((sum, [key, weight]) => sum + (scores[key] || 0) * weight, 0);
+}
+
+function buildRoleReason(track, key, scores, avg, spread) {
+  const { reaction=0, impulse=0, vision=0, cognition=0, aim=0, focus=0 } = scores;
+  if (track === 'fps') {
+    if (key === 'duelist') return `反应速度 ${reaction} 分和手眼协调 ${aim} 分是主驱动，更适合先手切入与抢第一枪。若要把这个位置真正打稳，还要继续看专注稳定性 ${focus} 分是否能撑住长局。`;
+    if (key === 'sniper') return `手眼协调 ${aim} 分、专注稳定性 ${focus} 分和动态视力 ${vision} 分更适合守点、架枪和精准击发。这类位置看重的是高压下的稳定兑现。`;
+    if (key === 'controller') return `认知处理 ${cognition} 分与冲动抑制 ${impulse} 分更突出，说明你对信息判断、技能时机和节奏控制更敏感，适合承担控场与指挥型职责。`;
+    return `七维均分 ${avg.toFixed(1)} 分，能力离散度约 ${spread.toFixed(0)} 分，结构不算偏科。弹性位更适合你按队伍需求切换职责，而不是被单一分工锁死。`;
+  }
+  if (key === 'jungler') return `认知处理 ${cognition} 分、反应速度 ${reaction} 分和动态视力 ${vision} 分的组合，更适合打野这种需要找时机、看线权和快速切入的角色。`;
+  if (key === 'adc') return `手眼协调 ${aim} 分与专注稳定性 ${focus} 分更适合持续输出位。ADC 更看重长团中的稳定手感与输出纪律。`;
+  if (key === 'mid') return `认知处理 ${cognition} 分、动态视力 ${vision} 分和反应速度 ${reaction} 分组合较好，更适合需要快速读图、支援和切换资源判断的中路。`;
+  if (key === 'support') return `冲动抑制 ${impulse} 分、认知处理 ${cognition} 分与专注稳定性 ${focus} 分更适合辅助位。你更像是先做正确判断、再执行协同的人。`;
+  return `专注稳定性 ${focus} 分和冲动抑制 ${impulse} 分让你更适合独立对线、稳定换血和承担边路压力。上单位更看重对线耐心和后程抗压。`;
+}
+
+function calcRoleTracks(scores) {
+  const keys = ['reaction','impulse','vision','cognition','aim','focus','color'];
+  const values = keys.map(key => scores[key] || 0);
+  const avg = values.reduce((a, b) => a + b, 0) / values.length;
+  const spread = Math.max(...values) - Math.min(...values);
+  const pickRole = (track, list) => {
+    const ranked = list.map(item => {
+      let fit = weightedFit(item.weights, scores);
+      if (item.key === 'flex') fit += spread <= 16 ? 6 : spread <= 24 ? 2 : -4;
+      return { ...item, fit: Math.round(fit), reason: buildRoleReason(track, item.key, scores, avg, spread) };
+    }).sort((a, b) => b.fit - a.fit);
+    return ranked[0];
+  };
+  const fps = pickRole('fps', [
+    { key:'duelist', role:'突击手 · Duelist', gameName:'Valorant / CS2', weights:{ reaction:0.36, aim:0.34, vision:0.16, impulse:0.08, focus:0.06 } },
+    { key:'sniper', role:'狙击手 · Sniper', gameName:'Valorant / CS2', weights:{ aim:0.34, focus:0.30, reaction:0.18, vision:0.18 } },
+    { key:'controller', role:'控场 / 指挥 · Controller', gameName:'Valorant / CS2', weights:{ cognition:0.32, impulse:0.24, focus:0.18, vision:0.14, aim:0.12 } },
+    { key:'flex', role:'弹性位 · Flex', gameName:'Valorant / CS2', weights:{ reaction:0.18, aim:0.18, cognition:0.20, impulse:0.18, focus:0.18, vision:0.08 } }
+  ]);
+  const moba = pickRole('moba', [
+    { key:'jungler', role:'打野 · Jungler', gameName:'英雄联盟 / 王者荣耀', weights:{ cognition:0.30, reaction:0.22, vision:0.18, focus:0.16, impulse:0.14 } },
+    { key:'adc', role:'ADC · 射手', gameName:'英雄联盟 / 王者荣耀', weights:{ aim:0.34, focus:0.24, reaction:0.18, impulse:0.12, vision:0.12 } },
+    { key:'mid', role:'中单 · Mid Lane', gameName:'英雄联盟 / 王者荣耀', weights:{ cognition:0.34, vision:0.22, reaction:0.18, impulse:0.16, focus:0.10 } },
+    { key:'support', role:'辅助 · Support', gameName:'英雄联盟 / 王者荣耀', weights:{ impulse:0.34, cognition:0.26, focus:0.20, vision:0.10, reaction:0.10 } },
+    { key:'top', role:'上单 · Top Lane', gameName:'英雄联盟 / 王者荣耀', weights:{ focus:0.28, impulse:0.24, reaction:0.20, cognition:0.18, aim:0.10 } }
+  ]);
+  const fpsFit = Math.round(weightedFit({ reaction:0.28, aim:0.28, vision:0.16, focus:0.12, color:0.08, cognition:0.05, impulse:0.03 }, scores));
+  const mobaFit = Math.round(weightedFit({ cognition:0.28, impulse:0.22, focus:0.18, vision:0.12, reaction:0.10, aim:0.06, color:0.04 }, scores));
+  const diff = fpsFit - mobaFit;
+  const primaryTrack = Math.abs(diff) <= 4 ? 'balanced' : (diff > 0 ? 'fps' : 'moba');
+  const profileText = primaryTrack === 'balanced'
+    ? `当前两条赛道的适配度接近，FPS 匹配度 ${fpsFit}，MOBA 匹配度 ${mobaFit}。更合理的做法不是只看单项高分，而是继续结合复测稳定性和真实对局反馈收敛方向。`
+    : `当前更建议优先尝试 ${primaryTrack === 'fps' ? 'FPS / 射击类' : 'MOBA / 策略对抗类'}。原因是相关维度形成了更完整的能力链路：FPS 匹配度 ${fpsFit}，MOBA 匹配度 ${mobaFit}。`;
+  return { fps, moba, fpsFit, mobaFit, primaryTrack, profileText };
+}
+
 // ─── MiniMax API 调用 ─────────────────────────────────────────
 async function callMiniMax(scores, rating, device, rawData) {
   const vals = Object.values(scores);
@@ -181,6 +236,7 @@ async function callMiniMax(scores, rating, device, rawData) {
     vision:'动态视力', cognition:'认知处理速度',
     aim:'手眼协调', focus:'专注稳定性', color:'色觉感知'
   };
+  const roleTracks = calcRoleTracks(scores);
   // 普通人基准
   const benchmarks = {
     reaction:50, impulse:55, vision:47, cognition:52, aim:47, focus:55, color:52
@@ -226,16 +282,14 @@ async function callMiniMax(scores, rating, device, rawData) {
     }
   }
 
-  // 判断倾向性（FPS vs MOBA）
-  const colorBonus = scores.color !== undefined ? scores.color * 0.5 : 0;
-  const fpsTendency = (scores.reaction + scores.aim) / 2 + colorBonus * 0.3;
-  const mobaTendency = (scores.cognition + scores.impulse) / 2;
-  const gameType = fpsTendency >= mobaTendency ? 'FPS（如Valorant、CS2）' : 'MOBA（如英雄联盟、王者荣耀）';
-  const gameReason = fpsTendency >= mobaTendency
-    ? `你的反应速度(${scores.reaction}分)、手眼协调(${scores.aim}分)${scores.color !== undefined ? `和色觉感知(${scores.color}分)` : ''}明显强于其他维度`
-    : `你的认知处理速度(${scores.cognition}分)和冲动抑制(${scores.impulse}分)体现出更强的策略型思维`;
+  const gameType = roleTracks.primaryTrack === 'balanced'
+    ? '双赛道均可尝试（需继续看复测表现）'
+    : roleTracks.primaryTrack === 'fps'
+      ? 'FPS（如Valorant、CS2）'
+      : 'MOBA（如英雄联盟、王者荣耀）';
+  const gameReason = roleTracks.profileText;
 
-  const prompt = `你是VE天赋雷达平台的资深电竞天赋评估专家，有10年职业选手评测经验。你的评估风格：权威专业，但有温度；用具体数字说话，不说废话；能从数据里看出别人看不到的天赋特征。
+  const prompt = `你是VE天赋雷达平台的资深电竞能力评估师，负责输出版本化测评报告。你的写作风格专业、克制、直接，用具体数字说话，不营销，不喊口号，也不把倾向判断写成绝对结论。
 
 【本次测评者的具体数据】
 七维得分（满分100）：
@@ -257,6 +311,9 @@ async function callMiniMax(scores, rating, device, rawData) {
 ${rawSummary}
 
 根据维度权重，更适合的游戏类型：${gameType}，理由：${gameReason}
+双赛道角色建议：
+- FPS：${roleTracks.fps.role}（匹配度 ${roleTracks.fps.fit}）—— ${roleTracks.fps.reason}
+- MOBA：${roleTracks.moba.role}（匹配度 ${roleTracks.moba.fit}）—— ${roleTracks.moba.reason}
 
 【写作要求】
 请写一份约700-900字的结构化电竞能力评估意见，分6段，每段之间空一行：
@@ -274,7 +331,7 @@ ${rawSummary}
 结合专注稳定性、两轮 Aim 前后差值、以及可用原始数据，判断其在连续对抗、疲劳后程、压力下维持输出的能力。这里要写得像评估报告，不要写成鼓励文。
 
 第五段（项目与角色匹配）：
-基于全部 7 项数据，给出最适合的游戏类型和角色方向，并说明为什么更适合这一类，而不是另一类。理由必须落回到数据，不要只给结论。
+基于全部 7 项数据，同时给出 FPS 建议角色和 MOBA 建议角色，再判断当前更应优先尝试哪一条赛道。理由必须落回到数据，不要只给结论，也不要只写一个项目。
 
 第六段（训练优先级）：
 给出 2-3 条按优先级排序的训练建议，每条都要包含工具名、训练时长、训练频率、观察指标。结尾只做克制收束，不喊口号，不使用“被选中”“天赋爆表”这类营销表达。
@@ -325,10 +382,13 @@ async function callMiniMaxBasic(scores, rating, rawData) {
   const sorted = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
   const best = sorted[0];
   const worst = sorted[sorted.length-1];
+  const roleTracks = calcRoleTracks(scores);
 
-  const fpsTendency = ((scores.reaction||0) + (scores.aim||0)) / 2;
-  const mobaTendency = ((scores.cognition||0) + (scores.impulse||0)) / 2;
-  const gameType = fpsTendency >= mobaTendency ? 'FPS（Valorant / CS2）' : 'MOBA（英雄联盟 / 王者荣耀）';
+  const gameType = roleTracks.primaryTrack === 'balanced'
+    ? '双赛道均可尝试'
+    : roleTracks.primaryTrack === 'fps'
+      ? 'FPS（Valorant / CS2）'
+      : 'MOBA（英雄联盟 / 王者荣耀）';
 
   const prompt = `你是VE天赋雷达的电竞能力评估专家。请根据以下数据生成一份简洁的基础版测评结论，约150字，分3段，段间空行，纯文本无标题。
 
@@ -337,10 +397,12 @@ async function callMiniMaxBasic(scores, rating, rawData) {
 - 最强维度：${dimNames[best[0]]}（${best[1]}分）
 - 最弱维度：${dimNames[worst[0]]}（${worst[1]}分）
 - 各维度：${Object.entries(scores).map(([k,v])=>`${dimNames[k]}${v}`).join('、')}
+- FPS建议：${roleTracks.fps.role}
+- MOBA建议：${roleTracks.moba.role}
 
 第一段（2句）：用评级和均分定调，说明综合表现。
 第二段（2句）：点出最强维度的意义和最弱维度需要注意的地方。
-第三段（2句）：推荐${gameType}类游戏，给一条具体训练建议。
+第三段（2句）：说明当前更建议优先尝试 ${gameType}，并同时简要点出 FPS 建议角色和 MOBA 建议角色，最后给一条具体训练建议。
 
 要求：用具体数字，不写废话，不夸张，语言直接。`;
 
@@ -369,16 +431,15 @@ function fallbackReport(scores, rating, mode = 'advanced') {
   const sorted = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
   const best = sorted[0];
   const worst = sorted[sorted.length-1];
+  const roleTracks = calcRoleTracks(scores);
   const dimNames = { reaction:'反应速度', impulse:'冲动抑制', vision:'动态视力', cognition:'认知处理速度', aim:'手眼协调', focus:'专注稳定性', color:'色觉感知' };
 
   if (mode === 'basic') {
-    return `综合评分 ${avg} 分，评级「${rating}」，整体表现${parseFloat(avg)>=70?'高于大多数测评者':'处于中等水平'}。\n\n最突出的能力是${dimNames[best[0]]}（${best[1]}分），在电竞对抗中具备明显优势；${dimNames[worst[0]]}（${worst[1]}分）是当前最需要提升的方向，建议重点训练。\n\n根据你的数据组合，推荐优先尝试 FPS 或 MOBA 类游戏，并针对${dimNames[worst[0]]}进行每日30分钟专项练习，持续4-6周可见明显进步。`;
+    return `综合评分 ${avg} 分，评级「${rating}」，整体表现${parseFloat(avg)>=70?'高于大多数测评者':'处于中等水平'}。\n\n最突出的能力是${dimNames[best[0]]}（${best[1]}分），而${dimNames[worst[0]]}（${worst[1]}分）仍是当前最需要补强的限制项。\n\n当前更建议优先尝试${roleTracks.primaryTrack === 'moba' ? ' MOBA / 策略对抗类' : roleTracks.primaryTrack === 'fps' ? ' FPS / 射击类' : '双赛道并行观察'}；若玩 FPS，更适合${roleTracks.fps.role.split(' · ')[0]}，若玩 MOBA，更适合${roleTracks.moba.role.split(' · ')[0]}。`;
   }
 
-  const fpsScore = Math.round(((scores.reaction || 0) + (scores.aim || 0) + (scores.vision || 0)) / 3);
-  const mobaScore = Math.round(((scores.cognition || 0) + (scores.impulse || 0) + (scores.focus || 0)) / 3);
-  const fitGame = fpsScore >= mobaScore ? 'FPS/射击类' : 'MOBA/策略对抗类';
-  return `综合评分 ${avg} 分，评级「${rating}」。从七维数据看，你当前更像是${fpsScore >= mobaScore ? '偏操作输出型' : '偏决策控制型'}选手：${dimNames[best[0]]}达到 ${best[1]} 分，是整组数据里最突出的单项，而${dimNames[worst[0]]}只有 ${worst[1]} 分，说明能力结构并不平均。\n\n在操作链路上，反应速度 ${scores.reaction} 分、手眼协调 ${scores.aim} 分、动态视力 ${scores.vision} 分决定了你处理瞬时信息和完成操作输出的效率。如果这三项里有两项明显高于均值，你在高节奏对抗里会更容易建立先手；反之，任何一项偏低都会拖慢整条链路。\n\n在决策与控制层面，认知处理速度 ${scores.cognition} 分、冲动抑制 ${scores.impulse} 分、专注稳定性 ${scores.focus} 分更接近“实战上限”的决定因素。这里如果分数波动较大，通常意味着你能打出高光，但稳定复现能力还不够强。\n\n以当前数据组合，较适合优先发展 ${fitGame}。原因不是单项高分，而是相关维度的组合更匹配这类项目的核心要求；如果直接转去另一类项目，最弱维度 ${dimNames[worst[0]]} 往往会先成为限制项。\n\n训练上建议先把${dimNames[worst[0]]}作为第一优先级，每天 15-20 分钟做单项训练，再用 10 分钟做与最强维度的组合练习，避免只补短板导致整体节奏断裂。连续训练 3-4 周后，重点看失误率、稳定性和第二轮表现是否改善。\n\n这组数据说明你已经有比较清晰的能力轮廓，但离“稳定兑现”还有优化空间。后续最关键的不是继续堆时长，而是围绕最弱项做更精确的训练闭环。`;
+  const fitGame = roleTracks.primaryTrack === 'moba' ? 'MOBA/策略对抗类' : roleTracks.primaryTrack === 'fps' ? 'FPS/射击类' : '双赛道并行';
+  return `综合评分 ${avg} 分，评级「${rating}」。从七维数据看，你当前的能力结构${roleTracks.primaryTrack === 'balanced' ? '相对均衡' : roleTracks.primaryTrack === 'fps' ? '偏操作输出型' : '偏决策控制型'}：${dimNames[best[0]]}达到 ${best[1]} 分，是整组数据里最突出的单项，而${dimNames[worst[0]]}只有 ${worst[1]} 分，说明真正限制上限的环节依然存在。\n\n在操作链路上，反应速度 ${scores.reaction} 分、手眼协调 ${scores.aim} 分、动态视力 ${scores.vision} 分共同决定了你处理瞬时信息并完成输出的效率；在决策与控制层面，认知处理 ${scores.cognition} 分、冲动抑制 ${scores.impulse} 分和专注稳定性 ${scores.focus} 分则更接近“后续能否稳定兑现”的上限。\n\n从双赛道匹配看，若玩 FPS，你更适合${roleTracks.fps.role}，匹配度 ${roleTracks.fps.fit}；若玩 MOBA，你更适合${roleTracks.moba.role}，匹配度 ${roleTracks.moba.fit}。当前更建议优先发展 ${fitGame}，因为这条线上的相关维度已经形成了更完整的能力链路。\n\n训练上建议先把${dimNames[worst[0]]}作为第一优先级，每天 15-20 分钟做单项训练，再用 10 分钟做与最强维度的组合练习，避免只补短板导致整体节奏断裂。连续训练 3-4 周后，重点看失误率、稳定性和第二轮表现是否改善。\n\n这组数据说明你已经有比较清晰的能力轮廓，但离“稳定兑现”还有优化空间。后续最关键的不是继续堆时长，而是围绕最弱项做更精确的训练闭环。`;
 }
 
 app.listen(PORT, () => {
