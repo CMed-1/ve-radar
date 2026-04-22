@@ -55,6 +55,23 @@ function initDB() {
     raw_data TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   )`);
+  db.exec(`CREATE TABLE IF NOT EXISTS payments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_no TEXT UNIQUE NOT NULL,
+    mode TEXT NOT NULL,
+    channel TEXT NOT NULL,
+    amount TEXT NOT NULL,
+    product_name TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'CREATED',
+    provider_trade_no TEXT,
+    report_token TEXT UNIQUE NOT NULL,
+    ref_code TEXT,
+    raw_response TEXT,
+    raw_notify TEXT,
+    paid_at TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  )`);
   const inviteColumns = db.prepare(`PRAGMA table_info(invite_codes)`).all();
   if (!inviteColumns.some(col => col.name === 'used_at')) {
     db.exec(`ALTER TABLE invite_codes ADD COLUMN used_at TEXT`);
@@ -130,6 +147,53 @@ function getTestResultCount() {
   return db.prepare('SELECT COUNT(*) AS count FROM test_results').get().count;
 }
 
+function createPayment({ orderNo, mode, channel, amount, productName, refCode }) {
+  const reportToken = 'pay_' + nanoid(32);
+  db.prepare(
+    `INSERT INTO payments (order_no, mode, channel, amount, product_name, report_token, ref_code)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`
+  ).run(orderNo, mode, channel, amount, productName, reportToken, refCode || null);
+  return getPaymentByOrderNo(orderNo);
+}
+
+function getPaymentByOrderNo(orderNo) {
+  return db.prepare('SELECT * FROM payments WHERE order_no = ?').get(orderNo);
+}
+
+function getPaymentByToken(token) {
+  return db.prepare('SELECT * FROM payments WHERE report_token = ?').get(token);
+}
+
+function markPaymentPending({ orderNo, providerTradeNo, rawResponse }) {
+  db.prepare(
+    `UPDATE payments
+     SET status = CASE WHEN status = 'CREATED' THEN 'PENDING' ELSE status END,
+         provider_trade_no = COALESCE(?, provider_trade_no),
+         raw_response = COALESCE(?, raw_response),
+         updated_at = datetime('now')
+     WHERE order_no = ?`
+  ).run(providerTradeNo || null, rawResponse ? JSON.stringify(rawResponse) : null, orderNo);
+  return getPaymentByOrderNo(orderNo);
+}
+
+function markPaymentPaid({ orderNo, providerTradeNo, rawNotify }) {
+  const existing = getPaymentByOrderNo(orderNo);
+  if (!existing) return { updated: false, row: null };
+  if (existing.status === 'PAID') return { updated: false, row: existing };
+
+  db.prepare(
+    `UPDATE payments
+     SET status = 'PAID',
+         provider_trade_no = COALESCE(?, provider_trade_no),
+         raw_notify = COALESCE(?, raw_notify),
+         paid_at = COALESCE(paid_at, datetime('now')),
+         updated_at = datetime('now')
+     WHERE order_no = ?`
+  ).run(providerTradeNo || null, rawNotify ? JSON.stringify(rawNotify) : null, orderNo);
+
+  return { updated: true, row: getPaymentByOrderNo(orderNo) };
+}
+
 module.exports = {
   initDB,
   generateCode,
@@ -141,5 +205,10 @@ module.exports = {
   recordReferralConversion,
   getReferralStats,
   saveTestResult,
-  getTestResultCount
+  getTestResultCount,
+  createPayment,
+  getPaymentByOrderNo,
+  getPaymentByToken,
+  markPaymentPending,
+  markPaymentPaid
 };

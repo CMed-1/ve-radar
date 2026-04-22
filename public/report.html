@@ -110,18 +110,6 @@
   .training-week-row{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;font-family:'Inter',sans-serif;line-height:1.6;}
   .training-week-row:last-child{border-bottom:none;}
   .week-label{color:var(--purple);font-weight:700;white-space:nowrap;min-width:40px;}
-  /* ── 锁定卡片 (basic模式) ── */
-  .locked-card{position:relative;border-radius:8px;border:1px solid var(--border);overflow:hidden;margin-bottom:24px;min-height:160px;}
-  .locked-blur-inner{padding:28px 32px;filter:blur(5px);user-select:none;pointer-events:none;opacity:0.35;}
-  .fake-row{height:11px;background:var(--border);border-radius:4px;margin-bottom:10px;}
-  .fake-row.w80{width:80%;}.fake-row.w60{width:60%;}.fake-row.w45{width:45%;}
-  .fake-block{height:72px;background:var(--border);border-radius:6px;margin-bottom:10px;}
-  .locked-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,10,10,0.72);gap:6px;}
-  .lock-icon-lg{font-size:28px;margin-bottom:4px;}
-  .lock-title{font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;color:var(--text);letter-spacing:1px;}
-  .lock-sub{font-size:12px;color:var(--sub);margin-bottom:10px;}
-  .lock-btn{padding:8px 22px;border:1px solid var(--green);border-radius:4px;color:var(--green);font-size:13px;font-weight:600;text-decoration:none;transition:background .2s;font-family:'Inter',sans-serif;}
-  .lock-btn:hover{background:rgba(118,185,0,0.1);}
 
   /* ── 百分位排名 ── */
   .percentile-section{text-align:center;margin-bottom:40px;}
@@ -619,10 +607,10 @@
     <div class="report-text" id="report-text"><span class="loading-inline">正在生成专属分析...</span></div>
   </div>
 
-  <!-- 角色方向分析（进阶专属 / basic显示锁定卡） -->
+  <!-- 角色方向分析（basic 显示简版，advanced 显示深度版） -->
   <div id="sec-role-analysis"></div>
 
-  <!-- 专属训练计划（进阶专属 / basic显示锁定卡） -->
+  <!-- 训练计划（basic 显示简版，advanced 显示深度版） -->
   <div id="sec-training-plan"></div>
 
   <!-- 操作按钮 -->
@@ -1133,30 +1121,76 @@ function renderTrainingCard() {
   </div>`;
 }
 
-// ── 渲染锁定卡片（basic模式）─────────────────────
-function renderLockedCard(containerId, title, sub) {
-  const el = document.getElementById(containerId);
+function renderBasicRoleCard() {
+  const el = document.getElementById('sec-role-analysis');
   if (!el) return;
-  el.innerHTML = `<div class="locked-card">
-    <div class="locked-blur-inner">
-      <div class="card-title" style="margin-bottom:14px;">${title}</div>
-      <div class="fake-block"></div>
-      <div class="fake-row w80"></div><div class="fake-row w60"></div><div class="fake-row w45"></div>
+  const r = calcRoleTracks(scores);
+  el.innerHTML = `<div class="card role-card">
+    <div class="card-title">双赛道方向 <span style="font-size:11px;color:var(--green);margin-left:8px;font-weight:400;letter-spacing:1px;">BASIC</span></div>
+    <div class="role-summary">
+      <div class="role-summary-title">当前建议</div>
+      <div class="role-summary-text">${r.profileText}</div>
     </div>
-    <div class="locked-overlay">
-      <div class="lock-icon-lg">🔒</div>
-      <div class="lock-title">${title}</div>
-      <div class="lock-sub">${sub}</div>
-      <a href="/preview.html" class="lock-btn">升级进阶版查看 →</a>
+    <div class="role-track-grid">
+      <div class="role-track-card fps">
+        <div class="role-track-label">FPS / 射击类</div>
+        <div class="role-header">
+          <div style="display:flex;align-items:center;gap:16px;">
+            <div class="role-icon">${r.fps.icon}</div>
+            <div>
+              <div class="role-title">${r.fps.role}</div>
+              <div class="role-sub">${r.fps.gameName}</div>
+            </div>
+          </div>
+          <div class="role-fit">匹配度 ${r.fps.fit}</div>
+        </div>
+        <div class="role-reason">${r.fps.reason}</div>
+      </div>
+      <div class="role-track-card moba">
+        <div class="role-track-label">MOBA / 策略对抗类</div>
+        <div class="role-header">
+          <div style="display:flex;align-items:center;gap:16px;">
+            <div class="role-icon">${r.moba.icon}</div>
+            <div>
+              <div class="role-title">${r.moba.role}</div>
+              <div class="role-sub">${r.moba.gameName}</div>
+            </div>
+          </div>
+          <div class="role-fit">匹配度 ${r.moba.fit}</div>
+        </div>
+        <div class="role-reason">${r.moba.reason}</div>
+      </div>
     </div>
+  </div>`;
+}
+
+function renderBasicTrainingCard() {
+  const el = document.getElementById('sec-training-plan');
+  if (!el) return;
+  const p = calcTrainingPlan(scores);
+  el.innerHTML = `<div class="card training-card">
+    <div class="card-title">简版训练建议 <span style="font-size:11px;color:var(--purple);margin-left:8px;font-weight:400;letter-spacing:1px;">BASIC</span></div>
+    <div class="training-focus">📍 优先补强：${p.worstDim}（当前 ${p.worstScore} 分）</div>
+    <div class="training-tool-box">
+      <div class="training-tool-name">🔧 建议工具：${p.main.tool}</div>
+      <div class="training-tool-detail">训练内容：${p.main.task}<br>建议频率：${p.main.freq}${p.main.site ? '<br>网址：<span style="color:var(--sub)">' + p.main.site + '</span>' : ''}</div>
+      <div class="training-target">🎯 ${p.main.target}</div>
+    </div>
+    <div class="training-tool-detail" style="margin-top:4px;">辅助强化：${p.secDim} · ${p.sec.tool}。建议把主练习和辅助练习交替安排，连续执行 3-4 周后再复测一次。</div>
   </div>`;
 }
 
 // ── 主流程 ────────────────────────────────────
 let reportMode = 'advanced'; // 'basic' | 'advanced'
 
-function hasReportAccess() {
-  return sessionStorage.getItem('ve_invited') === 'true' || sessionStorage.getItem('ve_paid') === 'true';
+async function fetchPaidReportAccess() {
+  try {
+    const res = await fetch('/api/report/access', { credentials: 'same-origin' });
+    const data = await res.json();
+    return data && data.access ? data : { access: false };
+  } catch (_) {
+    return { access: false };
+  }
 }
 
 async function init() {
@@ -1164,12 +1198,17 @@ async function init() {
   if (!Object.keys(scores).length) { window.location.href='/'; return; }
 
   const isInvited = sessionStorage.getItem('ve_invited') === 'true';
-  if (!hasReportAccess()) {
+  const paidAccess = isInvited ? { access: false, mode: 'advanced' } : await fetchPaidReportAccess();
+  if (!isInvited && !paidAccess.access) {
     window.location.href = '/preview.html'; return;
   }
 
   // 读取报告模式
-  reportMode = isInvited ? 'advanced' : (sessionStorage.getItem('ve_report_mode') || 'basic');
+  reportMode = isInvited ? 'advanced' : (paidAccess.mode || 'basic');
+  if (!isInvited) {
+    sessionStorage.setItem('ve_paid', 'true');
+    sessionStorage.setItem('ve_report_mode', reportMode);
+  }
   const vtag = document.getElementById('version-tag');
   vtag.style.display = 'inline-block';
   vtag.className = 'version-tag ' + reportMode;
@@ -1188,22 +1227,15 @@ async function init() {
   showContactSection();
 
   if (reportMode === 'basic') {
-    // 原始数据 → 锁定卡
     const rawSec = document.getElementById('sec-raw-data');
     if (rawSec) {
       rawSec.innerHTML = '';
-      renderLockedCard('sec-raw-data', '实测数据详情', '进阶版专属 · 含毫秒级原始测量数据');
-      rawSec.style.display = 'block';
+      rawSec.style.display = 'none';
     }
-    // 角色分析 → 锁定卡
-    renderLockedCard('sec-role-analysis', '角色方向分析', '进阶版专属 · 含 FPS / MOBA 双赛道角色与理由');
-    // 训练计划 → 锁定卡
-    renderLockedCard('sec-training-plan', '专属训练计划', '进阶版专属 · 含具体工具、频率与4周计划');
-    // 隐藏评分细则 + PDF下载
+    renderBasicRoleCard();
+    renderBasicTrainingCard();
     const critBtn = document.querySelector('.criteria-trigger');
     if (critBtn) critBtn.style.display = 'none';
-    const dlBtn = document.getElementById('btn-download');
-    if (dlBtn) dlBtn.style.display = 'none';
   } else {
     // 进阶版：渲染角色分析和训练计划卡
     renderRoleCard();

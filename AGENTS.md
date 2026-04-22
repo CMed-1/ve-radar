@@ -37,16 +37,16 @@
 
 ## Basic vs Advanced 报告差异
 
-| 内容 | Basic ¥6.9 | Advanced ¥19.9 |
+| 内容 | Basic ¥6.98 | Advanced ¥19.98 |
 |------|-----------|----------------|
 | SVG评级勋章 | ✅ | ✅ |
 | 雷达图+维度分数 | ✅ | ✅ |
 | AI分析文字 | ~200字 | ~600字 |
-| 实测原始数据 | 🔒锁定卡 | ✅ |
-| 角色方向分析 | 🔒锁定卡 | ✅ |
-| 专属训练计划 | 🔒锁定卡 | ✅ |
+| 实测原始数据 | ❌隐藏 | ✅ |
+| 角色方向分析 | ✅简版 | ✅深度版 |
+| 专属训练计划 | ✅简版 | ✅4周计划 |
 | 评分细则 | ❌隐藏 | ✅ |
-| PDF下载 | ❌隐藏 | ✅ |
+| PDF下载 | ✅ | ✅ |
 
 ## SVG勋章
 - genius: 金色六边形+王冠 (ID前缀: rsg-/pvg-)
@@ -83,7 +83,6 @@
 ## MiniMax 配置
 - 进阶版: tokens_to_generate=2400, 约700-900字，6段结构化评估意见
 - 基础版: tokens_to_generate=400, 约150字3段
-- 支付开关: `PAYMENT_ENABLED = false` in preview.html
 
 ## test.html 拆分规则（用户指令 2026-04）
 **触发条件**：接下来如果有需要改动 test.html 且工程量较大的任务，自动先拆分再修改。
@@ -106,19 +105,45 @@
 - `RENDER_DOMAIN = 'https://ve-radar.onrender.com'` 常量
 
 ## 访问门控（Feature B，2026-04已实现）
-- preview.html：无邀请码且 `ve_paid !== true` 时，一律调用 `applyGate(scores)`
+- preview.html：无邀请码且未支付时，一律调用 `applyGate(scores)`
   - 评级徽章 / 内部参考分位 / 雷达图统一锁定，避免结果侧漏
   - `club-section` 未解锁前不展示，避免通过推荐通道反推评级
-  - 支付卡片按钮显示“解锁基础版 ¥6.9 / 解锁进阶版 ¥19.9”
-  - 支付接口未接时，点击按钮只提示“暂不可解锁”，不能直接跳 report
-- report.html：只有 `ve_invited === true` 或 `ve_paid === true` 才允许访问；否则直接跳回 preview
-- 后续支付接入时，只需要在成功回跳后写入 `sessionStorage.ve_paid = 'true'` 与 `ve_report_mode`
+  - 支付卡片直接显示 `支付宝 / 微信` 两种支付入口
+- report.html：邀请码用户继续走 `sessionStorage.ve_invited`；付费用户改为调用 `/api/report/access`，由服务端支付凭证判定访问权限
+- 基础版报告不再出现“锁定卡片”，而是只展示基础版可见内容；进阶版专属内容直接隐藏
+- 易支付成功后会在服务端写入 `payments` 表，并通过 `ve_pay_token` cookie 识别已支付用户
 
 ## 推荐追踪（Feature C，2026-04已实现）
 - `?ref=CODE` → index.html 读取 → sessionStorage `ve_ref_code` + POST `/api/referral/click`
-- preview.html `unlockReport()` → POST `/api/referral/convert` with mode
+- 邀请码用户：preview.html `unlockReport()` → POST `/api/referral/convert`
+- 付费用户：支付成功后由服务端在订单转为 `PAID` 时记录 `referral_conversions`
 - DB：referral_clicks + referral_conversions 两张表
 - Admin API：POST `/api/admin/referral-stats` 返回每个 code 的 clicks + conversions
+
+## 支付接入（2026-04）
+- 当前接入：`六号易支付 V1 (MD5)`
+- 环境变量：
+  - `APP_BASE_URL`
+  - `EASYPAY_API_BASE`
+  - `EASYPAY_PID`
+  - `EASYPAY_KEY`
+  - `PAY_BASIC_PRICE`
+  - `PAY_ADVANCED_PRICE`
+  - `PAY_BASIC_NAME`
+  - `PAY_ADVANCED_NAME`
+- 后端接口：
+  - `POST /api/pay/create`：创建订单并请求易支付 `mapi.php`
+  - `GET /api/pay/status`：查询本地订单状态，并在未支付时兜底查询易支付 `api.php?act=order`
+  - `ALL /api/pay/notify/easypay`：验签并接收异步通知
+  - `GET /api/report/access`：读取服务端支付凭证
+- 页面流程：
+  - `preview.html` 选择版本与支付方式
+  - `pay.html` 承接支付跳转 / 二维码展示 / 状态轮询
+  - `report.html` 根据服务端访问状态读取基础版或进阶版
+- 支付成功判定：
+  - 异步通知 `trade_status=TRADE_SUCCESS`
+  - 或前端轮询时兜底查询 `status=1`
+- 收到异步通知后必须返回纯文本 `success`
 
 ## Aim 双轮与分位采样（2026-04）
 - Aim 顺序：Reaction → GNG → Vision → N-back → Aim1 → Grid → Color → Aim2 → RT2
@@ -128,7 +153,7 @@
 - 后端新增 `test_results` 表和 `/api/test-result`，用于匿名累计经验分位样本
 
 ## 待办/已知问题
-- [ ] 真实支付接入（支付成功后写入 `sessionStorage.ve_paid='true'` 和 `ve_report_mode`，打通 preview → pay → report）
+- [ ] 用真实 Render 环境变量跑一单联调支付宝 / 微信，确认易支付返回的是 `payurl`、`qrcode` 还是 `urlscheme`
 - [ ] 评分基准可能仍偏高（后续收集更多用户数据后再校准）
 - [ ] 色觉感知测试无学术验证，已在评分细则中标注
 

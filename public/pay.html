@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VE天赋雷达 · 支付中</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root{
+    --bg:#000;
+    --card:#111;
+    --card2:#0a0a0a;
+    --border:#262626;
+    --text:#fff;
+    --sub:#a7a7a7;
+    --green:#76b900;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    min-height:100vh;
+    background:
+      radial-gradient(circle at top, rgba(118,185,0,.12), transparent 38%),
+      linear-gradient(180deg, #050505 0%, #000 100%);
+    color:var(--text);
+    font-family:'Inter','Noto Sans SC',sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .card{
+    width:min(100%, 520px);
+    background:rgba(17,17,17,.96);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:30px 24px 24px;
+    box-shadow:0 18px 60px rgba(0,0,0,.45);
+  }
+  .eyebrow{
+    font-family:'Orbitron',sans-serif;
+    font-size:11px;
+    letter-spacing:4px;
+    color:var(--green);
+    margin-bottom:16px;
+  }
+  h1{
+    font-size:28px;
+    font-weight:700;
+    letter-spacing:-.5px;
+    margin-bottom:10px;
+  }
+  .sub{
+    color:var(--sub);
+    line-height:1.8;
+    font-size:14px;
+    margin-bottom:20px;
+  }
+  .meta{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:12px;
+    margin-bottom:20px;
+  }
+  .meta-item{
+    background:var(--card2);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:14px 12px;
+  }
+  .meta-label{
+    font-size:11px;
+    color:#6b7280;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    margin-bottom:6px;
+  }
+  .meta-value{
+    font-size:14px;
+    color:var(--text);
+    line-height:1.5;
+    word-break:break-all;
+  }
+  .qr-wrap{
+    background:var(--card2);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:20px;
+    text-align:center;
+    margin-bottom:18px;
+  }
+  #qrcode{
+    width:220px;
+    height:220px;
+    margin:0 auto 14px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#fff;
+    border-radius:10px;
+    padding:14px;
+  }
+  #qrcode img, #qrcode canvas{
+    max-width:100%;
+    height:auto;
+  }
+  .qr-tip{
+    font-size:13px;
+    color:var(--sub);
+    line-height:1.7;
+  }
+  .status{
+    min-height:22px;
+    font-size:13px;
+    color:var(--sub);
+    margin-bottom:18px;
+    line-height:1.6;
+  }
+  .actions{
+    display:grid;
+    gap:10px;
+  }
+  button, .link-btn{
+    width:100%;
+    border:none;
+    border-radius:10px;
+    padding:14px 16px;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    text-decoration:none;
+    transition:transform .15s ease, opacity .15s ease, border-color .15s ease;
+  }
+  button:hover, .link-btn:hover{transform:translateY(-1px);}
+  .btn-primary{
+    background:var(--green);
+    color:#000;
+  }
+  .btn-secondary{
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--text);
+  }
+  .btn-muted{
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--sub);
+  }
+  .hidden{display:none;}
+  @media (max-width: 560px) {
+    .meta{grid-template-columns:1fr;}
+    h1{font-size:24px;}
+    #qrcode{width:200px;height:200px;}
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="eyebrow">VE PAYMENT</div>
+    <h1 id="title">正在准备支付</h1>
+    <div class="sub" id="subtitle">支付完成后将自动解锁对应版本报告，并回到站内继续查看。</div>
+
+    <div class="meta">
+      <div class="meta-item">
+        <div class="meta-label">订单号</div>
+        <div class="meta-value" id="meta-order">--</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">金额</div>
+        <div class="meta-value" id="meta-amount">--</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">版本</div>
+        <div class="meta-value" id="meta-mode">--</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">支付方式</div>
+        <div class="meta-value" id="meta-channel">--</div>
+      </div>
+    </div>
+
+    <div class="qr-wrap hidden" id="qr-wrap">
+      <div id="qrcode"></div>
+      <div class="qr-tip" id="qr-tip">请使用微信或支付宝扫码完成支付。支付成功后，本页会自动刷新状态。</div>
+    </div>
+
+    <div class="status" id="status-text">正在检查支付状态...</div>
+
+    <div class="actions">
+      <button class="btn-primary hidden" id="btn-open" type="button">打开支付</button>
+      <button class="btn-secondary" id="btn-check" type="button">我已完成支付，刷新状态</button>
+      <a class="link-btn btn-muted" href="/preview.html">返回预览页</a>
+    </div>
+  </div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const orderNo = params.get('orderNo') || '';
+const pendingRaw = sessionStorage.getItem('ve_pending_payment');
+let pending = null;
+let pollTimer = null;
+
+try {
+  pending = pendingRaw ? JSON.parse(pendingRaw) : null;
+} catch (_) {
+  pending = null;
+}
+
+if (!orderNo) {
+  window.location.href = '/preview.html';
+}
+
+function channelLabel(channel) {
+  return channel === 'wxpay' ? '微信支付' : '支付宝';
+}
+
+function modeLabel(mode) {
+  return mode === 'advanced' ? '进阶版报告' : '基础版报告';
+}
+
+function renderMeta(data = {}) {
+  document.getElementById('meta-order').textContent = orderNo;
+  document.getElementById('meta-amount').textContent = data.amount ? `¥${data.amount}` : '--';
+  document.getElementById('meta-mode').textContent = modeLabel(data.mode || 'basic');
+  document.getElementById('meta-channel').textContent = channelLabel(data.channel || 'alipay');
+  document.getElementById('title').textContent = `支付 ${data.amount ? `¥${data.amount}` : ''}`.trim() || '正在准备支付';
+  document.getElementById('subtitle').textContent = `${modeLabel(data.mode || 'basic')} · ${channelLabel(data.channel || 'alipay')}。支付成功后将自动解锁报告。`;
+}
+
+function showStatus(text) {
+  document.getElementById('status-text').textContent = text;
+}
+
+function openPayment() {
+  if (!pending) return;
+  if (pending.urlscheme) {
+    window.location.href = pending.urlscheme;
+    return;
+  }
+  if (pending.payurl) {
+    window.location.href = pending.payurl;
+  }
+}
+
+function renderPendingPayment() {
+  if (!pending || pending.orderNo !== orderNo) return;
+  renderMeta(pending);
+
+  const openBtn = document.getElementById('btn-open');
+  if (pending.payurl || pending.urlscheme) {
+    openBtn.classList.remove('hidden');
+    openBtn.textContent = pending.urlscheme ? `打开${channelLabel(pending.channel)}` : `前往${channelLabel(pending.channel)}支付`;
+  }
+
+  if (pending.qrcode) {
+    document.getElementById('qr-wrap').classList.remove('hidden');
+    document.getElementById('qr-tip').textContent = pending.channel === 'wxpay'
+      ? '微信支付通常需要使用另一台设备扫码完成。本页会自动轮询支付状态。'
+      : '请使用支付宝扫码完成支付，本页会自动轮询支付状态。';
+    if (!document.getElementById('qrcode').dataset.ready) {
+      new QRCode(document.getElementById('qrcode'), {
+        text: pending.qrcode,
+        width: 192,
+        height: 192,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+      document.getElementById('qrcode').dataset.ready = '1';
+    }
+  }
+
+  const autoKey = `ve_pay_autopen_${orderNo}`;
+  if ((pending.payurl || pending.urlscheme) && !sessionStorage.getItem(autoKey)) {
+    sessionStorage.setItem(autoKey, '1');
+    setTimeout(openPayment, 400);
+  }
+}
+
+async function refreshStatus(silent = false) {
+  try {
+    const resp = await fetch(`/api/pay/status?orderNo=${encodeURIComponent(orderNo)}`, {
+      credentials: 'same-origin'
+    });
+    const data = await resp.json();
+    if (!resp.ok || !data.success) {
+      throw new Error(data.message || '状态查询失败');
+    }
+
+    renderMeta(data);
+
+    if (data.paid) {
+      sessionStorage.setItem('ve_paid', 'true');
+      sessionStorage.setItem('ve_report_mode', data.mode || 'basic');
+      sessionStorage.removeItem('ve_pending_payment');
+      showStatus('支付成功，正在跳转到报告页...');
+      window.location.href = '/report.html';
+      return;
+    }
+
+    if (!silent) {
+      showStatus('支付尚未完成。若你已付款，请点“我已完成支付，刷新状态”。');
+    }
+  } catch (err) {
+    if (!silent) {
+      showStatus(err.message || '状态查询失败，请稍后重试。');
+    }
+  }
+}
+
+document.getElementById('btn-open').addEventListener('click', openPayment);
+document.getElementById('btn-check').addEventListener('click', () => refreshStatus(false));
+
+renderPendingPayment();
+refreshStatus(true);
+pollTimer = setInterval(() => refreshStatus(true), 3000);
+window.addEventListener('beforeunload', () => {
+  if (pollTimer) clearInterval(pollTimer);
+});
+</script>
+</body>
+</html>
