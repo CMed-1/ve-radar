@@ -112,6 +112,11 @@
 - report.html：邀请码用户继续走 `sessionStorage.ve_invited`；付费用户改为调用 `/api/report/access`，由服务端支付凭证判定访问权限
 - 基础版报告不再出现“锁定卡片”，而是只展示基础版可见内容；进阶版专属内容直接隐藏
 - 易支付成功后会在服务端写入 `payments` 表，并通过 `ve_pay_token` cookie 识别已支付用户
+- 管理后台新增“查看未付费预览”调试按钮：
+  - 前端写入固定 mock `ve_scores / ve_rawdata / ve_device=pc`
+  - 清理 `ve_invited / ve_code / ve_paid / ve_report_mode / ve_pending_payment / ve_ref_code`
+  - 后端 `POST /api/admin/debug/reset-preview-access` 专门用于清掉 `ve_pay_token`
+  - 只用于运营验收未付费预览态，不算正式用户入口
 
 ## 推荐追踪（Feature C，2026-04已实现）
 - `?ref=CODE` → index.html 读取 → sessionStorage `ve_ref_code` + POST `/api/referral/click`

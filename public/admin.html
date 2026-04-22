@@ -72,6 +72,9 @@
   .stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;text-align:center;}
   .stat-num{font-family:'Orbitron',sans-serif;font-size:28px;color:var(--cyan);}
   .stat-label{font-size:12px;color:var(--sub);margin-top:4px;}
+  .card-sub{font-size:13px;color:var(--sub);line-height:1.7;margin:-8px 0 18px;}
+  .btn-debug{background:linear-gradient(135deg,var(--green),#059669);}
+  .debug-note{font-size:12px;color:var(--sub);margin-top:12px;}
 
   .refresh-btn{padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--sub);font-family:'Noto Sans SC',sans-serif;font-size:13px;cursor:pointer;float:right;}
   .refresh-btn:hover{border-color:var(--cyan);color:var(--cyan);}
@@ -161,12 +164,38 @@
         <button class="btn-gen" style="background:linear-gradient(135deg,var(--purple),#5B21B6);" onclick="exportCodeCSV()">导出邀请码CSV</button>
       </div>
     </div>
+    <div class="card">
+      <div class="card-title">预览调试</div>
+      <div class="card-sub">仅后台运营自查使用。点击后会清掉当前浏览器的支付访问凭证，写入一组固定的普通档模拟成绩，并直接打开未付费预览页。</div>
+      <button class="btn-gen btn-debug" id="preview-debug-btn" onclick="openLockedPreview()">查看未付费预览</button>
+      <div class="debug-note" id="preview-debug-note">目标效果：预览页评分锁定、内部参考分位打码、雷达图模糊、底部展示购买入口。</div>
+    </div>
   </div>
 </div>
 
 <script>
 let adminPwd = '';
 let allCodes = [], allContacts = [];
+const MOCK_PREVIEW_SCORES = {
+  reaction: 61,
+  impulse: 56,
+  vision: 58,
+  cognition: 60,
+  aim: 57,
+  focus: 55,
+  color: 62
+};
+const MOCK_PREVIEW_RAWDATA = {
+  reactionTimes: [],
+  gngFalseAlarms: 0,
+  gngMisses: 0,
+  gngHits: 0,
+  visionCorrect: 0,
+  visionTotal: 0,
+  gridTimes: [],
+  gridErrors: 0,
+  aimRounds: []
+};
 
 // ── 登录 ──────────────────────────────────────
 async function login() {
@@ -304,6 +333,56 @@ function exportCodeCSV() {
   const rows = [['邀请码','状态','使用时间','备注','生成时间']];
   allCodes.forEach(c=>rows.push([c.code,c.used?'已使用':'可用',c.used_at||'',c.note||'',c.created_at.slice(0,16)]));
   downloadCSV(rows, 'VE邀请码列表.csv');
+}
+
+async function openLockedPreview() {
+  const btn = document.getElementById('preview-debug-btn');
+  const note = document.getElementById('preview-debug-note');
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '正在准备预览...';
+  note.textContent = '正在清理支付态并写入模拟成绩，请稍候...';
+
+  try {
+    const res = await fetch('/api/admin/debug/reset-preview-access', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ password: adminPwd })
+    });
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.message || '重置预览访问态失败');
+    }
+
+    [
+      've_invited',
+      've_code',
+      've_paid',
+      've_report_mode',
+      've_pending_payment',
+      've_ref_code'
+    ].forEach(key => sessionStorage.removeItem(key));
+
+    sessionStorage.setItem('ve_device', 'pc');
+    sessionStorage.setItem('ve_scores', JSON.stringify(MOCK_PREVIEW_SCORES));
+    sessionStorage.setItem('ve_rawdata', JSON.stringify(MOCK_PREVIEW_RAWDATA));
+
+    note.textContent = '未付费预览已准备好，正在打开新页面...';
+    const previewWin = window.open('/preview.html', '_blank');
+    if (!previewWin) {
+      window.location.href = '/preview.html';
+      return;
+    }
+    previewWin.focus();
+    note.textContent = '未付费预览已在新标签页打开。';
+  } catch (err) {
+    note.textContent = `预览调试失败：${err.message || '请稍后重试'}`;
+    alert(err.message || '预览调试失败，请稍后重试');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
 }
 
 function downloadCSV(rows, filename) {

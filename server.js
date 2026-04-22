@@ -256,6 +256,21 @@ app.post('/api/admin/referral-stats', (req, res) => {
   }
 });
 
+// ─── 管理员：重置预览访问态（仅用于后台调试）──────────────────
+app.post('/api/admin/debug/reset-preview-access', (req, res) => {
+  try {
+    const { password } = req.body;
+    if (password !== process.env.ADMIN_PASSWORD) {
+      return res.json({ success: false, message: '管理员密码错误' });
+    }
+    clearPaymentCookie(res);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[admin/debug/reset-preview-access]', err.message);
+    res.status(500).json({ success: false, message: '服务器错误，请稍后重试' });
+  }
+});
+
 // ─── 提交联系方式 ─────────────────────────────────────────────
 app.post('/api/submit-contact', async (req, res) => {
   try {
