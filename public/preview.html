@@ -587,15 +587,6 @@ function calcRating(s) {
   return VEScoreModel.calcRatingKey(s);
 }
 
-function scoreToPercentile(score) {
-  const z = (score - 58) / 16; // 修正：测试人群自选偏差，均值偏高
-  const sign = z >= 0 ? 1 : -1;
-  const x = Math.abs(z) / Math.SQRT2;
-  const t = 1 / (1 + 0.3275911 * x);
-  const erf = sign * (1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x));
-  const pct = 0.5 * (1 + erf) * 100;
-  return Math.min(99.9, Math.max(0.1, pct));
-}
 
 async function fetchPaidAccess() {
   try {
@@ -735,7 +726,7 @@ async function init() {
   const ratingKey = calcRating(scores);
   const cfg = RATING_CONFIG[ratingKey];
   const avg = VEScoreModel.calcWeightedAverage(scores, 1);
-  const pct = scoreToPercentile(avg);
+  const pct = VEScoreModel.scoreToPercentile(avg);
 
   // SVG 勋章
   const svgWrap = document.getElementById('rating-svg-wrap');
