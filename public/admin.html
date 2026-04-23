@@ -80,6 +80,11 @@
   .score-preview{font-size:13px;color:var(--sub);line-height:1.8;margin-top:12px;}
   .score-pill{display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(0,212,255,0.1);color:var(--cyan);font-family:monospace;font-size:12px;margin:2px;}
   .raw-summary{max-width:300px;color:var(--sub);line-height:1.6;}
+  .calibration-controls{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px;}
+  .calibration-select{padding:10px 12px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;color:var(--text);outline:none;}
+  .calibration-status{padding:14px 16px;border:1px solid rgba(16,185,129,0.25);background:rgba(16,185,129,0.08);border-radius:10px;color:var(--sub);font-size:13px;line-height:1.8;margin-bottom:16px;}
+  .calibration-status strong{color:var(--green);}
+  .metric-group{font-size:11px;color:var(--cyan);letter-spacing:1px;}
 
   .refresh-btn{padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--sub);font-family:'Noto Sans SC',sans-serif;font-size:13px;cursor:pointer;float:right;}
   .refresh-btn:hover{border-color:var(--cyan);color:var(--cyan);}
@@ -115,6 +120,7 @@
     <button class="tab-btn active" onclick="switchTab('codes')">邀请码管理</button>
     <button class="tab-btn" onclick="switchTab('contacts')">联系方式库</button>
     <button class="tab-btn" onclick="switchTab('tests')">测试数据</button>
+    <button class="tab-btn" onclick="switchTab('calibration')">样本校准</button>
     <button class="tab-btn" onclick="switchTab('stats')">数据概览</button>
   </div>
 
@@ -176,6 +182,26 @@
     </div>
   </div>
 
+  <!-- 样本校准面板 -->
+  <div class="panel" id="panel-calibration">
+    <div class="stats-row" id="calibration-stats-row"></div>
+    <div class="card">
+      <div class="card-title">样本校准指标 <button class="refresh-btn" onclick="loadCalibrationStats()">刷新</button></div>
+      <div class="card-sub">这里用于观察站内样本分布，不会自动改变前台评分、分位或报告文案。建议样本量达到 100 后开始混合校准，达到 500 后再考虑切换经验分位。</div>
+      <div class="calibration-controls">
+        <select class="calibration-select" id="calibration-group" onchange="renderCalibrationStats()">
+          <option value="all">全体样本</option>
+        </select>
+        <button class="btn-gen" onclick="exportCalibrationCSV()">导出校准指标CSV</button>
+      </div>
+      <div class="calibration-status" id="calibration-status">暂无校准数据。</div>
+      <table class="data-table" id="calibration-table">
+        <thead><tr><th>类别</th><th>指标</th><th>方向</th><th>N</th><th>均值</th><th>标准差</th><th>P25</th><th>P50</th><th>P75</th><th>P90</th><th>P95</th><th>最小</th><th>最大</th></tr></thead>
+        <tbody id="calibration-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- 数据概览面板 -->
   <div class="panel" id="panel-stats">
     <div class="stats-row" id="stats-row"></div>
@@ -186,6 +212,7 @@
         <button class="btn-gen" style="background:linear-gradient(135deg,var(--purple),#5B21B6);" onclick="exportCodeCSV()">导出邀请码CSV</button>
         <button class="btn-gen" style="background:linear-gradient(135deg,#10B981,#047857);" onclick="switchTab('tests')">查看测试数据</button>
         <button class="btn-gen" style="background:linear-gradient(135deg,#76b900,#3f6d00);" onclick="exportTestCSV()">导出测试数据CSV</button>
+        <button class="btn-gen" style="background:linear-gradient(135deg,#F59E0B,#B45309);" onclick="switchTab('calibration')">查看样本校准</button>
       </div>
     </div>
     <div class="card">
@@ -213,7 +240,7 @@
 
 <script>
 let adminPwd = '';
-let allCodes = [], allContacts = [], allTestResults = [];
+let allCodes = [], allContacts = [], allTestResults = [], calibrationData = null;
 const DIM_KEYS = ['reaction','impulse','vision','cognition','aim','focus','color'];
 const DIM_NAMES = { reaction:'反应', impulse:'抑制', vision:'视力', cognition:'认知', aim:'Aim', focus:'专注', color:'色觉' };
 const MOCK_PREVIEW_SCORES = {
@@ -275,7 +302,7 @@ function logout() {
 
 // ── 标签切换 ──────────────────────────────────
 function switchTab(tab) {
-  const tabs = ['codes','contacts','tests','stats'];
+  const tabs = ['codes','contacts','tests','calibration','stats'];
   document.querySelectorAll('.tab-btn').forEach((b,i) => {
     b.classList.toggle('active', tabs[i]===tab);
   });
@@ -283,6 +310,7 @@ function switchTab(tab) {
   document.getElementById('panel-'+tab).classList.add('active');
   if (tab==='contacts') loadContacts();
   if (tab==='tests') loadTestResults();
+  if (tab==='calibration') loadCalibrationStats();
   if (tab==='stats') renderStats();
 }
 
@@ -423,6 +451,114 @@ function renderStats() {
     <div class="stat-card"><div class="stat-num">${contacts}</div><div class="stat-label">候选人</div></div>
     <div class="stat-card"><div class="stat-num">${testCount}</div><div class="stat-label">测试记录</div></div>
     <div class="stat-card"><div class="stat-num" style="color:#FCD34D">${geniusCount}</div><div class="stat-label">候选库天才少年</div></div>`;
+}
+
+async function loadCalibrationStats() {
+  const res = await fetch('/api/admin/calibration-stats', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ password: adminPwd, limit: 10000 })
+  });
+  const data = await res.json();
+  if (data.success) {
+    calibrationData = data.calibration;
+    renderCalibrationGroupOptions();
+    renderCalibrationStats();
+  }
+}
+
+function renderCalibrationGroupOptions() {
+  const select = document.getElementById('calibration-group');
+  if (!select || !calibrationData?.groups) return;
+  const current = select.value || 'all';
+  select.innerHTML = Object.values(calibrationData.groups)
+    .map(group => `<option value="${group.key}">${group.label} (${group.total})</option>`)
+    .join('');
+  select.value = calibrationData.groups[current] ? current : 'all';
+}
+
+function calibrationGroup() {
+  const key = document.getElementById('calibration-group')?.value || 'all';
+  return calibrationData?.groups?.[key] || calibrationData?.groups?.all || null;
+}
+
+function formatMetric(value, unit = '') {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return '—';
+  const abs = Math.abs(Number(value));
+  const digits = abs >= 100 || ['ms','次','题','个'].includes(unit) ? 0 : 1;
+  return Number(value).toFixed(digits);
+}
+
+function directionLabel(direction) {
+  return direction === 'lower' ? '越低越好' : '越高越好';
+}
+
+function renderCalibrationStats() {
+  const group = calibrationGroup();
+  const tbody = document.getElementById('calibration-tbody');
+  const statusEl = document.getElementById('calibration-status');
+  const statsEl = document.getElementById('calibration-stats-row');
+  if (!group || !tbody || !statusEl) return;
+
+  const scoreMetric = group.metrics.find(metric => metric.key === 'avgScore');
+  const aimMetric = group.metrics.find(metric => metric.key === 'aimKpm');
+  const rtMetric = group.metrics.find(metric => metric.key === 'reactionAvgMs');
+  const p50Score = scoreMetric ? formatMetric(scoreMetric.p50, scoreMetric.unit) : '—';
+  const p50Aim = aimMetric ? formatMetric(aimMetric.p50, aimMetric.unit) : '—';
+  const p50Rt = rtMetric ? formatMetric(rtMetric.p50, rtMetric.unit) : '—';
+
+  if (statsEl) {
+    statsEl.innerHTML = `
+      <div class="stat-card"><div class="stat-num">${group.total}</div><div class="stat-label">${group.label}</div></div>
+      <div class="stat-card"><div class="stat-num">${p50Score}</div><div class="stat-label">综合分 P50</div></div>
+      <div class="stat-card"><div class="stat-num">${p50Aim}</div><div class="stat-label">Aim KPM P50</div></div>
+      <div class="stat-card"><div class="stat-num">${p50Rt}</div><div class="stat-label">反应均值 P50(ms)</div></div>`;
+  }
+
+  statusEl.innerHTML = `<strong>${group.stage.label}</strong>：${group.stage.note}<br>当前展示 ${group.metrics.length} 个可用指标；P50 可理解为当前站内样本中位数，P90/P95 可作为高水平参考线。`;
+  tbody.innerHTML = group.metrics.map(metric => `
+    <tr>
+      <td><span class="metric-group">${metric.group}</span></td>
+      <td>${metric.label}<span style="color:var(--sub);font-size:11px;">${metric.unit ? ` · ${metric.unit}` : ''}</span></td>
+      <td style="color:var(--sub)">${directionLabel(metric.direction)}</td>
+      <td>${metric.n}</td>
+      <td>${formatMetric(metric.mean, metric.unit)}</td>
+      <td>${formatMetric(metric.sd, metric.unit)}</td>
+      <td>${formatMetric(metric.p25, metric.unit)}</td>
+      <td><strong>${formatMetric(metric.p50, metric.unit)}</strong></td>
+      <td>${formatMetric(metric.p75, metric.unit)}</td>
+      <td>${formatMetric(metric.p90, metric.unit)}</td>
+      <td>${formatMetric(metric.p95, metric.unit)}</td>
+      <td>${formatMetric(metric.min, metric.unit)}</td>
+      <td>${formatMetric(metric.max, metric.unit)}</td>
+    </tr>
+  `).join('');
+}
+
+function exportCalibrationCSV() {
+  const group = calibrationGroup();
+  if (!group || !group.metrics.length) {
+    alert('暂无校准指标可导出');
+    return;
+  }
+  const rows = [['样本组','类别','指标','单位','方向','N','均值','标准差','P25','P50','P75','P90','P95','最小','最大']];
+  group.metrics.forEach(metric => rows.push([
+    group.label,
+    metric.group,
+    metric.label,
+    metric.unit || '',
+    directionLabel(metric.direction),
+    metric.n,
+    formatMetric(metric.mean, metric.unit),
+    formatMetric(metric.sd, metric.unit),
+    formatMetric(metric.p25, metric.unit),
+    formatMetric(metric.p50, metric.unit),
+    formatMetric(metric.p75, metric.unit),
+    formatMetric(metric.p90, metric.unit),
+    formatMetric(metric.p95, metric.unit),
+    formatMetric(metric.min, metric.unit),
+    formatMetric(metric.max, metric.unit)
+  ]));
+  downloadCSV(rows, `VE样本校准指标-${group.key}.csv`);
 }
 
 // ── 导出 ──────────────────────────────────────
