@@ -158,8 +158,14 @@
 - Aim 顺序：Reaction → GNG → Vision → N-back → Aim1 → Grid → Color → Aim2 → RT2
 - Aim 每轮 60 秒，两轮合计 120 秒后再计算 `scores.aim`
 - `rawData.aimRounds[0/1]` 保存两轮数据；`rawData.aimConsistency` 保存二测-一测差值
+- Aim 原始数据里的“命中数”是两轮合计值；内部参考 `KPM≈44` 对应两轮约 `88` 命中。不要再使用旧 30 秒口径的 `普通人均值 ~22`
+- 外部 Aim Lab / Gridshot 公开数据与本网页测试的目标尺寸、输入方式、时长不一致；未拿到站内经验分布前，页面只写“内部参考”，不要写“普通人均值”
 - 首页手游端要提示：**不要在微信内打开**，否则横竖屏切换可能异常
 - 后端新增 `test_results` 表和 `/api/test-result`，用于匿名累计经验分位样本
+
+## 分享图二维码（2026-04）
+- 分享卡二维码必须保持黑码白底、足够大（当前 132px + 白色 quiet zone），否则微信/相机扫分享图时容易识别失败
+- QR URL 固定使用 `https://ve-radar.onrender.com/`，有邀请码时只追加 `?ref=CODE`
 - 后台“测试数据”Tab 可查看最近匿名完成记录并导出 CSV；该数据没有姓名/手机号，只能和 contacts 分开看
 
 ## 待办/已知问题

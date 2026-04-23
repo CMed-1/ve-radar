@@ -661,7 +661,7 @@ async function callMiniMax(scores, rating, device, rawData) {
         rawSummary += `；前后差值：命中率${accDelta > 0 ? '+' : ''}${accDelta}%，KPM${kpmDelta > 0 ? '+' : ''}${kpmDelta}，平均命中时间${timeDelta > 0 ? '+' : ''}${timeDelta}ms`;
       }
     } else if (rawData.aimHits !== undefined) {
-      rawSummary += `\nAim测试原始数据：命中${rawData.aimHits}个，命中率${rawData.aimAccuracy}%，KPM=${rawData.aimKpm}（普通人均值约44），平均命中时间${rawData.aimAvgTime}ms`;
+      rawSummary += `\nAim测试原始数据：命中${rawData.aimHits}个，命中率${rawData.aimAccuracy}%，KPM=${rawData.aimKpm}（内部参考KPM≈44），平均命中时间${rawData.aimAvgTime}ms`;
     }
     if (rawData.visionCorrect !== undefined) {
       rawSummary += `\n动态视力：${rawData.visionCorrect}/${rawData.visionTotal}题正确`;

@@ -681,10 +681,10 @@
   <div id="sc-ai" style="padding:16px 32px;background:#0d0d0d;margin:0 32px 24px;border-left:3px solid #76b900;border-radius:2px;font-size:12px;color:#ccc;line-height:1.8;"></div>
   <!-- 底部二维码 -->
   <div style="padding:20px 32px 28px;display:flex;align-items:center;gap:20px;border-top:1px solid #1e1e1e;">
-    <div id="sc-qr" style="flex-shrink:0;"></div>
+    <div id="sc-qr" style="flex-shrink:0;background:#fff;padding:12px;border-radius:10px;box-shadow:0 0 0 1px rgba(255,255,255,.18);"></div>
     <div>
       <div style="font-size:12px;color:#a7a7a7;margin-bottom:6px;">扫码测测你的电竞天赋</div>
-      <div id="sc-url" style="font-size:10px;color:#555;font-family:'Inter',monospace;"></div>
+      <div id="sc-url" style="font-size:12px;color:#76b900;font-family:'Inter',monospace;word-break:break-all;"></div>
     </div>
     <div style="margin-left:auto;text-align:right;">
       <div style="font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;color:#76b900;">VE</div>
@@ -914,9 +914,9 @@ function buildCriteriaContent() {
         </tr>
         <tr>
           <td>🎯 手眼协调</td>
-          <td class="tag-genius">两轮合计 KPM≥100 且准确≥90%</td>
-          <td class="tag-pro">两轮合计 KPM≥60 且准确≥75%</td>
-          <td style="color:#a78bfa;">两轮合计 KPM~44 准确~65%</td>
+          <td class="tag-genius">KPM≥100 且准确≥90%</td>
+          <td class="tag-pro">KPM≥60 且准确≥75%</td>
+          <td style="color:#a78bfa;">内部参考 KPM~44 准确~65%</td>
           <td class="tag-yours">${myAim}</td>
         </tr>
         <tr>
@@ -1351,9 +1351,9 @@ function renderDataDetail() {
 
   // Aim 详情
   if (raw.aimHits !== undefined) {
-    items.push({ num: raw.aimHits, label: '命中数 (Kills)', bench: '普通人均值 ~22' });
-    items.push({ num: (raw.aimAccuracy || 0) + '%', label: '命中率 (Accuracy)', bench: '普通人均值 ~65%' });
-    items.push({ num: raw.aimKpm || '—', label: 'KPM (每分命中)', bench: '普通人均值 ~44' });
+    items.push({ num: raw.aimHits, label: '命中数 (Kills)', bench: '内部参考：两轮约88' });
+    items.push({ num: (raw.aimAccuracy || 0) + '%', label: '命中率 (Accuracy)', bench: '内部参考 ~65%' });
+    items.push({ num: raw.aimKpm || '—', label: 'KPM (每分命中)', bench: '内部参考 ~44' });
     if (raw.aimAvgTime) items.push({ num: raw.aimAvgTime + 'ms', label: '平均命中时间', bench: '优秀：<400ms' });
     if (raw.aimRounds && raw.aimRounds.length === 2) {
       items.push({ num: `${raw.aimRounds[0].accuracy}% / ${raw.aimRounds[0].kpm}`, label: 'Aim 一测 准确率 / KPM', bench: '用于后程稳定性对比' });
@@ -1678,7 +1678,7 @@ function buildPDFContent(radarImg, barImg, lineImg) {
     dataLines.push(`动态视力：${raw.visionCorrect}/${raw.visionTotal} 题正确（普通人均值 ~5/10）`);
   }
   if (raw.aimHits !== undefined) {
-    let aimLine = `手眼协调：两轮合计命中 ${raw.aimHits} 个 · 准确率 ${raw.aimAccuracy}% · KPM ${raw.aimKpm}（普通人均值 ~44）`;
+    let aimLine = `手眼协调：两轮合计命中 ${raw.aimHits} 个 · 准确率 ${raw.aimAccuracy}% · KPM ${raw.aimKpm}（内部参考 KPM≈44；两轮约88命中）`;
     if (raw.aimRounds && raw.aimRounds.length === 2) {
       aimLine += ` · 一测 ${raw.aimRounds[0].accuracy}%/${raw.aimRounds[0].kpm} · 二测 ${raw.aimRounds[1].accuracy}%/${raw.aimRounds[1].kpm}`;
     }
@@ -1804,7 +1804,7 @@ async function generateShareImage() {
   try {
     // 1. QR URL（有邀请码则带 ref 参数）
     const code = sessionStorage.getItem('ve_code');
-    const qrUrl = code ? `${RENDER_DOMAIN}/?ref=${encodeURIComponent(code)}` : RENDER_DOMAIN;
+    const qrUrl = code ? `${RENDER_DOMAIN}/?ref=${encodeURIComponent(code)}` : `${RENDER_DOMAIN}/`;
 
     // 2. 填充卡片内容
     const avg = DIM_KEYS.reduce((a,k)=>a+(scores[k]||0),0) / 7;
@@ -1849,16 +1849,16 @@ async function generateShareImage() {
     qrEl.innerHTML = '';
     new QRCode(qrEl, {
       text: qrUrl,
-      width: 80, height: 80,
-      colorDark: '#ffffff',
-      colorLight: '#111111',
-      correctLevel: QRCode.CorrectLevel.M
+      width: 132, height: 132,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.H
     });
 
     // 4. 显示卡片供截图
     const card = document.getElementById('share-card');
     card.style.display = 'block';
-    await new Promise(r => setTimeout(r, 400)); // 等QR渲染
+    await new Promise(r => setTimeout(r, 500)); // 等QR渲染
 
     // 5. html2canvas 截图
     const canvas = await html2canvas(card, {
