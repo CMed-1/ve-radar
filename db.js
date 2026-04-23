@@ -148,7 +148,7 @@ function getTestResultCount() {
 }
 
 function getAllTestResults(limit = 300) {
-  const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 300, 1), 1000);
+  const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 300, 1), 10000);
   return db.prepare(
     `SELECT id, device, avg_score, scores, raw_data, created_at
      FROM test_results

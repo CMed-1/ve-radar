@@ -165,9 +165,9 @@
     <div class="stats-row" id="test-stats-row"></div>
     <div class="card">
       <div class="card-title">匿名完成测评数据 <button class="refresh-btn" onclick="loadTestResults()">刷新</button></div>
-      <div class="card-sub">这里展示的是完整测评结束后自动写入的匿名数据，不包含姓名/手机号。若用户另行提交联系方式，会在“联系方式库”里出现。</div>
+      <div class="card-sub">这里展示的是完整测评结束后自动写入的匿名数据，不限制邀请码/付费状态，不包含姓名/手机号。若用户另行提交联系方式，会在“联系方式库”里出现。</div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
-        <button class="btn-gen" onclick="exportTestCSV()">导出测试数据CSV</button>
+        <button class="btn-gen" onclick="exportTestCSV()">导出完整测试数据CSV</button>
       </div>
       <table class="data-table" id="tests-table">
         <thead><tr><th>ID</th><th>时间</th><th>设备</th><th>平均分</th><th>评级</th><th>七维分数</th><th>原始摘要</th></tr></thead>
@@ -184,6 +184,8 @@
       <div style="display:flex;gap:12px;flex-wrap:wrap;">
         <button class="btn-gen" onclick="exportCSV()">导出联系方式CSV</button>
         <button class="btn-gen" style="background:linear-gradient(135deg,var(--purple),#5B21B6);" onclick="exportCodeCSV()">导出邀请码CSV</button>
+        <button class="btn-gen" style="background:linear-gradient(135deg,#10B981,#047857);" onclick="switchTab('tests')">查看测试数据</button>
+        <button class="btn-gen" style="background:linear-gradient(135deg,#76b900,#3f6d00);" onclick="exportTestCSV()">导出测试数据CSV</button>
       </div>
     </div>
     <div class="card">
@@ -359,7 +361,7 @@ function renderContacts() {
 async function loadTestResults() {
   const res = await fetch('/api/admin/test-results', {
     method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ password: adminPwd, limit: 500 })
+    body: JSON.stringify({ password: adminPwd, limit: 1000 })
   });
   const data = await res.json();
   if (data.success) {
@@ -435,16 +437,38 @@ function exportCodeCSV() {
   downloadCSV(rows, 'VE邀请码列表.csv');
 }
 
-function exportTestCSV() {
-  const rows = [['ID','时间','设备','平均分','评级','反应','抑制','视力','认知','Aim','专注','色觉','原始摘要']];
-  allTestResults.forEach(row => rows.push([
+async function exportTestCSV() {
+  let rowsSource = allTestResults;
+  try {
+    const res = await fetch('/api/admin/test-results', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ password: adminPwd, limit: 10000 })
+    });
+    const data = await res.json();
+    if (data.success) {
+      rowsSource = data.results;
+      allTestResults = data.results;
+      renderTestResults();
+      renderStats();
+    }
+  } catch (_) {}
+
+  if (!rowsSource.length) {
+    alert('暂无测试数据可导出');
+    return;
+  }
+
+  const rows = [['ID','时间','设备','平均分','评级','反应','抑制','视力','认知','Aim','专注','色觉','原始摘要','七维分数JSON','原始数据JSON']];
+  rowsSource.forEach(row => rows.push([
     row.id,
     row.createdAt || '',
     row.device || '',
     row.avgScore === null ? '' : Number(row.avgScore).toFixed(1),
     row.rating || '',
     ...DIM_KEYS.map(key => row.scores?.[key] ?? ''),
-    row.rawSummary || ''
+    row.rawSummary || '',
+    JSON.stringify(row.scores || {}),
+    JSON.stringify(row.rawData || {})
   ]));
   downloadCSV(rows, 'VE匿名测试数据.csv');
 }
