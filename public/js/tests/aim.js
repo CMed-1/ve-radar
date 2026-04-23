@@ -68,6 +68,29 @@ function getAimMeta() {
   return AIM_PHASES[AIM.currentPhase];
 }
 
+function requestAimImmersive(screenId) {
+  if (!isMobile) return;
+  document.body.classList.add('aim-immersive-active');
+  const el = document.getElementById(screenId);
+  if (el?.requestFullscreen && !document.fullscreenElement) {
+    el.requestFullscreen()
+      .then(() => {
+        if (screen.orientation?.lock) {
+          return screen.orientation.lock('landscape').catch(() => {});
+        }
+      })
+      .catch(() => {});
+  }
+}
+
+function exitAimImmersive() {
+  if (!isMobile) return;
+  document.body.classList.remove('aim-immersive-active');
+  if (document.fullscreenElement && document.exitFullscreen) {
+    document.exitFullscreen().catch(() => {});
+  }
+}
+
 function openAimIntro(phase) {
   AIM.currentPhase = phase;
   syncAimUI();
@@ -110,6 +133,7 @@ function startAim() {
   resetAimRoundState();
   setProgress(getAimMeta().step);
   showScreen('s-aim-test');
+  requestAimImmersive('s-aim-test');
 
   document.getElementById('aim-test-index').textContent =
     `TEST ${AIM.currentPhase === 1 ? '05' : '08'} — GRIDSHOT · 第 ${AIM.currentPhase} 轮 / 60 秒`;
@@ -419,6 +443,7 @@ function finishAim() {
   clearInterval(AIM.timerInterval);
   document.querySelectorAll('.aim-target').forEach(target => target.remove());
   cleanupAimMobileControls();
+  exitAimImmersive();
 
   const roundStats = buildAimRoundSummary();
   AIM.rounds[AIM.currentPhase - 1] = roundStats;
@@ -648,6 +673,7 @@ function startSensitivityCal() {
   document.getElementById('sens-slider').value = AIM_SENSITIVITY;
   document.getElementById('sens-start-btn').disabled = true;
   showScreen('s-aim-sensitivity');
+  requestAimImmersive('s-aim-sensitivity');
 
   const arena = document.getElementById('sens-arena');
   const rect = arena.getBoundingClientRect();

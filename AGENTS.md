@@ -117,6 +117,10 @@
   - 清理 `ve_invited / ve_code / ve_paid / ve_report_mode / ve_pending_payment / ve_ref_code`
   - 后端 `POST /api/admin/debug/reset-preview-access` 专门用于清掉 `ve_pay_token`
   - 只用于运营验收未付费预览态，不算正式用户入口
+- 管理后台新增“手动生成结果”：
+  - 支持手填 7 维分数或一键填入天才少年演示样本
+  - 只写入当前浏览器 `sessionStorage`，不写入 `test_results`
+  - 进阶演示报告用 `ve_invited=true` 本地绕过，不能作为正式支付/邀请码逻辑
 
 ## 推荐追踪（Feature C，2026-04已实现）
 - `?ref=CODE` → index.html 读取 → sessionStorage `ve_ref_code` + POST `/api/referral/click`
@@ -156,6 +160,7 @@
 - `rawData.aimRounds[0/1]` 保存两轮数据；`rawData.aimConsistency` 保存二测-一测差值
 - 首页手游端要提示：**不要在微信内打开**，否则横竖屏切换可能异常
 - 后端新增 `test_results` 表和 `/api/test-result`，用于匿名累计经验分位样本
+- 后台“测试数据”Tab 可查看最近匿名完成记录并导出 CSV；该数据没有姓名/手机号，只能和 contacts 分开看
 
 ## 待办/已知问题
 - [ ] 用真实 Render 环境变量跑一单联调支付宝 / 微信，确认易支付返回的是 `payurl`、`qrcode` 还是 `urlscheme`
@@ -183,6 +188,9 @@
 - 多指隔离：lookId / fireId 各自记录 touch.identifier
 - 清理：_cleanLook / _cleanFire / _cleanArena 函数，避免事件泄漏
 - nipplejs 保留在 HTML（避免引用报错）但不再创建摇杆实例
+- 2026-04 修复：`fire-btn` 必须放在 screen 外层，否则灵敏度页父级 `display:none` 会导致按钮不可见
+- 手机 Aim 进入时会尝试 `requestFullscreen()` + `screen.orientation.lock('landscape')`，失败时使用 CSS fixed + `100dvh` 兜底
+- 手机 Aim HUD 使用底部悬浮，arena flex 占满剩余空间，避免横屏时小球区域被浏览器地址栏/底部 HUD 挤压
 
 ## Karpathy Guidelines（编码行为准则）
 来源：forrestchang/andrej-karpathy-skills，已装入 workflow

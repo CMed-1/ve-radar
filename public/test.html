@@ -15,6 +15,8 @@
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',sans-serif;min-height:100vh;overflow-x:hidden;}
+  body.aim-immersive-active{overflow:hidden;overscroll-behavior:none;}
+  body.aim-immersive-active .top-bar{display:none;}
 
   /* ── 顶部进度条 ── */
   .top-bar{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(0,0,0,0.96);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;gap:16px;}
@@ -205,8 +207,86 @@
   }
   .mobile-device .aim-hud{gap:8px;}
   .mobile-device .aim-hud-item{min-width:64px;padding:8px 10px;}
-  .mobile-device #fire-btn{right:16px;bottom:24px;width:92px;height:92px;}
+  .mobile-device #fire-btn{
+    right:calc(env(safe-area-inset-right,0px) + 18px);
+    bottom:calc(env(safe-area-inset-bottom,0px) + 18px);
+    width:92px;height:92px;z-index:10050;
+    box-shadow:0 0 0 1px rgba(255,255,255,.08),0 12px 32px rgba(239,68,68,.28);
+    backdrop-filter:blur(6px);
+  }
   .mobile-device #aim-crosshair{width:48px;height:48px;}
+  .mobile-device #s-aim-test.active,
+  .mobile-device #s-aim-sensitivity.active{
+    position:fixed;
+    inset:0;
+    z-index:10000;
+    max-width:none;
+    width:100vw;
+    height:100dvh;
+    min-height:100vh;
+    padding:calc(env(safe-area-inset-top,0px) + 8px) calc(env(safe-area-inset-right,0px) + 10px) calc(env(safe-area-inset-bottom,0px) + 10px) calc(env(safe-area-inset-left,0px) + 10px);
+    background:radial-gradient(circle at 50% 20%,rgba(118,185,0,.08),transparent 42%),#000;
+    overflow:hidden;
+    animation:none;
+  }
+  .mobile-device #s-aim-test.active{justify-content:flex-start;}
+  .mobile-device #s-aim-test.active #aim-test-index{
+    flex:0 0 auto;
+    margin:0 0 6px;
+    padding-right:112px;
+    font-size:10px;
+    line-height:1.4;
+  }
+  .mobile-device #s-aim-test.active #aim-arena{
+    flex:1 1 auto;
+    width:100%;
+    height:auto;
+    min-height:0;
+    max-height:none;
+    border-radius:10px;
+  }
+  .mobile-device #s-aim-test.active .aim-hud{
+    position:fixed;
+    left:calc(env(safe-area-inset-left,0px) + 10px);
+    right:calc(env(safe-area-inset-right,0px) + 116px);
+    bottom:calc(env(safe-area-inset-bottom,0px) + 14px);
+    z-index:10040;
+    justify-content:flex-start;
+    gap:6px;
+    margin:0;
+    pointer-events:none;
+  }
+  .mobile-device #s-aim-test.active .aim-hud-item{
+    min-width:54px;
+    padding:6px 8px;
+    background:rgba(0,0,0,.68);
+    backdrop-filter:blur(8px);
+  }
+  .mobile-device #s-aim-test.active .aim-hud-num{font-size:17px;}
+  .mobile-device #s-aim-test.active .aim-hud-label{font-size:9px;}
+  .mobile-device #s-aim-sensitivity.active{
+    justify-content:flex-start;
+    gap:8px;
+  }
+  .mobile-device #s-aim-sensitivity.active .test-title{font-size:20px;margin-bottom:0;}
+  .mobile-device #s-aim-sensitivity.active .test-desc{
+    max-width:none;
+    margin-bottom:4px;
+    font-size:12px;
+    line-height:1.5;
+    padding-right:112px;
+  }
+  .mobile-device #s-aim-sensitivity.active #sens-arena{
+    flex:1 1 auto;
+    width:100% !important;
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+    margin:0 auto 6px !important;
+    border-radius:10px !important;
+  }
+  .mobile-device #s-aim-sensitivity.active #sens-joy-wrap{display:none!important;}
+  .mobile-device #s-aim-sensitivity.active #sens-start-btn{padding:10px 22px;font-size:13px;}
 </style>
 </head>
 <body>
@@ -442,7 +522,6 @@
   </div>
   <!-- 摇杆（移动端） -->
   <div id="mobile-joy-wrap"><div id="joy-outer"><div id="joy-nub"></div></div></div>
-  <div id="fire-btn" style="display:none;">FIRE</div>
   <div class="aim-hud">
     <div class="aim-hud-item"><div class="aim-hud-num" id="aim-hits">0</div><div class="aim-hud-label">命中</div></div>
     <div class="aim-hud-item"><div class="aim-hud-num" id="aim-accuracy">—</div><div class="aim-hud-label">命中率</div></div>
@@ -450,6 +529,7 @@
     <div class="aim-hud-item"><div class="aim-hud-num" id="aim-time">60</div><div class="aim-hud-label">剩余秒</div></div>
   </div>
 </div>
+<div id="fire-btn" style="display:none;">FIRE</div>
 
 <!-- ═══════════════════════════════════════════
      TEST 5: Aim - 结果

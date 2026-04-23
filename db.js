@@ -147,6 +147,16 @@ function getTestResultCount() {
   return db.prepare('SELECT COUNT(*) AS count FROM test_results').get().count;
 }
 
+function getAllTestResults(limit = 300) {
+  const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 300, 1), 1000);
+  return db.prepare(
+    `SELECT id, device, avg_score, scores, raw_data, created_at
+     FROM test_results
+     ORDER BY created_at DESC, id DESC
+     LIMIT ?`
+  ).all(safeLimit);
+}
+
 function createPayment({ orderNo, mode, channel, amount, productName, refCode }) {
   const reportToken = 'pay_' + nanoid(32);
   db.prepare(
@@ -206,6 +216,7 @@ module.exports = {
   getReferralStats,
   saveTestResult,
   getTestResultCount,
+  getAllTestResults,
   createPayment,
   getPaymentByOrderNo,
   getPaymentByToken,

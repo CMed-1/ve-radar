@@ -14,6 +14,7 @@ const {
   recordReferralConversion,
   getReferralStats,
   saveTestResult,
+  getAllTestResults,
   createPayment,
   getPaymentByOrderNo,
   getPaymentByToken,
@@ -155,6 +156,61 @@ async function syncPaymentStatus(orderNo) {
   return getPaymentByOrderNo(orderNo);
 }
 
+function parseStoredJson(value, fallback) {
+  if (!value) return fallback;
+  try {
+    return JSON.parse(value);
+  } catch (_) {
+    return fallback;
+  }
+}
+
+function getScoreRating(scores) {
+  const keys = ['reaction', 'impulse', 'vision', 'cognition', 'aim', 'focus', 'color'];
+  const values = keys.map(key => Number(scores?.[key]) || 0);
+  const avg = values.reduce((sum, value) => sum + value, 0) / keys.length;
+  const above90 = values.filter(value => value >= 90).length;
+  const above80 = values.filter(value => value >= 80).length;
+  const minVal = Math.min(...values);
+  if (avg >= 90 && above90 >= 4 && minVal >= 78) return '职业级天才少年';
+  if (avg >= 76 && above80 >= 3) return '有潜力的电竞职业玩家';
+  if (avg >= 45) return '普通玩家水平';
+  return '弱于普通人水平';
+}
+
+function summarizeRawData(rawData) {
+  const parts = [];
+  if (Array.isArray(rawData?.reactionTimes) && rawData.reactionTimes.length) {
+    const valid = rawData.reactionTimes.map(Number).filter(Number.isFinite);
+    if (valid.length) {
+      const avg = Math.round(valid.reduce((sum, time) => sum + time, 0) / valid.length);
+      parts.push(`RT均值${avg}ms`);
+    }
+  }
+  if (rawData?.aimHits !== undefined) {
+    parts.push(`Aim ${rawData.aimHits}/${rawData.aimShots || 0} 命中`);
+  } else if (Array.isArray(rawData?.aimRounds) && rawData.aimRounds.length) {
+    const hits = rawData.aimRounds.reduce((sum, round) => sum + (Number(round.hits) || 0), 0);
+    const shots = rawData.aimRounds.reduce((sum, round) => sum + (Number(round.shots) || 0), 0);
+    if (shots > 0) {
+      parts.push(`Aim ${hits}/${shots} 命中`);
+    } else {
+      const accValues = rawData.aimRounds.map(round => Number(round.accuracy)).filter(Number.isFinite);
+      const kpmValues = rawData.aimRounds.map(round => Number(round.kpm)).filter(Number.isFinite);
+      const accAvg = accValues.length ? Math.round(accValues.reduce((sum, value) => sum + value, 0) / accValues.length * (accValues.some(value => value <= 1) ? 100 : 1)) : null;
+      const kpmAvg = kpmValues.length ? Math.round(kpmValues.reduce((sum, value) => sum + value, 0) / kpmValues.length) : null;
+      parts.push(`Aim ${accAvg ?? '--'}% / KPM ${kpmAvg ?? '--'}`);
+    }
+  }
+  if (rawData?.gngFalseAlarms !== undefined) {
+    parts.push(`GNG误触${rawData.gngFalseAlarms}`);
+  }
+  if (rawData?.visionCorrect !== undefined) {
+    parts.push(`视力${rawData.visionCorrect}/${rawData.visionTotal || 0}`);
+  }
+  return parts.join(' · ') || '暂无摘要';
+}
+
 // ─── 邀请码验证 ───────────────────────────────────────────────
 app.post('/api/verify-code', async (req, res) => {
   try {
@@ -210,6 +266,36 @@ app.post('/api/admin/contacts', async (req, res) => {
     res.json({ success: true, contacts: getAllContacts() });
   } catch (err) {
     console.error('[admin/contacts]', err.message);
+    res.status(500).json({ success: false, message: '服务器错误，请稍后重试' });
+  }
+});
+
+// ─── 管理员：查看匿名测试结果 ─────────────────────────────────
+app.post('/api/admin/test-results', async (req, res) => {
+  try {
+    const { password, limit = 300 } = req.body;
+    if (password !== process.env.ADMIN_PASSWORD) {
+      return res.json({ success: false, message: '管理员密码错误' });
+    }
+
+    const results = getAllTestResults(limit).map(row => {
+      const scores = parseStoredJson(row.scores, {});
+      const rawData = parseStoredJson(row.raw_data, {});
+      return {
+        id: row.id,
+        device: row.device || 'unknown',
+        avgScore: row.avg_score === null || row.avg_score === undefined ? null : Number(row.avg_score),
+        rating: getScoreRating(scores),
+        scores,
+        rawSummary: summarizeRawData(rawData),
+        rawData,
+        createdAt: row.created_at
+      };
+    });
+
+    res.json({ success: true, results });
+  } catch (err) {
+    console.error('[admin/test-results]', err.message);
     res.status(500).json({ success: false, message: '服务器错误，请稍后重试' });
   }
 });
