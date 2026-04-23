@@ -9,6 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="/js/score-model.js"></script>
 <style>
   :root{
     --bg:#000000;
@@ -746,19 +747,7 @@ let reportTextContent = '';
 
 // ── 评级判断 ──────────────────────────────────
 function calcRating(s) {
-  const vals = DIM_KEYS.map(k => s[k] || 0);
-  const avg = vals.reduce((a,b)=>a+b,0)/7;
-  const above90 = vals.filter(v=>v>=90).length;
-  const above80 = vals.filter(v=>v>=80).length;
-  const minVal = Math.min(...vals);
-
-  // 职业级天才少年：平均≥90，至少4项≥90，最低项≥78
-  if (avg >= 90 && above90 >= 4 && minVal >= 78) return 'genius';
-  // 有潜力的职业玩家：平均≥76，至少3项≥80
-  if (avg >= 76 && above80 >= 3) return 'pro';
-  // 普通玩家：平均≥45
-  if (avg >= 45) return 'normal';
-  return 'below';
+  return VEScoreModel.calcRatingKey(s);
 }
 
 const RATING_CONFIG = {
@@ -794,7 +783,7 @@ function closeCriteriaOutside(e) {
 
 function buildCriteriaContent() {
   const raw = JSON.parse(sessionStorage.getItem('ve_rawdata') || '{}');
-  const avg = (DIM_KEYS.reduce((a,k)=>a+(scores[k]||0),0)/7).toFixed(1);
+  const avg = VEScoreModel.calcWeightedAverage(scores, 1).toFixed(1);
 
   const myRT = raw.reactionTimes && raw.reactionTimes.length
     ? Math.round(raw.reactionTimes.reduce((a,b)=>a+b,0)/raw.reactionTimes.length) + 'ms'
@@ -840,36 +829,40 @@ function buildCriteriaContent() {
     <div class="criteria-h2">综合评级标准</div>
     <table class="criteria-table">
       <thead><tr>
-        <th>评级</th><th>代码条件</th><th>规则档位</th><th>综合均分</th>
+        <th>评级</th><th>代码条件</th><th>规则档位</th><th>综合加权分</th>
       </tr></thead>
       <tbody>
         <tr>
           <td class="tag-genius">👑 职业级天才少年</td>
-          <td>均分 ≥90 且 4项以上 ≥90分 且最低项 ≥78</td>
+          <td>加权分 ≥90 且 4项以上 ≥90分 且最低项 ≥78</td>
           <td class="tag-genius">内部最高阈值档</td>
           <td>90-100</td>
         </tr>
         <tr>
           <td class="tag-pro">🚀 有潜力的职业玩家</td>
-          <td>均分 ≥76 且 3项以上 ≥80分</td>
+          <td>加权分 ≥76 且 3项以上 ≥80分</td>
           <td class="tag-pro">内部进阶候选档</td>
           <td>76-89</td>
         </tr>
         <tr>
           <td class="tag-normal">🎮 普通玩家水平</td>
-          <td>均分 ≥45</td>
+          <td>加权分 ≥45</td>
           <td style="color:#a78bfa;">大众区间</td>
           <td>45-75</td>
         </tr>
         <tr>
           <td style="color:var(--sub);">📊 弱于普通人</td>
-          <td>均分 &lt;45</td>
+          <td>加权分 &lt;45</td>
           <td style="color:var(--sub);">待提升区间</td>
           <td>0-44</td>
         </tr>
         <tr style="border-top:1px solid rgba(118,185,0,0.25);">
-          <td style="color:var(--sub);">本次综合均分</td>
+          <td style="color:var(--sub);">本次综合加权分</td>
           <td colspan="3" class="tag-yours">${avg} 分 · ${RATING_CONFIG[ratingKey].label}</td>
+        </tr>
+        <tr>
+          <td style="color:var(--sub);">权重</td>
+          <td colspan="3">Aim 32% · 反应 20% · 认知 14% · 专注 11% · 抑制 9% · 视力 7% · 色觉 7%</td>
         </tr>
       </tbody>
     </table>
@@ -977,7 +970,7 @@ function scoreToPercentile(score) {
 }
 
 function renderPercentile() {
-  const avg = DIM_KEYS.reduce((a,k)=>a+(scores[k]||0),0) / 7;
+  const avg = VEScoreModel.calcWeightedAverage(scores, 1);
   const pct = scoreToPercentile(avg);
   const pctDisplay = pct >= 99 ? pct.toFixed(1) : pct >= 10 ? pct.toFixed(1) : pct.toFixed(1);
   document.getElementById('pct-num').textContent = pct >= 99.9 ? '99.9+' : pctDisplay;
@@ -1443,7 +1436,7 @@ function typewriterEffect(text) {
 }
 
 function fallbackText() {
-  const avg = (DIM_KEYS.reduce((a,k)=>a+(scores[k]||0),0)/7).toFixed(1);
+  const avg = VEScoreModel.calcWeightedAverage(scores, 1).toFixed(1);
   const cfg = RATING_CONFIG[ratingKey];
   const roleTracks = calcRoleTracks(scores);
   const priority = roleTracks.primaryTrack === 'balanced'
@@ -1662,7 +1655,7 @@ async function renderLineChartImage(reactionTimes) {
 
 function buildPDFContent(radarImg, barImg, lineImg) {
   const cfg = RATING_CONFIG[ratingKey];
-  const avg = (DIM_KEYS.reduce((a,k)=>a+(scores[k]||0),0)/7).toFixed(1);
+  const avg = VEScoreModel.calcWeightedAverage(scores, 1).toFixed(1);
   const accentColor = ratingKey==='genius' ? '#FCD34D' : ratingKey==='pro' ? '#76b900' : '#a78bfa';
   const raw = JSON.parse(sessionStorage.getItem('ve_rawdata') || '{}');
   const dateStr = new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
@@ -1725,7 +1718,7 @@ function buildPDFContent(radarImg, barImg, lineImg) {
         </div>
         <div style="text-align:right;">
           <div style="padding:10px 24px;border:2px solid ${accentColor};border-radius:4px;font-size:14px;font-weight:700;color:${accentColor};display:inline-block;">${cfg.label}</div>
-          <div style="font-size:12px;color:#a7a7a7;margin-top:6px;">综合均分 <span style="color:#fff;font-weight:700;">${avg}</span> / 100</div>
+          <div style="font-size:12px;color:#a7a7a7;margin-top:6px;">综合加权分 <span style="color:#fff;font-weight:700;">${avg}</span> / 100</div>
         </div>
       </div>
 
@@ -1811,7 +1804,7 @@ async function generateShareImage() {
     const qrUrl = code ? `${RENDER_DOMAIN}/?ref=${encodeURIComponent(code)}` : `${RENDER_DOMAIN}/`;
 
     // 2. 填充卡片内容
-    const avg = DIM_KEYS.reduce((a,k)=>a+(scores[k]||0),0) / 7;
+    const avg = VEScoreModel.calcWeightedAverage(scores, 1);
     const pct = scoreToPercentile(avg);
     const cfg = RATING_CONFIG[ratingKey];
 

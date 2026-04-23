@@ -417,7 +417,24 @@
       <li>漏按会记漏触，乱按会记误触</li>
     </ul>
   </div>
-  <button class="btn-start" onclick="startNback()">开始测试</button>
+  <button class="btn-start" onclick="showNbackDemo()">先看 20 秒示例</button>
+</div>
+
+<!-- TEST 4: 工作记忆 N-back - 演示 -->
+<div class="screen" id="s-nback-demo">
+  <div class="test-index">TEST 04 / 09 · 规则演示（不计分）</div>
+  <div class="test-title">什么时候点 SAME？</div>
+  <div class="test-desc">只比较“当前字母”和“前第 2 个字母”。相同才点 SAME，不同就不要点。</div>
+  <div style="display:grid;gap:14px;justify-items:center;margin:22px 0;">
+    <div id="nback-demo-display" style="width:150px;height:150px;border:2px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:76px;font-weight:800;color:var(--cyan);background:var(--card);"></div>
+    <div id="nback-demo-compare" style="min-height:52px;color:var(--text);font-size:15px;line-height:1.7;text-align:center;"></div>
+    <div id="nback-demo-feedback" style="min-height:24px;color:var(--sub);font-weight:700;"></div>
+  </div>
+  <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
+    <button class="btn-start" style="font-size:16px;padding:14px 36px;letter-spacing:2px;" onclick="nbackDemoSame()">SAME</button>
+    <button class="btn-start secondary" style="font-size:16px;padding:14px 28px;" id="nback-demo-next" onclick="nbackDemoNext()">下一步</button>
+    <button class="btn-start" style="font-size:16px;padding:14px 28px;display:none;" id="nback-demo-start" onclick="startNback()">我明白了，开始正式测试</button>
+  </div>
 </div>
 
 <!-- TEST 4: 工作记忆 N-back - 测试 -->
@@ -661,6 +678,7 @@
 
 </div><!-- /main -->
 
+<script src="/js/score-model.js"></script>
 <script src="/js/scores.js"></script>
 <script src="/js/tests/reaction.js"></script>
 <script src="/js/tests/impulse.js"></script>

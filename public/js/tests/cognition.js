@@ -1,6 +1,7 @@
 const NBACK_LETTERS = ['A', 'B', 'C', 'D', 'F', 'H', 'L', 'M', 'P', 'R'];
 const NBACK_N = 2;
 const NBACK_TOTAL = 24;
+const NBACK_DEMO_SEQUENCE = ['A', 'B', 'A', 'C'];
 
 const NB = {
   sequence: [],
@@ -11,6 +12,11 @@ const NB = {
   responded: false,
   displayTimer: null,
   pauseTimer: null
+};
+
+const NBD = {
+  idx: 0,
+  answered: false
 };
 
 function buildNbackSequence() {
@@ -44,6 +50,87 @@ function startNback() {
   document.getElementById('nback-display').textContent = '';
   document.getElementById('nback-display').style.borderColor = 'var(--border)';
   setTimeout(showNbackStimulus, 600);
+}
+
+function showNbackDemo() {
+  NBD.idx = 0;
+  NBD.answered = false;
+  showScreen('s-nback-demo');
+  renderNbackDemo();
+}
+
+function getNbackDemoTarget() {
+  return NBD.idx >= NBACK_N && NBACK_DEMO_SEQUENCE[NBD.idx] === NBACK_DEMO_SEQUENCE[NBD.idx - NBACK_N];
+}
+
+function renderNbackDemo() {
+  const letter = NBACK_DEMO_SEQUENCE[NBD.idx];
+  const display = document.getElementById('nback-demo-display');
+  const compare = document.getElementById('nback-demo-compare');
+  const feedback = document.getElementById('nback-demo-feedback');
+  const nextBtn = document.getElementById('nback-demo-next');
+  const startBtn = document.getElementById('nback-demo-start');
+
+  NBD.answered = false;
+  display.textContent = letter;
+  display.style.borderColor = 'var(--border)';
+  feedback.textContent = '';
+  nextBtn.style.display = 'inline-block';
+  startBtn.style.display = 'none';
+
+  if (NBD.idx < NBACK_N) {
+    compare.innerHTML = `第 ${NBD.idx + 1} 个字母：<strong>${letter}</strong><br>还没有“前第 2 个字母”，这一步不要点 SAME。`;
+    return;
+  }
+
+  const previous = NBACK_DEMO_SEQUENCE[NBD.idx - NBACK_N];
+  if (getNbackDemoTarget()) {
+    compare.innerHTML = `当前是 <strong>${letter}</strong>，前第 2 个也是 <strong>${previous}</strong><br><span style="color:var(--cyan);">相同，这一步应该点 SAME。</span>`;
+  } else {
+    compare.innerHTML = `当前是 <strong>${letter}</strong>，前第 2 个是 <strong>${previous}</strong><br><span style="color:var(--yellow);">不同，这一步不要点 SAME，直接下一步。</span>`;
+  }
+}
+
+function nbackDemoSame() {
+  const feedback = document.getElementById('nback-demo-feedback');
+  const display = document.getElementById('nback-demo-display');
+  if (NBD.idx < NBACK_N) {
+    feedback.textContent = '这一步不用判断，不要点 SAME。';
+    feedback.style.color = 'var(--yellow)';
+    display.style.borderColor = 'var(--yellow)';
+    return;
+  }
+  if (getNbackDemoTarget()) {
+    NBD.answered = true;
+    feedback.textContent = '正确：当前字母和前第 2 个相同。';
+    feedback.style.color = 'var(--cyan)';
+    display.style.borderColor = 'var(--cyan)';
+  } else {
+    feedback.textContent = '这一步不同，不应该点 SAME。';
+    feedback.style.color = 'var(--red)';
+    display.style.borderColor = 'var(--red)';
+  }
+}
+
+function nbackDemoNext() {
+  const feedback = document.getElementById('nback-demo-feedback');
+  if (getNbackDemoTarget() && !NBD.answered) {
+    feedback.textContent = '这一格是相同，请先点 SAME 感受一次。';
+    feedback.style.color = 'var(--yellow)';
+    return;
+  }
+
+  NBD.idx += 1;
+  if (NBD.idx >= NBACK_DEMO_SEQUENCE.length) {
+    document.getElementById('nback-demo-display').textContent = 'OK';
+    document.getElementById('nback-demo-display').style.borderColor = 'var(--cyan)';
+    document.getElementById('nback-demo-compare').innerHTML = '正式测试里每次都按这个逻辑：<br>只看当前字母是否等于前第 2 个字母。';
+    feedback.textContent = '';
+    document.getElementById('nback-demo-next').style.display = 'none';
+    document.getElementById('nback-demo-start').style.display = 'inline-block';
+    return;
+  }
+  renderNbackDemo();
 }
 
 function showNbackStimulus() {

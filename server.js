@@ -14,6 +14,7 @@ const {
   recordReferralConversion,
   getReferralStats,
   saveTestResult,
+  recalculateTestResultScores,
   getAllTestResults,
   createPayment,
   getPaymentByOrderNo,
@@ -21,6 +22,7 @@ const {
   markPaymentPending,
   markPaymentPaid
 } = require('./db');
+const { calcWeightedAverage, calcRatingLabel } = require('./public/js/score-model');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -166,16 +168,7 @@ function parseStoredJson(value, fallback) {
 }
 
 function getScoreRating(scores) {
-  const keys = ['reaction', 'impulse', 'vision', 'cognition', 'aim', 'focus', 'color'];
-  const values = keys.map(key => Number(scores?.[key]) || 0);
-  const avg = values.reduce((sum, value) => sum + value, 0) / keys.length;
-  const above90 = values.filter(value => value >= 90).length;
-  const above80 = values.filter(value => value >= 80).length;
-  const minVal = Math.min(...values);
-  if (avg >= 90 && above90 >= 4 && minVal >= 78) return '职业级天才少年';
-  if (avg >= 76 && above80 >= 3) return '有潜力的电竞职业玩家';
-  if (avg >= 45) return '普通玩家水平';
-  return '弱于普通人水平';
+  return calcRatingLabel(scores || {});
 }
 
 function summarizeRawData(rawData) {
@@ -241,7 +234,7 @@ function getAimEffectiveKpm(raw) {
 }
 
 const CALIBRATION_METRICS = [
-  { key: 'avgScore', group: '总分/七维', label: '综合均分', unit: '分', direction: 'higher' },
+  { key: 'avgScore', group: '总分/七维', label: '综合加权分', unit: '分', direction: 'higher' },
   { key: 'scoreReaction', group: '总分/七维', label: '反应速度分', unit: '分', direction: 'higher' },
   { key: 'scoreImpulse', group: '总分/七维', label: '冲动抑制分', unit: '分', direction: 'higher' },
   { key: 'scoreVision', group: '总分/七维', label: '动态视力分', unit: '分', direction: 'higher' },
@@ -545,6 +538,26 @@ app.post('/api/admin/test-results', async (req, res) => {
     res.json({ success: true, results });
   } catch (err) {
     console.error('[admin/test-results]', err.message);
+    res.status(500).json({ success: false, message: '服务器错误，请稍后重试' });
+  }
+});
+
+app.post('/api/admin/test-results/recalculate', async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (password !== process.env.ADMIN_PASSWORD) {
+      return res.json({ success: false, message: '管理员密码错误' });
+    }
+
+    const result = recalculateTestResultScores();
+    res.json({
+      success: true,
+      total: result.total,
+      updated: result.updated,
+      sample: result.changes.slice(0, 20)
+    });
+  } catch (err) {
+    console.error('[admin/test-results/recalculate]', err.message);
     res.status(500).json({ success: false, message: '服务器错误，请稍后重试' });
   }
 });
@@ -887,8 +900,7 @@ function calcRoleTracks(scores) {
 
 // ─── MiniMax API 调用 ─────────────────────────────────────────
 async function callMiniMax(scores, rating, device, rawData) {
-  const vals = Object.values(scores);
-  const avg = (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1);
+  const avg = calcWeightedAverage(scores, 1).toFixed(1);
   const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
   const best = sorted[0];
   const worst = sorted[sorted.length - 1];
@@ -967,7 +979,7 @@ async function callMiniMax(scores, rating, device, rawData) {
 - 专注稳定性：${scores.focus}分（普通人均分55）
 - 色觉感知：${scores.color !== undefined ? scores.color : '未测'}分（普通人均分52）
 
-综合均分：${avg}分
+综合加权分：${avg}分
 综合评级：【${rating}】
 最强维度：${dimNames[best[0]]}（${best[1]}分，超过普通人${best[1]-benchmarks[best[0]]}分）
 第二强：${dimNames[second_best[0]]}（${second_best[1]}分）
@@ -985,7 +997,7 @@ ${rawSummary}
 请写一份约700-900字的结构化电竞能力评估意见，分6段，每段之间空一行：
 
 第一段（综合判断）：
-先用综合均分 ${avg} 分和评级「${rating}」给出整体结论，明确说明这是偏操作型、偏决策型还是相对均衡型能力结构。必须引用至少两个具体数字，不要空泛夸赞。
+先用综合加权分 ${avg} 分和评级「${rating}」给出整体结论，明确说明这是偏操作型、偏决策型还是相对均衡型能力结构。必须引用至少两个具体数字，不要空泛夸赞。
 
 第二段（操作链分析）：
 分析反应速度、手眼协调、动态视力三项如何共同作用于实战操作。要指出这名测评者在“看到信息→完成瞄准/操作输出”这条链路上的强项和短板，用分数与普通人均分对比，避免编造不存在的职业常模。
@@ -1043,8 +1055,7 @@ async function callMiniMaxBasic(scores, rating, rawData) {
     reaction:'反应速度', impulse:'冲动抑制', vision:'动态视力',
     cognition:'认知处理速度', aim:'手眼协调', focus:'专注稳定性', color:'色觉感知'
   };
-  const vals = Object.values(scores);
-  const avg = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1);
+  const avg = calcWeightedAverage(scores, 1).toFixed(1);
   const sorted = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
   const best = sorted[0];
   const worst = sorted[sorted.length-1];
@@ -1059,14 +1070,14 @@ async function callMiniMaxBasic(scores, rating, rawData) {
   const prompt = `你是VE天赋雷达的电竞能力评估专家。请根据以下数据生成一份简洁的基础版测评结论，约150字，分3段，段间空行，纯文本无标题。
 
 数据：
-- 综合均分：${avg}分，评级：${rating}
+- 综合加权分：${avg}分，评级：${rating}
 - 最强维度：${dimNames[best[0]]}（${best[1]}分）
 - 最弱维度：${dimNames[worst[0]]}（${worst[1]}分）
 - 各维度：${Object.entries(scores).map(([k,v])=>`${dimNames[k]}${v}`).join('、')}
 - FPS建议：${roleTracks.fps.role}
 - MOBA建议：${roleTracks.moba.role}
 
-第一段（2句）：用评级和均分定调，说明综合表现。
+第一段（2句）：用评级和综合加权分定调，说明综合表现。
 第二段（2句）：点出最强维度的意义和最弱维度需要注意的地方。
 第三段（2句）：说明当前更建议优先尝试 ${gameType}，并同时简要点出 FPS 建议角色和 MOBA 建议角色，最后给一条具体训练建议。
 
@@ -1092,8 +1103,7 @@ async function callMiniMaxBasic(scores, rating, rawData) {
 }
 
 function fallbackReport(scores, rating, mode = 'advanced') {
-  const vals = Object.values(scores);
-  const avg = (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1);
+  const avg = calcWeightedAverage(scores, 1).toFixed(1);
   const sorted = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
   const best = sorted[0];
   const worst = sorted[sorted.length-1];

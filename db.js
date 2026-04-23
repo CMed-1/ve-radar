@@ -2,6 +2,7 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 const { nanoid } = require('nanoid');
+const { calcWeightedAverage } = require('./public/js/score-model');
 
 // Render 持久化磁盘挂载在 /var/data（由 Render 负责创建该目录）
 // 本地开发回退到项目目录
@@ -142,14 +143,39 @@ function getReferralStats() {
 }
 
 function saveTestResult({ device, inviteCode, scores, rawData }) {
-  const values = Object.values(scores || {});
-  const avg = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+  const avg = calcWeightedAverage(scores || {}, 1);
   const normalizedInviteCode = typeof inviteCode === 'string' && inviteCode.trim()
     ? inviteCode.trim().toUpperCase()
     : null;
   db.prepare(
     'INSERT INTO test_results (device, invite_code, avg_score, scores, raw_data) VALUES (?, ?, ?, ?, ?)'
   ).run(device || 'unknown', normalizedInviteCode, avg, JSON.stringify(scores || {}), JSON.stringify(rawData || {}));
+}
+
+function recalculateTestResultScores() {
+  const rows = db.prepare('SELECT id, avg_score, scores FROM test_results').all();
+  const update = db.prepare('UPDATE test_results SET avg_score = ? WHERE id = ?');
+  const changes = [];
+
+  const run = db.transaction(() => {
+    rows.forEach(row => {
+      let scores = {};
+      try {
+        scores = JSON.parse(row.scores || '{}');
+      } catch (_) {
+        scores = {};
+      }
+      const nextAvg = calcWeightedAverage(scores, 1);
+      const prevAvg = row.avg_score === null || row.avg_score === undefined ? null : Number(row.avg_score);
+      if (prevAvg === null || Math.abs(prevAvg - nextAvg) >= 0.05) {
+        update.run(nextAvg, row.id);
+        changes.push({ id: row.id, before: prevAvg, after: nextAvg });
+      }
+    });
+  });
+
+  run();
+  return { total: rows.length, updated: changes.length, changes };
 }
 
 function getTestResultCount() {
@@ -224,6 +250,7 @@ module.exports = {
   recordReferralConversion,
   getReferralStats,
   saveTestResult,
+  recalculateTestResultScores,
   getTestResultCount,
   getAllTestResults,
   createPayment,

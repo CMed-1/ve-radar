@@ -176,7 +176,7 @@
         <button class="btn-gen" onclick="exportTestCSV()">导出完整测试数据CSV</button>
       </div>
       <table class="data-table" id="tests-table">
-        <thead><tr><th>ID</th><th>时间</th><th>设备</th><th>邀请码</th><th>平均分</th><th>评级</th><th>七维分数</th><th>原始摘要</th></tr></thead>
+        <thead><tr><th>ID</th><th>时间</th><th>设备</th><th>邀请码</th><th>综合加权分</th><th>评级</th><th>七维分数</th><th>原始摘要</th></tr></thead>
         <tbody id="tests-tbody"></tbody>
       </table>
     </div>
@@ -233,11 +233,12 @@
         <button class="btn-gen" onclick="openManualPreview('locked')">打开未付费预览</button>
         <button class="btn-gen btn-debug" onclick="openManualPreview('advanced')">打开进阶演示报告</button>
       </div>
-      <div class="score-preview" id="manual-score-preview">调整分数后会显示平均分和预计评级。</div>
+      <div class="score-preview" id="manual-score-preview">调整分数后会显示综合加权分和预计评级。</div>
     </div>
   </div>
 </div>
 
+<script src="/js/score-model.js"></script>
 <script>
 let adminPwd = '';
 let allCodes = [], allContacts = [], allTestResults = [], calibrationData = null;
@@ -429,7 +430,7 @@ function renderTestResults() {
     const mobile = allTestResults.filter(row => row.device === 'mobile').length;
     statsEl.innerHTML = `
       <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">最近完成记录</div></div>
-      <div class="stat-card"><div class="stat-num">${avg}</div><div class="stat-label">平均综合分</div></div>
+      <div class="stat-card"><div class="stat-num">${avg}</div><div class="stat-label">平均加权分</div></div>
       <div class="stat-card"><div class="stat-num" style="color:#FCD34D">${genius}</div><div class="stat-label">天才少年档</div></div>
       <div class="stat-card"><div class="stat-num">${mobile}</div><div class="stat-label">手机端记录</div></div>`;
   }
@@ -595,7 +596,7 @@ async function exportTestCSV() {
     return;
   }
 
-  const rows = [['ID','时间','设备','邀请码','平均分','评级','反应','抑制','视力','认知','Aim','专注','色觉','原始摘要','七维分数JSON','原始数据JSON']];
+  const rows = [['ID','时间','设备','邀请码','综合加权分','评级','反应','抑制','视力','认知','Aim','专注','色觉','原始摘要','七维分数JSON','原始数据JSON']];
   rowsSource.forEach(row => rows.push([
     row.id,
     row.createdAt || '',
@@ -612,15 +613,7 @@ async function exportTestCSV() {
 }
 
 function calcRating(scores) {
-  const values = DIM_KEYS.map(key => Number(scores[key]) || 0);
-  const avg = values.reduce((sum, value) => sum + value, 0) / values.length;
-  const above90 = values.filter(value => value >= 90).length;
-  const above80 = values.filter(value => value >= 80).length;
-  const minVal = Math.min(...values);
-  if (avg >= 90 && above90 >= 4 && minVal >= 78) return '职业级天才少年';
-  if (avg >= 76 && above80 >= 3) return '有潜力的电竞职业玩家';
-  if (avg >= 45) return '普通玩家水平';
-  return '弱于普通人水平';
+  return VEScoreModel.calcRatingLabel(scores);
 }
 
 function getManualScores() {
@@ -665,8 +658,8 @@ function updateManualScorePreview() {
   const preview = document.getElementById('manual-score-preview');
   if (!preview) return;
   const scores = getManualScores();
-  const avg = DIM_KEYS.reduce((sum, key) => sum + scores[key], 0) / DIM_KEYS.length;
-  preview.textContent = `平均分 ${avg.toFixed(1)} · 预计评级：${calcRating(scores)}。此数据仅写入当前浏览器，不进入真实数据库。`;
+  const avg = VEScoreModel.calcWeightedAverage(scores, 1);
+  preview.textContent = `综合加权分 ${avg.toFixed(1)} · 预计评级：${calcRating(scores)}。此数据仅写入当前浏览器，不进入真实数据库。`;
 }
 
 function buildManualRawData(scores) {

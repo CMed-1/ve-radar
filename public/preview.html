@@ -6,6 +6,7 @@
 <title>VE天赋雷达 · 测评结果</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="/js/score-model.js"></script>
 <style>
 :root{
   --bg:#000000;
@@ -583,15 +584,7 @@ function trackReferralUnlock(mode) {
 }
 
 function calcRating(s) {
-  const vals = DIM_KEYS.map(k => s[k] || 0);
-  const avg = vals.reduce((a,b)=>a+b,0)/7;
-  const above90 = vals.filter(v=>v>=90).length;
-  const above80 = vals.filter(v=>v>=80).length;
-  const minVal = Math.min(...vals);
-  if (avg >= 90 && above90 >= 4 && minVal >= 78) return 'genius';
-  if (avg >= 76 && above80 >= 3) return 'pro';
-  if (avg >= 45) return 'normal';
-  return 'below';
+  return VEScoreModel.calcRatingKey(s);
 }
 
 function scoreToPercentile(score) {
@@ -741,7 +734,7 @@ async function init() {
 
   const ratingKey = calcRating(scores);
   const cfg = RATING_CONFIG[ratingKey];
-  const avg = DIM_KEYS.reduce((a,k)=>a+(scores[k]||0),0)/7;
+  const avg = VEScoreModel.calcWeightedAverage(scores, 1);
   const pct = scoreToPercentile(avg);
 
   // SVG 勋章
