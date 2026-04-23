@@ -170,7 +170,7 @@
         <button class="btn-gen" onclick="exportTestCSV()">导出完整测试数据CSV</button>
       </div>
       <table class="data-table" id="tests-table">
-        <thead><tr><th>ID</th><th>时间</th><th>设备</th><th>平均分</th><th>评级</th><th>七维分数</th><th>原始摘要</th></tr></thead>
+        <thead><tr><th>ID</th><th>时间</th><th>设备</th><th>邀请码</th><th>平均分</th><th>评级</th><th>七维分数</th><th>原始摘要</th></tr></thead>
         <tbody id="tests-tbody"></tbody>
       </table>
     </div>
@@ -385,6 +385,7 @@ function renderTestResults() {
       <td style="font-family:monospace;color:var(--cyan)">${row.id}</td>
       <td style="color:var(--sub)">${(row.createdAt || '').slice(0,16)}</td>
       <td>${row.device || 'unknown'}</td>
+      <td style="font-family:monospace;color:var(--sub)">${row.inviteCode || ''}</td>
       <td><strong>${avg}</strong></td>
       <td><span class="rating-pill ${ratingClass}">${row.rating}</span></td>
       <td>${scoreChips(row.scores)}</td>
@@ -458,11 +459,12 @@ async function exportTestCSV() {
     return;
   }
 
-  const rows = [['ID','时间','设备','平均分','评级','反应','抑制','视力','认知','Aim','专注','色觉','原始摘要','七维分数JSON','原始数据JSON']];
+  const rows = [['ID','时间','设备','邀请码','平均分','评级','反应','抑制','视力','认知','Aim','专注','色觉','原始摘要','七维分数JSON','原始数据JSON']];
   rowsSource.forEach(row => rows.push([
     row.id,
     row.createdAt || '',
     row.device || '',
+    row.inviteCode || '',
     row.avgScore === null ? '' : Number(row.avgScore).toFixed(1),
     row.rating || '',
     ...DIM_KEYS.map(key => row.scores?.[key] ?? ''),

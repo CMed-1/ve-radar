@@ -50,6 +50,7 @@ function initDB() {
   db.exec(`CREATE TABLE IF NOT EXISTS test_results (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     device TEXT,
+    invite_code TEXT,
     avg_score REAL,
     scores TEXT NOT NULL,
     raw_data TEXT,
@@ -76,6 +77,11 @@ function initDB() {
   if (!inviteColumns.some(col => col.name === 'used_at')) {
     db.exec(`ALTER TABLE invite_codes ADD COLUMN used_at TEXT`);
     console.log('[DB] invite_codes 补充 used_at 字段');
+  }
+  const testResultColumns = db.prepare(`PRAGMA table_info(test_results)`).all();
+  if (!testResultColumns.some(col => col.name === 'invite_code')) {
+    db.exec(`ALTER TABLE test_results ADD COLUMN invite_code TEXT`);
+    console.log('[DB] test_results 补充 invite_code 字段');
   }
   console.log('数据库初始化完成');
 }
@@ -135,12 +141,15 @@ function getReferralStats() {
   return Object.values(map).sort((a, b) => b.clicks - a.clicks);
 }
 
-function saveTestResult({ device, scores, rawData }) {
+function saveTestResult({ device, inviteCode, scores, rawData }) {
   const values = Object.values(scores || {});
   const avg = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+  const normalizedInviteCode = typeof inviteCode === 'string' && inviteCode.trim()
+    ? inviteCode.trim().toUpperCase()
+    : null;
   db.prepare(
-    'INSERT INTO test_results (device, avg_score, scores, raw_data) VALUES (?, ?, ?, ?)'
-  ).run(device || 'unknown', avg, JSON.stringify(scores || {}), JSON.stringify(rawData || {}));
+    'INSERT INTO test_results (device, invite_code, avg_score, scores, raw_data) VALUES (?, ?, ?, ?, ?)'
+  ).run(device || 'unknown', normalizedInviteCode, avg, JSON.stringify(scores || {}), JSON.stringify(rawData || {}));
 }
 
 function getTestResultCount() {
@@ -150,7 +159,7 @@ function getTestResultCount() {
 function getAllTestResults(limit = 300) {
   const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 300, 1), 10000);
   return db.prepare(
-    `SELECT id, device, avg_score, scores, raw_data, created_at
+    `SELECT id, device, invite_code, avg_score, scores, raw_data, created_at
      FROM test_results
      ORDER BY created_at DESC, id DESC
      LIMIT ?`

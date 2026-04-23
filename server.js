@@ -284,6 +284,7 @@ app.post('/api/admin/test-results', async (req, res) => {
       return {
         id: row.id,
         device: row.device || 'unknown',
+        inviteCode: row.invite_code || '',
         avgScore: row.avg_score === null || row.avg_score === undefined ? null : Number(row.avg_score),
         rating: getScoreRating(scores),
         scores,
@@ -373,11 +374,11 @@ app.post('/api/submit-contact', async (req, res) => {
 // ─── 匿名记录完整测评结果（用于后续经验分位校准）──────────────
 app.post('/api/test-result', (req, res) => {
   try {
-    const { scores, rawData, device } = req.body;
+    const { scores, rawData, device, inviteCode } = req.body;
     if (!scores || typeof scores !== 'object') {
       return res.json({ success: false });
     }
-    saveTestResult({ scores, rawData, device });
+    saveTestResult({ scores, rawData, device, inviteCode });
     res.json({ success: true });
   } catch (err) {
     console.error('[test-result]', err.message);

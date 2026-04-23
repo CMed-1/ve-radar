@@ -498,6 +498,7 @@
   function startTestDirect() {
     sessionStorage.setItem('ve_device', selectedDevice);
     sessionStorage.removeItem('ve_invited');
+    sessionStorage.removeItem('ve_code');
     window.location.href = '/test.html';
   }
 

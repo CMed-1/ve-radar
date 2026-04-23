@@ -100,10 +100,13 @@ function startReadCountdown(btn) {
 }
 
 function saveAnonymousResult() {
+  const inviteCode = sessionStorage.getItem('ve_invited') === 'true'
+    ? (sessionStorage.getItem('ve_code') || '')
+    : '';
   fetch('/api/test-result', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ scores, rawData, device })
+    body: JSON.stringify({ scores, rawData, device, inviteCode })
   }).catch(() => {});
 }
 
