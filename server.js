@@ -188,7 +188,12 @@ function summarizeRawData(rawData) {
     }
   }
   if (rawData?.aimHits !== undefined) {
-    parts.push(`Aim ${rawData.aimHits}/${rawData.aimShots || 0} 命中`);
+    const rawKpm = getAimRawKpm(rawData);
+    const effectiveKpm = getAimEffectiveKpm(rawData);
+    const kpmText = effectiveKpm !== null
+      ? `有效KPM${effectiveKpm}${rawKpm !== null ? `/原始${rawKpm}` : ''}`
+      : '';
+    parts.push(`Aim ${rawData.aimHits}/${rawData.aimShots || 0} 命中${kpmText ? ` · ${kpmText}` : ''}`);
   } else if (Array.isArray(rawData?.aimRounds) && rawData.aimRounds.length) {
     const hits = rawData.aimRounds.reduce((sum, round) => sum + (Number(round.hits) || 0), 0);
     const shots = rawData.aimRounds.reduce((sum, round) => sum + (Number(round.shots) || 0), 0);
@@ -199,7 +204,7 @@ function summarizeRawData(rawData) {
       const kpmValues = rawData.aimRounds.map(round => Number(round.kpm)).filter(Number.isFinite);
       const accAvg = accValues.length ? Math.round(accValues.reduce((sum, value) => sum + value, 0) / accValues.length * (accValues.some(value => value <= 1) ? 100 : 1)) : null;
       const kpmAvg = kpmValues.length ? Math.round(kpmValues.reduce((sum, value) => sum + value, 0) / kpmValues.length) : null;
-      parts.push(`Aim ${accAvg ?? '--'}% / KPM ${kpmAvg ?? '--'}`);
+      parts.push(`Aim ${accAvg ?? '--'}% / 有效KPM ${kpmAvg ?? '--'}`);
     }
   }
   if (rawData?.gngFalseAlarms !== undefined) {
@@ -209,6 +214,30 @@ function summarizeRawData(rawData) {
     parts.push(`视力${rawData.visionCorrect}/${rawData.visionTotal || 0}`);
   }
   return parts.join(' · ') || '暂无摘要';
+}
+
+function computeAimEffectiveKpm(rawKpm, accuracyPct, avgHitTime) {
+  const raw = finiteNumber(rawKpm);
+  const acc = finiteNumber(accuracyPct);
+  const time = finiteNumber(avgHitTime);
+  if (raw === null) return null;
+  const accuracy = acc === null ? 1 : Math.max(0, Math.min(1, acc / 100));
+  const responseKpm = time && time > 0 ? Math.round(60000 / time) : raw;
+  const responseAdjustedKpm = Math.round(raw * 0.45 + responseKpm * 0.55);
+  const accuracyFactor = Math.max(0.85, Math.min(1, 0.85 + accuracy * 0.15));
+  return Math.max(0, Math.min(200, Math.round(Math.min(raw, responseAdjustedKpm) * accuracyFactor)));
+}
+
+function getAimRawKpm(raw) {
+  const rawKpm = finiteNumber(raw?.aimRawKpm);
+  if (rawKpm !== null) return rawKpm;
+  return finiteNumber(raw?.aimKpm);
+}
+
+function getAimEffectiveKpm(raw) {
+  const stored = finiteNumber(raw?.aimEffectiveKpm);
+  if (stored !== null) return stored;
+  return computeAimEffectiveKpm(getAimRawKpm(raw), raw?.aimAccuracy, raw?.aimAvgTime);
 }
 
 const CALIBRATION_METRICS = [
@@ -237,12 +266,13 @@ const CALIBRATION_METRICS = [
   { key: 'nbackScore', group: '认知处理', label: 'N-back分数', unit: '分', direction: 'higher' },
   { key: 'nbackFalseAlarms', group: '认知处理', label: 'N-back误触', unit: '次', direction: 'lower' },
   { key: 'aimHits', group: 'Aim', label: '两轮总命中', unit: '次', direction: 'higher' },
-  { key: 'aimKpm', group: 'Aim', label: 'KPM', unit: '次/分', direction: 'higher' },
+  { key: 'aimKpm', group: 'Aim', label: '有效KPM', unit: '次/分', direction: 'higher' },
+  { key: 'aimRawKpm', group: 'Aim', label: '原始KPM', unit: '次/分', direction: 'higher' },
   { key: 'aimAccuracy', group: 'Aim', label: '命中率', unit: '%', direction: 'higher' },
   { key: 'aimAvgTime', group: 'Aim', label: '平均命中时间', unit: 'ms', direction: 'lower' },
-  { key: 'aimRound1Kpm', group: 'Aim', label: 'Aim一测KPM', unit: '次/分', direction: 'higher' },
-  { key: 'aimRound2Kpm', group: 'Aim', label: 'Aim二测KPM', unit: '次/分', direction: 'higher' },
-  { key: 'aimKpmDelta', group: 'Aim', label: '二测-一测KPM', unit: '次/分', direction: 'higher' },
+  { key: 'aimRound1Kpm', group: 'Aim', label: 'Aim一测有效KPM', unit: '次/分', direction: 'higher' },
+  { key: 'aimRound2Kpm', group: 'Aim', label: 'Aim二测有效KPM', unit: '次/分', direction: 'higher' },
+  { key: 'aimKpmDelta', group: 'Aim', label: '二测-一测有效KPM', unit: '次/分', direction: 'higher' },
   { key: 'aimAccuracyDelta', group: 'Aim', label: '二测-一测命中率', unit: '%', direction: 'higher' },
   { key: 'colorP1AccuracyPct', group: '色觉感知', label: '红色识别正确率', unit: '%', direction: 'higher' },
   { key: 'colorP1AvgRT', group: '色觉感知', label: '红色识别反应', unit: 'ms', direction: 'lower' },
@@ -347,14 +377,17 @@ function extractCalibrationMetrics(row) {
   addMetric(metrics, 'nbackFalseAlarms', raw.nbFalseAlarms);
 
   addMetric(metrics, 'aimHits', raw.aimHits);
-  addMetric(metrics, 'aimKpm', raw.aimKpm);
+  addMetric(metrics, 'aimKpm', getAimEffectiveKpm(raw));
+  addMetric(metrics, 'aimRawKpm', getAimRawKpm(raw));
   addMetric(metrics, 'aimAccuracy', raw.aimAccuracy);
   addMetric(metrics, 'aimAvgTime', raw.aimAvgTime);
   if (Array.isArray(raw.aimRounds) && raw.aimRounds.length >= 2) {
     const [round1, round2] = raw.aimRounds;
-    addMetric(metrics, 'aimRound1Kpm', round1?.kpm);
-    addMetric(metrics, 'aimRound2Kpm', round2?.kpm);
-    addMetric(metrics, 'aimKpmDelta', finiteNumber(round2?.kpm) !== null && finiteNumber(round1?.kpm) !== null ? Number(round2.kpm) - Number(round1.kpm) : null);
+    const round1Kpm = finiteNumber(round1?.effectiveKpm) ?? computeAimEffectiveKpm(finiteNumber(round1?.rawKpm) ?? round1?.kpm, round1?.accuracy, round1?.avgHitTime);
+    const round2Kpm = finiteNumber(round2?.effectiveKpm) ?? computeAimEffectiveKpm(finiteNumber(round2?.rawKpm) ?? round2?.kpm, round2?.accuracy, round2?.avgHitTime);
+    addMetric(metrics, 'aimRound1Kpm', round1Kpm);
+    addMetric(metrics, 'aimRound2Kpm', round2Kpm);
+    addMetric(metrics, 'aimKpmDelta', round2Kpm !== null && round1Kpm !== null ? round2Kpm - round1Kpm : null);
     addMetric(metrics, 'aimAccuracyDelta', finiteNumber(round2?.accuracy) !== null && finiteNumber(round1?.accuracy) !== null ? Number(round2.accuracy) - Number(round1.accuracy) : null);
   } else {
     addMetric(metrics, 'aimKpmDelta', raw.aimConsistency?.kpmDelta);
@@ -885,15 +918,18 @@ async function callMiniMax(scores, rating, device, rawData) {
     }
     if (rawData.aimRounds && rawData.aimRounds.length === 2) {
       const [r1, r2] = rawData.aimRounds;
-      rawSummary += `\nAim双轮原始数据：第一轮 命中${r1.hits}个、命中率${r1.accuracy}%、KPM=${r1.kpm}、平均命中时间${r1.avgHitTime}ms；第二轮 命中${r2.hits}个、命中率${r2.accuracy}%、KPM=${r2.kpm}、平均命中时间${r2.avgHitTime}ms`;
+      const r1RawKpm = r1.rawKpm !== undefined ? `，原始KPM=${r1.rawKpm}` : '';
+      const r2RawKpm = r2.rawKpm !== undefined ? `，原始KPM=${r2.rawKpm}` : '';
+      rawSummary += `\nAim双轮原始数据：第一轮 命中${r1.hits}个、命中率${r1.accuracy}%、有效KPM=${r1.kpm}${r1RawKpm}、平均命中时间${r1.avgHitTime}ms；第二轮 命中${r2.hits}个、命中率${r2.accuracy}%、有效KPM=${r2.kpm}${r2RawKpm}、平均命中时间${r2.avgHitTime}ms`;
       if (rawData.aimConsistency) {
         const accDelta = rawData.aimConsistency.accuracyDelta || 0;
         const kpmDelta = rawData.aimConsistency.kpmDelta || 0;
         const timeDelta = rawData.aimConsistency.avgTimeDelta || 0;
-        rawSummary += `；前后差值：命中率${accDelta > 0 ? '+' : ''}${accDelta}%，KPM${kpmDelta > 0 ? '+' : ''}${kpmDelta}，平均命中时间${timeDelta > 0 ? '+' : ''}${timeDelta}ms`;
+        rawSummary += `；前后差值：命中率${accDelta > 0 ? '+' : ''}${accDelta}%，有效KPM${kpmDelta > 0 ? '+' : ''}${kpmDelta}，平均命中时间${timeDelta > 0 ? '+' : ''}${timeDelta}ms`;
       }
     } else if (rawData.aimHits !== undefined) {
-      rawSummary += `\nAim测试原始数据：命中${rawData.aimHits}个，命中率${rawData.aimAccuracy}%，KPM=${rawData.aimKpm}（内部参考KPM≈44），平均命中时间${rawData.aimAvgTime}ms`;
+      const rawKpmText = rawData.aimRawKpm !== undefined ? `，原始KPM=${rawData.aimRawKpm}` : '';
+      rawSummary += `\nAim测试原始数据：命中${rawData.aimHits}个，命中率${rawData.aimAccuracy}%，有效KPM=${rawData.aimKpm}${rawKpmText}（内部参考有效KPM≈44），平均命中时间${rawData.aimAvgTime}ms`;
     }
     if (rawData.visionCorrect !== undefined) {
       rawSummary += `\n动态视力：${rawData.visionCorrect}/${rawData.visionTotal}题正确`;

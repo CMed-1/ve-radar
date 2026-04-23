@@ -318,9 +318,20 @@ function updateAimTimer() {
   }
 }
 
-function computeAimScore(accuracy, kpm, avgHitTime) {
+function computeRawKpm(hits, duration) {
+  return duration > 0 ? Math.round(hits / (duration / 60000)) : 0;
+}
+
+function computeEffectiveKpm(rawKpm, accuracy, avgHitTime) {
+  const responseKpm = avgHitTime > 0 ? Math.round(60000 / avgHitTime) : rawKpm;
+  const responseAdjustedKpm = Math.round(rawKpm * 0.45 + responseKpm * 0.55);
+  const accuracyFactor = clamp(0.85 + accuracy * 0.15, 0.85, 1);
+  return clamp(Math.round(Math.min(rawKpm, responseAdjustedKpm) * accuracyFactor), 0, 200);
+}
+
+function computeAimScore(accuracy, effectiveKpm, avgHitTime) {
   const accScore = clamp(accuracy * 100, 0, 100);
-  const kpmScore = kpm >= 100 ? 100 : kpm >= 80 ? 82 : kpm >= 60 ? 65 : kpm >= 44 ? 50 : kpm >= 30 ? 35 : kpm >= 20 ? 22 : 10;
+  const kpmScore = effectiveKpm >= 100 ? 100 : effectiveKpm >= 80 ? 82 : effectiveKpm >= 60 ? 65 : effectiveKpm >= 44 ? 50 : effectiveKpm >= 30 ? 35 : effectiveKpm >= 20 ? 22 : 10;
   const timeScore = avgHitTime < 300 ? 100 : avgHitTime < 500 ? 78 : avgHitTime < 750 ? 55 : avgHitTime < 1000 ? 32 : 15;
   return clamp(Math.round(accScore * 0.4 + kpmScore * 0.4 + timeScore * 0.2), 0, 100);
 }
@@ -328,10 +339,11 @@ function computeAimScore(accuracy, kpm, avgHitTime) {
 function buildAimRoundSummary() {
   const totalShots = AIM.shots;
   const accuracy = totalShots > 0 ? AIM.hits / totalShots : 0;
-  const kpm = Math.round(AIM.hits / (AIM.duration / 60000));
+  const rawKpm = computeRawKpm(AIM.hits, AIM.duration);
   const avgHitTime = AIM.hitTimes.length
     ? Math.round(AIM.hitTimes.reduce((sum, time) => sum + time, 0) / AIM.hitTimes.length)
     : 999;
+  const effectiveKpm = computeEffectiveKpm(rawKpm, accuracy, avgHitTime);
   const misses = AIM.expired + (totalShots - AIM.hits);
 
   return {
@@ -340,11 +352,13 @@ function buildAimRoundSummary() {
     hits: AIM.hits,
     shots: totalShots,
     accuracy: Math.round(accuracy * 100),
-    kpm,
+    kpm: effectiveKpm,
+    effectiveKpm,
+    rawKpm,
     avgHitTime,
     bestStreak: AIM.bestStreak,
     misses,
-    score: computeAimScore(accuracy, kpm, avgHitTime)
+    score: computeAimScore(accuracy, effectiveKpm, avgHitTime)
   };
 }
 
@@ -384,17 +398,20 @@ function finalizeAimTotals() {
   const totalHitCount = rounds.reduce((sum, round) => sum + round.hits, 0);
   const totalHitTime = rounds.reduce((sum, round) => sum + round.avgHitTime * round.hits, 0);
   const accuracy = totalShots > 0 ? totalHits / totalShots : 0;
-  const kpm = totalDuration > 0 ? Math.round(totalHits / (totalDuration / 60000)) : 0;
+  const rawKpm = computeRawKpm(totalHits, totalDuration);
   const avgHitTime = totalHitCount > 0 ? Math.round(totalHitTime / totalHitCount) : 999;
+  const effectiveKpm = computeEffectiveKpm(rawKpm, accuracy, avgHitTime);
   const bestStreak = rounds.reduce((best, round) => Math.max(best, round.bestStreak), 0);
   const misses = rounds.reduce((sum, round) => sum + round.misses, 0);
-  const score = computeAimScore(accuracy, kpm, avgHitTime);
+  const score = computeAimScore(accuracy, effectiveKpm, avgHitTime);
 
   scores.aim = score;
   rawData.aimRounds = rounds;
   rawData.aimHits = totalHits;
   rawData.aimShots = totalShots;
-  rawData.aimKpm = kpm;
+  rawData.aimKpm = effectiveKpm;
+  rawData.aimEffectiveKpm = effectiveKpm;
+  rawData.aimRawKpm = rawKpm;
   rawData.aimAccuracy = Math.round(accuracy * 100);
   rawData.aimAvgTime = avgHitTime;
   rawData.aimBestStreak = bestStreak;
@@ -404,7 +421,9 @@ function finalizeAimTotals() {
   return {
     hits: totalHits,
     accuracy: Math.round(accuracy * 100),
-    kpm,
+    kpm: effectiveKpm,
+    effectiveKpm,
+    rawKpm,
     avgHitTime,
     bestStreak,
     misses,
@@ -431,9 +450,11 @@ function renderAimResult(stats, isFinal) {
     const accText = compare.accuracyDelta === 0 ? '0%' : `${compare.accuracyDelta > 0 ? '+' : ''}${compare.accuracyDelta}%`;
     const kpmText = compare.kpmDelta === 0 ? '0' : `${compare.kpmDelta > 0 ? '+' : ''}${compare.kpmDelta}`;
     const timeText = compare.avgTimeDelta === 0 ? '0ms' : `${compare.avgTimeDelta > 0 ? '+' : ''}${compare.avgTimeDelta}ms`;
-    note.textContent = `第二轮较第一轮：命中率 ${accText}，KPM ${kpmText}，平均命中时间 ${timeText}。该差值已纳入专注稳定性评分。`;
+    const rawText = stats.rawKpm !== undefined ? `原始KPM ${stats.rawKpm}，` : '';
+    note.textContent = `第二轮较第一轮：命中率 ${accText}，有效KPM ${kpmText}，平均命中时间 ${timeText}。${rawText}该差值已纳入专注稳定性评分。`;
   } else {
-    note.textContent = meta.resultNote;
+    const rawText = stats.rawKpm !== undefined ? ` 原始KPM ${stats.rawKpm}，有效KPM ${stats.kpm}。` : '';
+    note.textContent = meta.resultNote + rawText;
   }
 }
 

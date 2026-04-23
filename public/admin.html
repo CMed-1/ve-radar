@@ -510,7 +510,7 @@ function renderCalibrationStats() {
     statsEl.innerHTML = `
       <div class="stat-card"><div class="stat-num">${group.total}</div><div class="stat-label">${group.label}</div></div>
       <div class="stat-card"><div class="stat-num">${p50Score}</div><div class="stat-label">综合分 P50</div></div>
-      <div class="stat-card"><div class="stat-num">${p50Aim}</div><div class="stat-label">Aim KPM P50</div></div>
+      <div class="stat-card"><div class="stat-num">${p50Aim}</div><div class="stat-label">Aim有效KPM P50</div></div>
       <div class="stat-card"><div class="stat-num">${p50Rt}</div><div class="stat-label">反应均值 P50(ms)</div></div>`;
   }
 
@@ -680,12 +680,14 @@ function buildManualRawData(scores) {
     gridTimes: [],
     gridErrors: 0,
     aimRounds: [
-      { phase: 1, duration: 60000, hits: 92, shots: 100, accuracy: 92, kpm: 92, avgHitTime: 285, bestStreak: 24, misses: 8, score: scores.aim },
-      { phase: 2, duration: 60000, hits: 96, shots: 102, accuracy: 94, kpm: 96, avgHitTime: 268, bestStreak: 31, misses: 6, score: scores.aim }
+      { phase: 1, duration: 60000, hits: 92, shots: 100, accuracy: 92, kpm: 92, effectiveKpm: 92, rawKpm: 92, avgHitTime: 285, bestStreak: 24, misses: 8, score: scores.aim },
+      { phase: 2, duration: 60000, hits: 96, shots: 102, accuracy: 94, kpm: 96, effectiveKpm: 96, rawKpm: 96, avgHitTime: 268, bestStreak: 31, misses: 6, score: scores.aim }
     ],
     aimHits: 188,
     aimShots: 202,
     aimKpm: 94,
+    aimEffectiveKpm: 94,
+    aimRawKpm: 94,
     aimAccuracy: 93,
     aimAvgTime: 276,
     aimBestStreak: 31,

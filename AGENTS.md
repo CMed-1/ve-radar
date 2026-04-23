@@ -160,6 +160,7 @@
 - Aim 每轮 60 秒，两轮合计 120 秒后再计算 `scores.aim`
 - `rawData.aimRounds[0/1]` 保存两轮数据；`rawData.aimConsistency` 保存二测-一测差值
 - Aim 原始数据里的“命中数”是两轮合计值；内部参考 `KPM≈44` 对应两轮约 `88` 命中。不要再使用旧 30 秒口径的 `普通人均值 ~22`
+- Aim 从 2026-04-23 起区分 `aimRawKpm` 和 `aimKpm/aimEffectiveKpm`：原始KPM=真实命中/分钟；有效KPM=原始KPM按命中率和平均命中时间折减，用于 Aim 评分、专注稳定和报告展示
 - 外部 Aim Lab / Gridshot 公开数据与本网页测试的目标尺寸、输入方式、时长不一致；未拿到站内经验分布前，页面只写“内部参考”，不要写“普通人均值”
 - 首页手游端要提示：**不要在微信内打开**，否则横竖屏切换可能异常
 - 后端新增 `test_results` 表和 `/api/test-result`，用于匿名累计经验分位样本

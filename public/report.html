@@ -801,12 +801,13 @@ function buildCriteriaContent() {
     : '—';
   const myFA = raw.gngFalseAlarms !== undefined ? raw.gngFalseAlarms + '次误触' : '—';
   const myVis = raw.visionCorrect !== undefined ? raw.visionCorrect + '/' + raw.visionTotal + ' 题' : '—';
+  const rawKpmText = raw.aimRawKpm !== undefined ? `，原始KPM ${raw.aimRawKpm}` : '';
   const myAim = raw.aimKpm !== undefined
-    ? `两轮合计 KPM ${raw.aimKpm}，准确率 ${raw.aimAccuracy}%${
+    ? `两轮合计有效KPM ${raw.aimKpm}${rawKpmText}，准确率 ${raw.aimAccuracy}%${
       raw.aimRounds && raw.aimRounds.length === 2
-        ? `<br><span style="font-size:12px;color:var(--sub);">一测 ${raw.aimRounds[0].accuracy}% / ${raw.aimRounds[0].kpm}，二测 ${raw.aimRounds[1].accuracy}% / ${raw.aimRounds[1].kpm}</span>`
+        ? `<br><span style="font-size:12px;color:var(--sub);">一测 ${raw.aimRounds[0].accuracy}% / 有效KPM ${raw.aimRounds[0].kpm}，二测 ${raw.aimRounds[1].accuracy}% / 有效KPM ${raw.aimRounds[1].kpm}</span>`
         : ''
-    }`
+      }`
     : '—';
 
   let myFocusDesc = '—';
@@ -816,7 +817,7 @@ function buildCriteriaContent() {
       const accDelta = raw.aimConsistency.accuracyDelta || 0;
       const kpmDelta = raw.aimConsistency.kpmDelta || 0;
       const timeDelta = raw.aimConsistency.avgTimeDelta || 0;
-      myFocusDesc += `<br><span style="font-size:12px;color:var(--sub);">二测-一测：命中率 ${accDelta > 0 ? '+' : ''}${accDelta}% / KPM ${kpmDelta > 0 ? '+' : ''}${kpmDelta} / 平均命中时间 ${timeDelta > 0 ? '+' : ''}${timeDelta}ms</span>`;
+      myFocusDesc += `<br><span style="font-size:12px;color:var(--sub);">二测-一测：命中率 ${accDelta > 0 ? '+' : ''}${accDelta}% / 有效KPM ${kpmDelta > 0 ? '+' : ''}${kpmDelta} / 平均命中时间 ${timeDelta > 0 ? '+' : ''}${timeDelta}ms</span>`;
     }
   } else if (raw.reactionTimes && raw.reactionTimes.length >= 4) {
     const times = raw.reactionTimes;
@@ -914,9 +915,9 @@ function buildCriteriaContent() {
         </tr>
         <tr>
           <td>🎯 手眼协调</td>
-          <td class="tag-genius">KPM≥100 且准确≥90%</td>
-          <td class="tag-pro">KPM≥60 且准确≥75%</td>
-          <td style="color:#a78bfa;">内部参考 KPM~44 准确~65%</td>
+          <td class="tag-genius">有效KPM≥100 且准确≥90%</td>
+          <td class="tag-pro">有效KPM≥60 且准确≥75%</td>
+          <td style="color:#a78bfa;">内部参考有效KPM~44 准确~65%</td>
           <td class="tag-yours">${myAim}</td>
         </tr>
         <tr>
@@ -945,8 +946,8 @@ function buildCriteriaContent() {
         <tr><td>冲动抑制</td><td>85 − 误触×32 − 漏触×7；若 Go 轮平均反应 &lt;260ms，再 +3 分</td></tr>
         <tr><td>动态视力</td><td>10 轮正确率 × 100，难度按位数和闪现时长递增</td></tr>
         <tr><td>认知处理</td><td>数字方格均分 × 60% + 2-back 分数 × 40%；方格基准 3×3=8s、4×4=25s、5×5=60s，错 1 次 −5 分；2-back = 命中率×80 − 误触率×40 + 20</td></tr>
-        <tr><td>手眼协调</td><td>两轮各 60 秒，合计 120 秒后计算：命中率 × 40% + KPM × 40% + 平均命中时间 × 20%</td></tr>
-        <tr><td>专注稳定</td><td>RT 稳定性 × 70% + 双次 Aim 一致性 × 30%；Aim 一致性由两轮命中率、KPM、平均命中时间差值共同决定</td></tr>
+        <tr><td>手眼协调</td><td>两轮各 60 秒，合计 120 秒后计算：命中率 × 40% + 有效KPM × 40% + 平均命中时间 × 20%；有效KPM会按命中率和目标响应时间折减原始KPM</td></tr>
+        <tr><td>专注稳定</td><td>RT 稳定性 × 70% + 双次 Aim 一致性 × 30%；Aim 一致性由两轮命中率、有效KPM、平均命中时间差值共同决定</td></tr>
         <tr><td>色觉感知</td><td>P1 颜色反应 × 60% + P2 红色搜索 × 40%；两阶段都包含误触惩罚和速度奖励</td></tr>
       </tbody>
     </table>
@@ -1354,11 +1355,12 @@ function renderDataDetail() {
   if (raw.aimHits !== undefined) {
     items.push({ num: raw.aimHits, label: '命中数 (Kills)', bench: '内部参考：两轮约88' });
     items.push({ num: (raw.aimAccuracy || 0) + '%', label: '命中率 (Accuracy)', bench: '内部参考 ~65%' });
-    items.push({ num: raw.aimKpm || '—', label: 'KPM (每分命中)', bench: '内部参考 ~44' });
+    items.push({ num: raw.aimKpm || '—', label: '有效KPM', bench: '内部参考 ~44' });
+    if (raw.aimRawKpm !== undefined) items.push({ num: raw.aimRawKpm, label: '原始KPM', bench: '真实命中/分钟' });
     if (raw.aimAvgTime) items.push({ num: raw.aimAvgTime + 'ms', label: '平均命中时间', bench: '优秀：<400ms' });
     if (raw.aimRounds && raw.aimRounds.length === 2) {
-      items.push({ num: `${raw.aimRounds[0].accuracy}% / ${raw.aimRounds[0].kpm}`, label: 'Aim 一测 准确率 / KPM', bench: '用于后程稳定性对比' });
-      items.push({ num: `${raw.aimRounds[1].accuracy}% / ${raw.aimRounds[1].kpm}`, label: 'Aim 二测 准确率 / KPM', bench: '用于后程稳定性对比' });
+      items.push({ num: `${raw.aimRounds[0].accuracy}% / ${raw.aimRounds[0].kpm}`, label: 'Aim 一测 准确率 / 有效KPM', bench: '用于后程稳定性对比' });
+      items.push({ num: `${raw.aimRounds[1].accuracy}% / ${raw.aimRounds[1].kpm}`, label: 'Aim 二测 准确率 / 有效KPM', bench: '用于后程稳定性对比' });
     }
     if (raw.aimConsistency) {
       const accDelta = raw.aimConsistency.accuracyDelta || 0;
@@ -1679,9 +1681,10 @@ function buildPDFContent(radarImg, barImg, lineImg) {
     dataLines.push(`动态视力：${raw.visionCorrect}/${raw.visionTotal} 题正确（普通人均值 ~5/10）`);
   }
   if (raw.aimHits !== undefined) {
-    let aimLine = `手眼协调：两轮合计命中 ${raw.aimHits} 个 · 准确率 ${raw.aimAccuracy}% · KPM ${raw.aimKpm}（内部参考 KPM≈44；两轮约88命中）`;
+    const rawKpmText = raw.aimRawKpm !== undefined ? ` · 原始KPM ${raw.aimRawKpm}` : '';
+    let aimLine = `手眼协调：两轮合计命中 ${raw.aimHits} 个 · 准确率 ${raw.aimAccuracy}% · 有效KPM ${raw.aimKpm}${rawKpmText}（内部参考有效KPM≈44；两轮约88命中）`;
     if (raw.aimRounds && raw.aimRounds.length === 2) {
-      aimLine += ` · 一测 ${raw.aimRounds[0].accuracy}%/${raw.aimRounds[0].kpm} · 二测 ${raw.aimRounds[1].accuracy}%/${raw.aimRounds[1].kpm}`;
+      aimLine += ` · 一测 ${raw.aimRounds[0].accuracy}%/有效KPM ${raw.aimRounds[0].kpm} · 二测 ${raw.aimRounds[1].accuracy}%/有效KPM ${raw.aimRounds[1].kpm}`;
     }
     dataLines.push(aimLine);
   }
