@@ -417,7 +417,7 @@
     display:none;
     position:fixed;left:-9999px;top:0;
     width:750px;
-    background:#111111;
+    background:#080808;
     font-family:'Inter','Noto Sans SC',sans-serif;
     padding:0;
     overflow:hidden;
@@ -658,40 +658,57 @@
 
 <!-- 分享图生成卡片（隐藏，用于html2canvas） -->
 <div id="share-card">
-  <!-- 顶部栏 -->
-  <div style="background:#0a0a0a;padding:22px 32px 18px;border-bottom:2px solid #76b900;">
-    <div style="font-family:'Orbitron',sans-serif;font-size:10px;color:#76b900;letter-spacing:4px;text-transform:uppercase;margin-bottom:4px;">VE ESPORTS TALENT RADAR</div>
-    <div style="font-size:11px;color:#555;letter-spacing:2px;">电竞天赋测评 · 官方报告</div>
+
+  <!-- 顶部品牌栏 -->
+  <div style="background:#050505;padding:16px 36px;border-bottom:2px solid #76b900;display:flex;align-items:center;gap:14px;">
+    <svg width="28" height="28" viewBox="0 0 40 40" fill="none" style="flex-shrink:0;">
+      <polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="none" stroke="#76b900" stroke-width="1.5"/>
+      <polygon points="20,8 30,13.5 30,24.5 20,30 10,24.5 10,13.5" fill="rgba(118,185,0,0.06)" stroke="#76b900" stroke-width="1" stroke-dasharray="3,2"/>
+      <circle cx="20" cy="20" r="3" fill="#76b900"/>
+    </svg>
+    <div>
+      <div style="font-family:'Orbitron',sans-serif;font-size:11px;color:#76b900;letter-spacing:4px;font-weight:700;">VE ESPORTS TALENT RADAR</div>
+      <div style="font-size:9px;color:#333;letter-spacing:3px;margin-top:2px;">电竞天赋测评 · 官方报告</div>
+    </div>
   </div>
+
   <!-- 评级区 -->
-  <div style="display:flex;align-items:center;gap:24px;padding:28px 32px 20px;">
-    <div id="sc-badge" style="flex-shrink:0;width:96px;height:96px;display:flex;align-items:center;justify-content:center;"></div>
+  <div style="background:linear-gradient(150deg,#0d1800 0%,#080808 60%);padding:28px 40px 20px;display:flex;align-items:center;gap:22px;">
+    <div id="sc-badge" style="flex-shrink:0;width:80px;height:80px;display:flex;align-items:center;justify-content:center;"></div>
     <div>
-      <div id="sc-rating" style="font-family:'Orbitron',sans-serif;font-size:18px;font-weight:700;color:#fff;margin-bottom:6px;"></div>
-      <div id="sc-pct" style="font-size:13px;color:#76b900;font-weight:600;margin-bottom:4px;"></div>
-      <div id="sc-sub" style="font-size:11px;color:#777;"></div>
+      <div id="sc-rating" style="font-family:'Orbitron',sans-serif;font-size:17px;font-weight:700;color:#fff;margin-bottom:6px;letter-spacing:.5px;"></div>
+      <div id="sc-pct" style="font-size:12px;color:#76b900;font-weight:600;letter-spacing:.5px;"></div>
     </div>
   </div>
-  <!-- 雷达图 -->
-  <div style="padding:0 32px 20px;text-align:center;">
-    <img id="sc-radar" style="width:280px;height:280px;display:inline-block;" src="" alt="">
+
+  <!-- ★ 天赋代号（核心传播区）★ -->
+  <div style="background:linear-gradient(150deg,#0d1800 0%,#080808 100%);padding:4px 40px 32px;">
+    <div style="height:1px;background:linear-gradient(90deg,#76b900 0%,rgba(118,185,0,.3) 60%,transparent 100%);margin-bottom:26px;"></div>
+    <div style="font-size:10px;color:#3a5a0a;letter-spacing:5px;text-transform:uppercase;margin-bottom:10px;font-family:'Inter',sans-serif;">TALENT ARCHETYPE · 天赋代号</div>
+    <div id="sc-archetype-adj" style="font-size:15px;color:#7aaa30;font-weight:500;letter-spacing:2px;margin-bottom:8px;font-family:'Noto Sans SC','Inter',sans-serif;"></div>
+    <div id="sc-archetype-role" style="font-size:52px;font-weight:900;color:#ffffff;line-height:1.0;letter-spacing:1px;font-family:'Noto Sans SC','Inter',sans-serif;margin-bottom:22px;"></div>
+    <div id="sc-ai" style="font-size:12px;color:#606060;line-height:1.9;border-left:3px solid #2a4a08;padding-left:14px;"></div>
   </div>
-  <!-- 分数格 -->
-  <div id="sc-scores" style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#222;margin:0 32px 20px;border:1px solid #222;border-radius:4px;overflow:hidden;"></div>
-  <!-- AI摘要 -->
-  <div id="sc-ai" style="padding:16px 32px;background:#0d0d0d;margin:0 32px 24px;border-left:3px solid #76b900;border-radius:2px;font-size:12px;color:#ccc;line-height:1.8;"></div>
-  <!-- 底部二维码 -->
-  <div style="padding:20px 32px 28px;display:flex;align-items:center;gap:20px;border-top:1px solid #1e1e1e;">
-    <div id="sc-qr" style="flex-shrink:0;background:#fff;padding:12px;border-radius:10px;box-shadow:0 0 0 1px rgba(255,255,255,.18);"></div>
-    <div>
-      <div style="font-size:12px;color:#a7a7a7;margin-bottom:6px;">扫码测测你的电竞天赋</div>
-      <div id="sc-url" style="font-size:12px;color:#76b900;font-family:'Inter',monospace;word-break:break-all;"></div>
+
+  <!-- 雷达图 + 维度分数 -->
+  <div style="background:#060606;padding:24px 36px;display:flex;align-items:center;gap:28px;border-top:1px solid #141414;border-bottom:1px solid #141414;">
+    <img id="sc-radar" style="width:230px;height:230px;flex-shrink:0;" src="" alt="">
+    <div id="sc-dims" style="flex:1;display:flex;flex-direction:column;gap:9px;"></div>
+  </div>
+
+  <!-- 底部：二维码 + 邀请 + VE logo -->
+  <div style="background:#000;padding:20px 36px;display:flex;align-items:center;gap:18px;">
+    <div style="flex:1;">
+      <div style="font-size:13px;color:#888;margin-bottom:5px;font-weight:500;">扫码免费测你的电竞天赋</div>
+      <div id="sc-url" style="font-size:10px;color:#333;letter-spacing:.3px;"></div>
     </div>
-    <div style="margin-left:auto;text-align:right;">
-      <div style="font-family:'Orbitron',sans-serif;font-size:16px;font-weight:900;color:#76b900;">VE</div>
-      <div style="font-size:9px;color:#444;letter-spacing:1px;">TALENT RADAR</div>
+    <img id="sc-qr-img" style="width:86px;height:86px;border-radius:5px;display:block;background:#fff;flex-shrink:0;" src="" alt="QR">
+    <div style="text-align:right;margin-left:6px;flex-shrink:0;">
+      <div style="font-family:'Orbitron',sans-serif;font-size:20px;font-weight:900;color:#76b900;line-height:1;">VE</div>
+      <div style="font-size:7px;color:#222;letter-spacing:2px;margin-top:3px;">TALENT RADAR</div>
     </div>
   </div>
+
 </div>
 
 <!-- 分享图模态框 -->
@@ -1839,6 +1856,32 @@ function scScoreColor(v) {
   return '#a78bfa';
 }
 
+// ── 天赋代号生成（最强维度 × 角色方向）──────────
+function getArchetypeName(s) {
+  const adjMap = {
+    reaction: { hi:'闪电神经',  lo:'反应灵敏' },
+    aim:      { hi:'弹无虚发',  lo:'精准出手' },
+    cognition:{ hi:'策略大脑',  lo:'运筹帷幄' },
+    impulse:  { hi:'冰山克制',  lo:'冷静沉稳' },
+    focus:    { hi:'专注锁定',  lo:'意志如钢' },
+    vision:   { hi:'鹰眼动感',  lo:'锐视敏感' },
+    color:    { hi:'色感超群',  lo:'感知敏锐' }
+  };
+  const sorted = DIM_KEYS.map(k => [k, s[k] || 0]).sort((a, b) => b[1] - a[1]);
+  const [topDim, topScore] = sorted[0];
+  const level = topScore >= 78 ? 'hi' : 'lo';
+  const adj = adjMap[topDim]?.[level] || '天赋异禀';
+
+  const r = calcRoleTracks(s);
+  const fpsNames  = { duelist:'突击手', sniper:'狙击手', controller:'战术指挥', flex:'全能选手' };
+  const mobaNames = { jungler:'打野掌控者', adc:'射手', mid:'中单大师', support:'守护辅助', top:'上单铁卫' };
+  const roleName  = r.primaryTrack === 'moba'
+    ? (mobaNames[r.moba.key] || '战略家')
+    : (fpsNames[r.fps.key]   || '竞技者');
+
+  return { adj, roleName, primaryTrack: r.primaryTrack };
+}
+
 async function generateShareImage() {
   if (!reportTextContent) {
     alert('AI 分析尚未完成，请稍候再生成分享图');
@@ -1847,70 +1890,79 @@ async function generateShareImage() {
   const btn = document.getElementById('btn-share');
   btn.disabled = true; btn.textContent = '生成中...';
   try {
-    // 1. QR URL（有邀请码则带 ref 参数）
+    // 1. QR URL
     const code = sessionStorage.getItem('ve_code');
     const qrUrl = code ? `${RENDER_DOMAIN}/?ref=${encodeURIComponent(code)}` : `${RENDER_DOMAIN}/`;
 
-    // 2. 填充卡片内容
+    // 2. 计算评级与天赋代号
     const avg = VEScoreModel.calcWeightedAverage(scores, 1);
     const pct = VEScoreModel.scoreToPercentile(avg);
-    const cfg = RATING_CONFIG[ratingKey];
+    const cfg  = RATING_CONFIG[ratingKey];
+    const arch = getArchetypeName(scores);
 
-    // 评级徽章（复用已有SVG）
+    // 3. 评级徽章
     const badgeEl = document.getElementById('sc-badge');
-    // 替换 ID 前缀避免与页面主体 SVG 的 rsg-/rsf- ID 冲突
-    const svgHtml = (RATING_SVG[ratingKey] || '')
-      .replace(/rsg-/g, 'ssc-').replace(/rsf-/g, 'ssf-');
-    badgeEl.innerHTML = svgHtml;
-    // 缩小SVG到96px
+    badgeEl.innerHTML = (RATING_SVG[ratingKey] || '').replace(/rsg-/g,'ssc-').replace(/rsf-/g,'ssf-');
     const svgEl = badgeEl.querySelector('svg');
-    if (svgEl) { svgEl.style.width='96px'; svgEl.style.height='96px'; }
+    if (svgEl) { svgEl.style.width = '80px'; svgEl.style.height = '80px'; }
 
     document.getElementById('sc-rating').textContent = cfg.label;
-    document.getElementById('sc-pct').textContent =
-      `内部参考分位 ${pct >= 99.9 ? '99.9+' : pct.toFixed(1)}`;
-    document.getElementById('sc-sub').textContent = cfg.subtitle;
-    document.getElementById('sc-url').textContent = qrUrl.replace('https://','');
+    const topPct = pct >= 99.9 ? '0.1' : (100 - pct).toFixed(1);
+    document.getElementById('sc-pct').textContent = `超越了 ${pct >= 99.9 ? '99.9' : pct.toFixed(1)}% 的测评者 · TOP ${topPct}%`;
 
-    // 雷达图图片
+    // 4. 天赋代号
+    document.getElementById('sc-archetype-adj').textContent = arch.adj + '的';
+    document.getElementById('sc-archetype-role').textContent = arch.roleName;
+
+    // 5. AI 摘要（前 2 句）
+    const sentences = (reportTextContent || '').trim().split(/(?<=[。！？])/g).filter(s => s.trim());
+    document.getElementById('sc-ai').textContent =
+      (sentences.slice(0, 2).join('') || `综合 7 项能力测评，天赋评级：${cfg.label}。`) ;
+
+    // 6. 雷达图
     const radarCanvas = document.getElementById('radar-chart');
     document.getElementById('sc-radar').src = radarCanvas ? radarCanvas.toDataURL('image/png') : '';
 
-    // 分数格
-    const scoresEl = document.getElementById('sc-scores');
-    scoresEl.innerHTML = DIM_KEYS.map(k => {
+    // 7. 维度分数（横向条形）
+    document.getElementById('sc-dims').innerHTML = DIM_KEYS.map(k => {
       const v = Math.round(scores[k] || 0);
-      return `<div style="background:#111;padding:10px 6px;text-align:center;">
-        <div style="font-size:9px;color:#666;margin-bottom:4px;letter-spacing:.5px;">${DIM_NAMES[k]}</div>
-        <div style="font-family:'Orbitron',sans-serif;font-size:16px;font-weight:700;color:${scScoreColor(v)};">${v}</div>
+      const color = v >= 80 ? '#76b900' : v >= 60 ? '#888' : '#3a3a3a';
+      return `<div style="display:flex;align-items:center;gap:8px;">
+        <div style="font-size:10px;color:#444;width:54px;flex-shrink:0;letter-spacing:.3px;">${DIM_NAMES[k]}</div>
+        <div style="flex:1;height:3px;background:#1a1a1a;border-radius:2px;overflow:hidden;">
+          <div style="width:${v}%;height:100%;background:${color};border-radius:2px;"></div>
+        </div>
+        <div style="font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;color:${color};width:26px;text-align:right;">${v}</div>
       </div>`;
     }).join('');
 
-    // AI摘要（第一句话）
-    const aiFirst = reportTextContent
-      ? reportTextContent.trim().split(/[。！？\n]/)[0].replace(/^[\s\r\n]+/,'') + '。'
-      : `综合7项能力测评，你的电竞天赋综合评级为 ${cfg.label}。`;
-    document.getElementById('sc-ai').textContent = aiFirst;
+    // 8. URL 文字
+    document.getElementById('sc-url').textContent = qrUrl.replace('https://', '');
 
-    // 3. 生成二维码
-    const qrEl = document.getElementById('sc-qr');
-    qrEl.innerHTML = '';
-    new QRCode(qrEl, {
+    // 9. QR 码：渲染到临时节点 → 提取 canvas/img → 写入 <img>
+    //    避免 html2canvas 直接截 QRCode DOM 时的渲染不稳定问题
+    const tempDiv = document.createElement('div');
+    tempDiv.style.cssText = 'position:fixed;left:-9999px;top:0;';
+    document.body.appendChild(tempDiv);
+    new QRCode(tempDiv, {
       text: qrUrl,
-      width: 132, height: 132,
-      colorDark: '#000000',
-      colorLight: '#ffffff',
-      correctLevel: QRCode.CorrectLevel.H
+      width: 180, height: 180,
+      colorDark: '#000000', colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M  // M 级容错率足够，URL 不过长
     });
+    await new Promise(r => setTimeout(r, 500)); // 等 QRCode 渲染完毕
+    const qrCvs = tempDiv.querySelector('canvas');
+    const qrImgEl = tempDiv.querySelector('img');
+    document.getElementById('sc-qr-img').src =
+      qrCvs ? qrCvs.toDataURL('image/png') : (qrImgEl?.src || '');
+    document.body.removeChild(tempDiv);
 
-    // 4. 显示卡片供截图
+    // 10. 截图
     const card = document.getElementById('share-card');
     card.style.display = 'block';
-    await new Promise(r => setTimeout(r, 500)); // 等QR渲染
-
-    // 5. html2canvas 截图
+    await new Promise(r => setTimeout(r, 300));
     const canvas = await html2canvas(card, {
-      backgroundColor: '#111111',
+      backgroundColor: '#050505',
       scale: 2,
       useCORS: true,
       logging: false,
@@ -1919,12 +1971,11 @@ async function generateShareImage() {
     });
     card.style.display = 'none';
 
-    // 6. 显示模态框
     document.getElementById('share-img').src = canvas.toDataURL('image/png');
     document.getElementById('share-modal').style.display = 'flex';
   } catch(e) {
     console.error('分享图生成失败', e);
-    alert('分享图生成失败，请稍后重试');
+    alert('分享图生成失败：' + e.message);
   }
   btn.disabled = false; btn.textContent = '生成分享图';
 }
