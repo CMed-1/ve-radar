@@ -722,11 +722,7 @@
 <script>
 const { jsPDF } = window.jspdf;
 
-const DIM_NAMES = {
-  reaction:'反应速度', impulse:'冲动抑制',
-  vision:'动态视力', cognition:'认知处理速度',
-  aim:'手眼协调', focus:'专注稳定性', color:'色觉感知'
-};
+const { DIM_NAMES } = VEScoreModel;
 const DIM_KEYS = ['reaction','impulse','vision','cognition','aim','focus','color'];
 
 const GAME_MAP = {
@@ -1787,6 +1783,10 @@ function scScoreColor(v) {
 }
 
 async function generateShareImage() {
+  if (!reportTextContent) {
+    alert('AI 分析尚未完成，请稍候再生成分享图');
+    return;
+  }
   const btn = document.getElementById('btn-share');
   btn.disabled = true; btn.textContent = '生成中...';
   try {

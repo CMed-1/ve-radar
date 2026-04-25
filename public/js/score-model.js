@@ -6,6 +6,10 @@
   root.VEScoreModel = model;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createScoreModel() {
   const DIM_KEYS = ['reaction', 'impulse', 'vision', 'cognition', 'aim', 'focus', 'color'];
+  const DIM_NAMES = {
+    reaction: '反应速度', impulse: '冲动抑制', vision: '动态视力',
+    cognition: '认知处理速度', aim: '手眼协调', focus: '专注稳定性', color: '色觉感知'
+  };
   const SCORE_WEIGHTS = {
     reaction: 20,
     impulse: 9,
@@ -63,6 +67,7 @@
 
   return {
     DIM_KEYS,
+    DIM_NAMES,
     SCORE_WEIGHTS,
     calcWeightedAverage,
     calcRatingKey,

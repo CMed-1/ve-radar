@@ -91,8 +91,10 @@ function addRTChip(text, cls) {
 
 function finishReaction() {
   const valid = RT.times.filter(time => time !== null);
-  rawData.reactionTimes = valid;
-  const avg = valid.length ? valid.reduce((sum, time) => sum + time, 0) / valid.length : 400;
+  const filtered = filterRTOutliers(valid);
+  rawData.reactionTimes = filtered;
+  rawData.reactionTimesRaw = valid; // 原始数据保留供调试
+  const avg = filtered.length ? filtered.reduce((sum, time) => sum + time, 0) / filtered.length : 400;
 
   let score;
   if (avg < 190) score = 100;

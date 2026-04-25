@@ -210,6 +210,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',s
 .plans-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
 @media(max-width:560px){.plans-grid{grid-template-columns:1fr;}}
 @media(max-width:560px){.method-grid{grid-template-columns:1fr;}}
+.teaser-scores-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+@media(max-width:420px){.teaser-scores-grid{grid-template-columns:repeat(2,1fr);}}
 
 .plan-card{
   background:var(--card);
@@ -444,7 +446,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',s
   <div id="gate-teasers" style="display:none;margin-top:20px;">
     <div class="teaser-section">
       <div class="teaser-title">七维评分详情 · DIMENSION SCORES</div>
-      <div class="teaser-content" id="teaser-scores" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;"></div>
+      <div class="teaser-content teaser-scores-grid" id="teaser-scores"></div>
     </div>
     <div class="teaser-section">
       <div class="teaser-title">AI 天赋分析摘要 · AI REPORT</div>
@@ -555,7 +557,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',s
 <script>
 // ── 评级配置（与 report.html 保持一致）──
 const DIM_KEYS = ['reaction','impulse','vision','cognition','aim','focus','color'];
-const DIM_NAMES = { reaction:'反应速度', impulse:'冲动抑制', vision:'动态视力', cognition:'认知处理速度', aim:'手眼协调', focus:'专注稳定性', color:'色觉感知' };
+const { DIM_NAMES } = VEScoreModel;
 
 const RATING_SVG = {
   genius:`<svg width="100" height="110" viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="pvg-genius" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FCD34D"/><stop offset="100%" stop-color="#D97706"/></linearGradient><filter id="pvf-genius"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><polygon points="50,5 93,27.5 93,72.5 50,95 7,72.5 7,27.5" fill="rgba(252,211,77,0.1)" stroke="url(#pvg-genius)" stroke-width="2.5" filter="url(#pvf-genius)"/><polygon points="50,16 82,34 82,66 50,84 18,66 18,34" fill="none" stroke="rgba(252,211,77,0.25)" stroke-width="1"/><rect x="33" y="65" width="34" height="6" rx="1.5" fill="url(#pvg-genius)"/><path d="M33,65 L33,44 L42,54 L50,34 L58,54 L67,44 L67,65 Z" fill="url(#pvg-genius)" opacity="0.92"/><circle cx="50" cy="33" r="3.5" fill="#FCD34D"/><circle cx="32" cy="44" r="2.5" fill="#FCD34D"/><circle cx="68" cy="44" r="2.5" fill="#FCD34D"/><text x="50" y="108" text-anchor="middle" font-size="8.5" fill="rgba(252,211,77,0.65)" font-family="Orbitron,sans-serif" letter-spacing="1.5">GENIUS</text></svg>`,

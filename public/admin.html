@@ -121,6 +121,7 @@
     <button class="tab-btn" onclick="switchTab('contacts')">联系方式库</button>
     <button class="tab-btn" onclick="switchTab('tests')">测试数据</button>
     <button class="tab-btn" onclick="switchTab('calibration')">样本校准</button>
+    <button class="tab-btn" onclick="switchTab('referral')">推广统计</button>
     <button class="tab-btn" onclick="switchTab('stats')">数据概览</button>
   </div>
 
@@ -198,6 +199,19 @@
       <table class="data-table" id="calibration-table">
         <thead><tr><th>类别</th><th>指标</th><th>方向</th><th>N</th><th>均值</th><th>标准差</th><th>P25</th><th>P50</th><th>P75</th><th>P90</th><th>P95</th><th>最小</th><th>最大</th></tr></thead>
         <tbody id="calibration-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 推广统计面板 -->
+  <div class="panel" id="panel-referral">
+    <div class="stats-row" id="referral-stats-row"></div>
+    <div class="card">
+      <div class="card-title">推广链接统计 <button class="refresh-btn" onclick="loadReferralStats()">刷新</button></div>
+      <div class="card-sub">统计各推荐码的点击与转化情况。转化 = 完成测评或进入报告。</div>
+      <table class="data-table" id="referral-table">
+        <thead><tr><th>推荐码</th><th>点击次数</th><th>转化次数</th><th>转化率</th><th>转化模式分布</th></tr></thead>
+        <tbody id="referral-tbody"></tbody>
       </table>
     </div>
   </div>
@@ -303,7 +317,7 @@ function logout() {
 
 // ── 标签切换 ──────────────────────────────────
 function switchTab(tab) {
-  const tabs = ['codes','contacts','tests','calibration','stats'];
+  const tabs = ['codes','contacts','tests','calibration','referral','stats'];
   document.querySelectorAll('.tab-btn').forEach((b,i) => {
     b.classList.toggle('active', tabs[i]===tab);
   });
@@ -312,6 +326,7 @@ function switchTab(tab) {
   if (tab==='contacts') loadContacts();
   if (tab==='tests') loadTestResults();
   if (tab==='calibration') loadCalibrationStats();
+  if (tab==='referral') loadReferralStats();
   if (tab==='stats') renderStats();
 }
 
@@ -560,6 +575,54 @@ function exportCalibrationCSV() {
     formatMetric(metric.max, metric.unit)
   ]));
   downloadCSV(rows, `VE样本校准指标-${group.key}.csv`);
+}
+
+// ── 推广统计 ──────────────────────────────────
+let referralStats = [];
+
+async function loadReferralStats() {
+  const res = await fetch('/api/admin/referral-stats', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: adminPwd })
+  });
+  const data = await res.json();
+  if (data.success) {
+    referralStats = data.stats || [];
+    renderReferralStats();
+  }
+}
+
+function renderReferralStats() {
+  const tbody = document.getElementById('referral-tbody');
+  if (!tbody) return;
+
+  const totalClicks = referralStats.reduce((s, r) => s + r.clicks, 0);
+  const totalConvs = referralStats.reduce((s, r) => s + r.conversions, 0);
+  const statsEl = document.getElementById('referral-stats-row');
+  if (statsEl) {
+    const rate = totalClicks ? ((totalConvs / totalClicks) * 100).toFixed(1) : '0.0';
+    statsEl.innerHTML = `
+      <div class="stat-card"><div class="stat-num">${referralStats.length}</div><div class="stat-label">推广码数量</div></div>
+      <div class="stat-card"><div class="stat-num">${totalClicks}</div><div class="stat-label">总点击次数</div></div>
+      <div class="stat-card"><div class="stat-num">${totalConvs}</div><div class="stat-label">总转化次数</div></div>
+      <div class="stat-card"><div class="stat-num">${rate}%</div><div class="stat-label">整体转化率</div></div>`;
+  }
+
+  if (!referralStats.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:var(--sub);text-align:center;padding:24px">暂无推广数据</td></tr>';
+    return;
+  }
+  tbody.innerHTML = referralStats.map(r => {
+    const rate = r.clicks ? ((r.conversions / r.clicks) * 100).toFixed(1) : '0.0';
+    const modes = Object.entries(r.modes || {}).map(([k, v]) => `${k}:${v}`).join(' · ') || '—';
+    return `<tr>
+      <td><span style="font-family:monospace;color:var(--cyan)">${r.code}</span></td>
+      <td>${r.clicks}</td>
+      <td>${r.conversions}</td>
+      <td>${rate}%</td>
+      <td style="color:var(--sub);font-size:12px">${modes}</td>
+    </tr>`;
+  }).join('');
 }
 
 // ── 导出 ──────────────────────────────────────

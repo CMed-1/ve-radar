@@ -87,8 +87,8 @@ function addRT2Chip(text, cls) {
 }
 
 function finishReaction2() {
-  const valid1 = rawData.reactionTimes.filter(time => time !== null);
-  const valid2 = RT2.times.filter(time => time !== null);
+  const valid1 = rawData.reactionTimes; // 已在一测时完成过滤
+  const valid2 = filterRTOutliers(RT2.times.filter(time => time !== null));
   rawData.rt2Times = valid2;
 
   let rtStability = 50;
