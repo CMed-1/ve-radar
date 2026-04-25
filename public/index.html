@@ -51,16 +51,57 @@
 
   /* ── 英雄区 ── */
   .hero {
-    min-height: 100vh; display:flex; flex-direction:column;
-    align-items:center; justify-content:center;
-    padding: 120px 24px 80px;
-    position:relative; z-index:1; text-align:center;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    padding: 100px 72px 60px;
+    position: relative; z-index: 1;
+    gap: 0;
   }
 
   /* thin horizontal rule accent above h1 */
   .hero-rule {
     width: 48px; height: 2px; background: var(--green);
-    margin: 0 auto 32px;
+    margin: 0 0 32px;
+  }
+
+  /* ── 英雄左栏 ── */
+  .hero-left {
+    display: flex; flex-direction: column;
+    align-items: flex-start; text-align: left;
+    padding-right: 60px;
+  }
+  .hero-left .hero-desc { max-width: 500px; margin-bottom: 40px; }
+  .hero-left .invite-card { width: 100%; max-width: 480px; }
+  .hero-left .stats { max-width: 100%; margin: 36px 0 0; }
+
+  /* ── 英雄右栏：理论依据 ── */
+  .hero-right {
+    border-left: 1px solid var(--border);
+    padding-left: 60px;
+    display: flex; flex-direction: column;
+  }
+  .hs-eyebrow {
+    font-family: 'Orbitron', sans-serif; font-size: 10px;
+    font-weight: 700; color: var(--green);
+    letter-spacing: 3px; text-transform: uppercase; margin-bottom: 8px;
+  }
+  .hs-heading { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .hs-subhead { font-size: 12.5px; color: var(--sub); line-height: 1.7; margin-bottom: 24px; }
+  .hs-list { display: flex; flex-direction: column; }
+  .hs-row {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 12px 0; border-bottom: 1px solid #151515;
+  }
+  .hs-row:first-child { padding-top: 0; }
+  .hs-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .hs-icon { font-size: 15px; flex-shrink: 0; width: 22px; margin-top: 1px; }
+  .hs-dim-name { font-size: 12.5px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+  .hs-finding { font-size: 11.5px; color: var(--sub); line-height: 1.5; margin-bottom: 4px; }
+  .hs-papers {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9.5px; color: var(--green); letter-spacing: 0.6px; opacity: 0.75;
   }
 
   .hero-badge {
@@ -335,6 +376,41 @@
   /* ── Partner section bg ── */
   .section-alt { background: #080808; }
 
+  /* ── 英雄区折叠：900px 以下切换为单栏 ── */
+  @media(max-width:900px) {
+    .hero {
+      grid-template-columns: 1fr;
+      padding: 100px 24px 48px;
+    }
+    .hero-left {
+      align-items: center; text-align: center;
+      padding-right: 0;
+    }
+    .hero-left .hero-rule { margin: 0 auto 32px; }
+    .hero-left .hero-desc { max-width: 560px; margin-bottom: 48px; }
+    .hero-left .stats { margin: 36px auto 0; max-width: 700px; }
+    .hero-right {
+      border-left: none; border-top: 1px solid var(--border);
+      padding-left: 0; padding-top: 36px; margin-top: 36px;
+      text-align: center;
+    }
+    .hs-list {
+      display: grid; grid-template-columns: repeat(2,1fr);
+      gap: 1px; background: var(--border);
+      border: 1px solid var(--border); border-radius: 4px;
+      overflow: hidden; margin-top: 20px; text-align: left;
+    }
+    .hs-row {
+      background: var(--card); padding: 14px;
+      border-bottom: none; flex-direction: column; gap: 4px;
+    }
+    .hs-finding { display: none; }
+  }
+
+  @media(max-width:540px) {
+    .hs-list { grid-template-columns: 1fr; }
+  }
+
   @media(max-width:600px) {
     nav { padding:12px 20px; }
     .nav-links { display:none; }
@@ -380,58 +456,120 @@
 
 <!-- 英雄区 -->
 <section class="hero">
-  <div class="hero-rule"></div>
-  <div class="hero-badge"><span class="hero-badge-dot"></span> 与顶级电竞俱乐部深度合作 · 官方选材通道</div>
-  <h1>发现你的电竞天赋</h1>
-  <div class="hero-sub-title">ESPORTS TALENT RADAR</div>
-  <p class="hero-desc">
-    通过七大维度科学测评，精准定位你的电竞潜能。<br>
-    测评约 10 分钟 · 完全免费开始<br>
-    <span class="hero-trial-highlight">优秀者将由 VE 直接向合作俱乐部推荐参与职业试训</span>
-  </p>
 
-  <!-- 开始卡片 -->
-  <div class="invite-card">
-    <h2>开始测评</h2>
-    <p style="margin-bottom:16px;">选择你的设备类型，即可开始七大维度科学测评</p>
+  <!-- 左栏：入口内容 -->
+  <div class="hero-left">
+    <div class="hero-rule"></div>
+    <div class="hero-badge"><span class="hero-badge-dot"></span> 与顶级电竞俱乐部深度合作 · 官方选材通道</div>
+    <h1>发现你的电竞天赋</h1>
+    <div class="hero-sub-title">ESPORTS TALENT RADAR</div>
+    <p class="hero-desc">
+      通过七大维度科学测评，精准定位你的电竞潜能。<br>
+      测评约 10 分钟 · 完全免费开始<br>
+      <span class="hero-trial-highlight">优秀者将由 VE 直接向合作俱乐部推荐参与职业试训</span>
+    </p>
 
-    <div class="device-select">
-      <button class="device-btn active" id="btn-pc" onclick="selectDevice('pc')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-        电脑端
-      </button>
-      <button class="device-btn" id="btn-mobile" onclick="selectDevice('mobile')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg>
-        手机端
-      </button>
-    </div>
+    <!-- 开始卡片 -->
+    <div class="invite-card">
+      <h2>开始测评</h2>
+      <p style="margin-bottom:16px;">选择你的设备类型，即可开始七大维度科学测评</p>
 
-    <div class="mobile-browser-tip" id="mobile-browser-tip"></div>
-
-    <button class="btn-primary" id="start-btn" onclick="startTestDirect()" style="margin-bottom:12px;">立即开始测评 →</button>
-
-    <!-- 邀请码折叠区 -->
-    <div id="code-toggle" style="text-align:center;margin-bottom:4px;">
-      <button onclick="toggleCodeInput()" style="background:none;border:none;color:var(--sub);font-size:13px;cursor:pointer;font-family:'Inter','Noto Sans SC',sans-serif;text-decoration:underline;text-underline-offset:3px;">
-        有邀请码？点击输入可解锁专属权益
-      </button>
-    </div>
-    <div id="code-area" style="display:none;margin-top:10px;">
-      <div class="input-wrap" style="margin-bottom:10px;">
-        <input type="text" id="code-input" placeholder="输入邀请码，例：VE-ABCD1234" maxlength="12" autocomplete="off" oninput="this.value=this.value.toUpperCase()">
+      <div class="device-select">
+        <button class="device-btn active" id="btn-pc" onclick="selectDevice('pc')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          电脑端
+        </button>
+        <button class="device-btn" id="btn-mobile" onclick="selectDevice('mobile')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="2" width="14" height="20" rx="2"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg>
+          手机端
+        </button>
       </div>
-      <button class="btn-secondary" id="code-btn" onclick="startTestWithCode()">使用邀请码开始 →</button>
+
+      <div class="mobile-browser-tip" id="mobile-browser-tip"></div>
+
+      <button class="btn-primary" id="start-btn" onclick="startTestDirect()" style="margin-bottom:12px;">立即开始测评 →</button>
+
+      <!-- 邀请码折叠区 -->
+      <div id="code-toggle" style="text-align:center;margin-bottom:4px;">
+        <button onclick="toggleCodeInput()" style="background:none;border:none;color:var(--sub);font-size:13px;cursor:pointer;font-family:'Inter','Noto Sans SC',sans-serif;text-decoration:underline;text-underline-offset:3px;">
+          有邀请码？点击输入可解锁专属权益
+        </button>
+      </div>
+      <div id="code-area" style="display:none;margin-top:10px;">
+        <div class="input-wrap" style="margin-bottom:10px;">
+          <input type="text" id="code-input" placeholder="输入邀请码，例：VE-ABCD1234" maxlength="12" autocomplete="off" oninput="this.value=this.value.toUpperCase()">
+        </div>
+        <button class="btn-secondary" id="code-btn" onclick="startTestWithCode()">使用邀请码开始 →</button>
+      </div>
+      <div class="error-msg" id="error-msg"></div>
     </div>
-    <div class="error-msg" id="error-msg"></div>
+
+    <!-- 统计 -->
+    <div class="stats">
+      <div class="stat-item"><div class="stat-num">7</div><div class="stat-label">测评维度</div></div>
+      <div class="stat-item"><div class="stat-num">7项</div><div class="stat-label">核心行为指标</div></div>
+      <div class="stat-item"><div class="stat-num">2轮</div><div class="stat-label">稳定性复测</div></div>
+      <div class="stat-item"><div class="stat-num">VE-M7</div><div class="stat-label">版本化评分模型</div></div>
+    </div>
   </div>
 
-  <!-- 统计 -->
-  <div class="stats">
-    <div class="stat-item"><div class="stat-num">7</div><div class="stat-label">测评维度</div></div>
-    <div class="stat-item"><div class="stat-num">7项</div><div class="stat-label">核心行为指标</div></div>
-    <div class="stat-item"><div class="stat-num">2轮</div><div class="stat-label">稳定性复测</div></div>
-    <div class="stat-item"><div class="stat-num">VE-M7</div><div class="stat-label">版本化评分模型</div></div>
+  <!-- 右栏：理论依据 -->
+  <div class="hero-right">
+    <div class="hs-eyebrow">SCIENTIFIC BASIS</div>
+    <div class="hs-heading">测评理论依据</div>
+    <p class="hs-subhead">六大核心维度均基于已发表的<br>认知神经科学与电竞表现同行评审研究</p>
+    <div class="hs-list">
+      <div class="hs-row">
+        <span class="hs-icon">⚡</span>
+        <div>
+          <div class="hs-dim-name">反应速度</div>
+          <div class="hs-finding">普通人视觉 RT 均值 ~260ms；电竞选手 ~200ms</div>
+          <div class="hs-papers">Kosinski 2008 · Luu et al. 2021</div>
+        </div>
+      </div>
+      <div class="hs-row">
+        <span class="hs-icon">🛡</span>
+        <div>
+          <div class="hs-dim-name">冲动抑制</div>
+          <div class="hs-finding">Go/No-Go 是抑制控制的经典神经心理学范式</div>
+          <div class="hs-papers">Kok et al. 1999 · Bezdjian et al. 2009</div>
+        </div>
+      </div>
+      <div class="hs-row">
+        <span class="hs-icon">🧠</span>
+        <div>
+          <div class="hs-dim-name">认知处理速度</div>
+          <div class="hs-finding">N-back 任务衡量工作记忆与流体智力</div>
+          <div class="hs-papers">Kirchner 1958 · Kokkinakis et al. 2017 PLoS ONE</div>
+        </div>
+      </div>
+      <div class="hs-row">
+        <span class="hs-icon">🎯</span>
+        <div>
+          <div class="hs-dim-name">手眼协调</div>
+          <div class="hs-finding">Fitts 定律精准描述瞄准速度–精度权衡</div>
+          <div class="hs-papers">Fitts 1954 · Valeriani et al. 2025</div>
+        </div>
+      </div>
+      <div class="hs-row">
+        <span class="hs-icon">🔋</span>
+        <div>
+          <div class="hs-dim-name">专注稳定性</div>
+          <div class="hs-finding">IIV 是注意力稳定性与认知疲劳的核心生物标志物</div>
+          <div class="hs-papers">Ortelli et al. 2022 · Nature Sci. Rep. 2021 (N=20k+)</div>
+        </div>
+      </div>
+      <div class="hs-row">
+        <span class="hs-icon">🎮</span>
+        <div>
+          <div class="hs-dim-name">电竞认知研究</div>
+          <div class="hs-finding">动作游戏对注意力与执行功能的促进效应 d=0.55</div>
+          <div class="hs-papers">Bediou et al. 2018 Psych. Bulletin · Frontiers 2025</div>
+        </div>
+      </div>
+    </div>
   </div>
+
 </section>
 
 <!-- 科学依据 -->
