@@ -102,8 +102,9 @@ function getAimEffectiveKpm(raw) {
 
 function summarizeRawData(rawData) {
   const parts = [];
-  const reactionComposite = finiteNumber(rawData?.reactionBreakdown?.compositeAvgMs);
-  const reactionCorrection = finiteNumber(rawData?.reactionBreakdown?.correctionMs);
+  const reactionDetails = calcReactionScoreDetails(rawData || {});
+  const reactionComposite = finiteNumber(rawData?.reactionBreakdown?.compositeAvgMs ?? reactionDetails.compositeAvg);
+  const reactionCorrection = finiteNumber(rawData?.reactionBreakdown?.correctionMs ?? reactionDetails.correctionMs);
   if (reactionComposite !== null) {
     parts.push(`综合RT均值${Math.round(reactionComposite)}ms${reactionCorrection !== null ? `（修正${Math.round(reactionCorrection)}ms）` : ''}`);
   } else if (Array.isArray(rawData?.reactionTimes) && rawData.reactionTimes.length) {
