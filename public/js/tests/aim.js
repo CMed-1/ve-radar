@@ -25,10 +25,18 @@ const AIM_PHASES = {
   }
 };
 
-let AIM_SENSITIVITY = 5;
+const AIM_SENSITIVITY = {
+  master: 8,
+  horizontal: 8,
+  vertical: 8
+};
 const AIM_GRID = {
   desktop: { cols: 8, rows: 5 },
   mobile: { cols: 6, rows: 4 }
+};
+const AIM_SPEED_BASE = {
+  desktop: 0.72,
+  mobile: 1.05
 };
 
 const aimOccupied = new Set();
@@ -51,7 +59,8 @@ const AIM = {
   finished: false,
   activeTargets: 0,
   _cleanLook: null,
-  _cleanFire: null
+  _cleanFire: null,
+  _cleanDesktop: null
 };
 
 const SENS = {
@@ -59,10 +68,50 @@ const SENS = {
   raf: null,
   hits: 0,
   _cleanArena: null,
-  _cleanFire: null
+  _cleanFire: null,
+  _cleanDesktop: null
 };
 
 let sensTargetTimer = null;
+
+function getAimAxisSpeed(axis) {
+  const base = isMobile ? AIM_SPEED_BASE.mobile : AIM_SPEED_BASE.desktop;
+  return base * (AIM_SENSITIVITY.master / 8) * (AIM_SENSITIVITY[axis] / 8);
+}
+
+function applyCrosshairDelta(point, rect, dx, dy) {
+  point.x = clamp(point.x + dx * getAimAxisSpeed('horizontal'), 0, rect.width);
+  point.y = clamp(point.y + dy * getAimAxisSpeed('vertical'), 0, rect.height);
+}
+
+function setCrosshairPosition(element, point) {
+  element.style.left = point.x + 'px';
+  element.style.top = point.y + 'px';
+}
+
+function requestDesktopPointerLock(element) {
+  if (isMobile || !element?.requestPointerLock) return;
+  try {
+    const maybe = element.requestPointerLock();
+    if (maybe && typeof maybe.catch === 'function') {
+      maybe.catch(() => {});
+    }
+  } catch (_) {
+    // ignore
+  }
+}
+
+function exitDesktopPointerLock() {
+  if (isMobile || !document.pointerLockElement || !document.exitPointerLock) return;
+  try {
+    const maybe = document.exitPointerLock();
+    if (maybe && typeof maybe.catch === 'function') {
+      maybe.catch(() => {});
+    }
+  } catch (_) {
+    // ignore
+  }
+}
 
 function getAimMeta() {
   return AIM_PHASES[AIM.currentPhase];
@@ -73,7 +122,7 @@ function requestAimImmersive(screenId) {
   document.body.classList.add('aim-immersive-active');
   const el = document.getElementById(screenId);
   if (el?.requestFullscreen && !document.fullscreenElement) {
-    el.requestFullscreen()
+    el.requestFullscreen({ navigationUI: 'hide' })
       .then(() => {
         if (screen.orientation?.lock) {
           return screen.orientation.lock('landscape').catch(() => {});
@@ -119,14 +168,14 @@ function syncAimUI() {
   document.getElementById('aim-result-next').textContent = meta.resultButton;
   document.getElementById('aim-result-note').style.display = 'none';
   document.getElementById('aim-result-note').textContent = '';
+  document.getElementById('aim-sens-title').textContent = isMobile ? '调整灵敏度' : '校准鼠标灵敏度';
+  document.getElementById('aim-sens-desc').textContent = isMobile
+    ? '拖动屏幕空白区域或右下射击键来移动准星。先命中 3 个目标，再开始正式测试，找到最适合你的手感。'
+    : '移动鼠标来控制准星，左键开火。先命中 3 个目标，再开始正式测试，确认水平、垂直和总体灵敏度都合适。';
 }
 
 function startAimEntry() {
-  if (isMobile) {
-    startSensitivityCal();
-  } else {
-    startAim();
-  }
+  startSensitivityCal();
 }
 
 function startAim() {
@@ -145,17 +194,14 @@ function startAim() {
 
   const arena = document.getElementById('aim-arena');
   AIM.endTime = Date.now() + AIM.duration;
-
-  if (isMobile) {
-    arena.onclick = null;
-    arena.ontouchstart = null;
-    initJoystick();
-  } else {
-    arena.onclick = handleAimArenaClick;
-    arena.ontouchstart = null;
-    document.getElementById('aim-crosshair').style.display = 'none';
-    document.getElementById('fire-btn').style.display = 'none';
-  }
+  CH.x = arena.getBoundingClientRect().width / 2;
+  CH.y = arena.getBoundingClientRect().height / 2;
+  document.getElementById('aim-crosshair').style.display = 'block';
+  updateCH();
+  arena.onclick = null;
+  arena.ontouchstart = null;
+  if (isMobile) initJoystick();
+  else initDesktopAimControls();
 
   for (let i = 0; i < 3; i += 1) {
     setTimeout(spawnOneTarget, i * 80);
@@ -266,28 +312,12 @@ function spawnOneTarget() {
     setTimeout(spawnOneTarget, 80);
   };
 
-  if (isMobile) {
-    target.addEventListener('mobileHit', onHit);
-  } else {
-    target.addEventListener('click', onHit);
-    target.addEventListener('touchstart', event => {
-      event.preventDefault();
-      onHit(event);
-    }, { passive: false });
-  }
+  target.addEventListener('aimHit', onHit);
 
   arena.appendChild(target);
   requestAnimationFrame(() => {
     requestAnimationFrame(() => target.classList.add('spawned'));
   });
-}
-
-function handleAimArenaClick(event) {
-  if (event.target !== document.getElementById('aim-arena')) return;
-  AIM.shots += 1;
-  AIM.streak = 0;
-  updateAimHUD();
-  flashAimMiss();
 }
 
 function flashAimMiss() {
@@ -492,20 +522,74 @@ function cleanupAimMobileControls() {
     AIM._cleanFire();
     AIM._cleanFire = null;
   }
+  if (AIM._cleanDesktop) {
+    AIM._cleanDesktop();
+    AIM._cleanDesktop = null;
+  }
+  exitDesktopPointerLock();
   document.getElementById('aim-crosshair').style.display = 'none';
   document.getElementById('fire-btn').style.display = 'none';
 }
 
 function updateCH() {
   const ch = document.getElementById('aim-crosshair');
-  ch.style.left = CH.x + 'px';
-  ch.style.top = CH.y + 'px';
+  setCrosshairPosition(ch, CH);
   document.querySelectorAll('.aim-target').forEach(target => {
     const tx = parseFloat(target.style.left);
     const ty = parseFloat(target.style.top);
     const radius = parseInt(target.style.width, 10) / 2;
     target.classList.toggle('aim-target-lit', Math.hypot(CH.x - tx, CH.y - ty) < radius + 8);
   });
+}
+
+function fireAtAimCrosshair(event) {
+  if (event) event.preventDefault();
+  if (AIM.finished) return;
+
+  let hit = false;
+  document.querySelectorAll('.aim-target').forEach(target => {
+    if (hit) return;
+    const tx = parseFloat(target.style.left);
+    const ty = parseFloat(target.style.top);
+    const radius = parseInt(target.style.width, 10) / 2;
+    if (Math.hypot(CH.x - tx, CH.y - ty) < radius + 6) {
+      target.dispatchEvent(new Event('aimHit'));
+      hit = true;
+    }
+  });
+
+  if (!hit) {
+    AIM.shots += 1;
+    AIM.streak = 0;
+    updateAimHUD();
+    flashAimMiss();
+  }
+}
+
+function initDesktopAimControls() {
+  const arena = document.getElementById('aim-arena');
+  const onMove = event => {
+    if (document.pointerLockElement && document.pointerLockElement !== arena) return;
+    if (!document.pointerLockElement && !arena.matches(':hover')) return;
+    const rect = arena.getBoundingClientRect();
+    applyCrosshairDelta(CH, rect, event.movementX || 0, event.movementY || 0);
+    updateCH();
+  };
+
+  const onMouseDown = event => {
+    if (event.button !== 0) return;
+    if (!document.pointerLockElement && !arena.contains(event.target)) return;
+    requestDesktopPointerLock(arena);
+    fireAtAimCrosshair(event);
+  };
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mousedown', onMouseDown, true);
+
+  AIM._cleanDesktop = () => {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mousedown', onMouseDown, true);
+  };
 }
 
 function initJoystick() {
@@ -541,9 +625,7 @@ function initJoystick() {
       const dy = touch.clientY - lastLY;
       lastLX = touch.clientX;
       lastLY = touch.clientY;
-      const speed = AIM_SENSITIVITY * 0.18;
-      CH.x = clamp(CH.x + dx * speed, 0, rect.width);
-      CH.y = clamp(CH.y + dy * speed, 0, rect.height);
+      applyCrosshairDelta(CH, rect, dx, dy);
       updateCH();
     }
   };
@@ -608,9 +690,7 @@ function initJoystick() {
       if (fireDrag) {
         const dx = touch.clientX - firePX;
         const dy = touch.clientY - firePY;
-        const speed = AIM_SENSITIVITY * 0.18;
-        CH.x = clamp(CH.x + dx * speed, 0, rect.width);
-        CH.y = clamp(CH.y + dy * speed, 0, rect.height);
+        applyCrosshairDelta(CH, rect, dx, dy);
         updateCH();
       }
       firePX = touch.clientX;
@@ -655,27 +735,7 @@ function animateCH() {
 }
 
 function fireTap(event) {
-  event.preventDefault();
-  if (AIM.finished) return;
-
-  let hit = false;
-  document.querySelectorAll('.aim-target').forEach(target => {
-    if (hit) return;
-    const tx = parseFloat(target.style.left);
-    const ty = parseFloat(target.style.top);
-    const radius = parseInt(target.style.width, 10) / 2;
-    if (Math.hypot(CH.x - tx, CH.y - ty) < radius + 6) {
-      target.dispatchEvent(new Event('mobileHit'));
-      hit = true;
-    }
-  });
-
-  if (!hit) {
-    AIM.shots += 1;
-    AIM.streak = 0;
-    updateAimHUD();
-    flashAimMiss();
-  }
+  fireAtAimCrosshair(event);
 
   const btn = document.getElementById('fire-btn');
   btn.style.background = 'rgba(239,68,68,.5)';
@@ -690,8 +750,12 @@ function startSensitivityCal() {
 
   SENS.hits = 0;
   document.getElementById('sens-hits-count').textContent = '0';
-  document.getElementById('sens-value').textContent = AIM_SENSITIVITY;
-  document.getElementById('sens-slider').value = AIM_SENSITIVITY;
+  document.getElementById('sens-master-value').textContent = AIM_SENSITIVITY.master;
+  document.getElementById('sens-horizontal-value').textContent = AIM_SENSITIVITY.horizontal;
+  document.getElementById('sens-vertical-value').textContent = AIM_SENSITIVITY.vertical;
+  document.getElementById('sens-master-slider').value = AIM_SENSITIVITY.master;
+  document.getElementById('sens-horizontal-slider').value = AIM_SENSITIVITY.horizontal;
+  document.getElementById('sens-vertical-slider').value = AIM_SENSITIVITY.vertical;
   document.getElementById('sens-start-btn').disabled = true;
   showScreen('s-aim-sensitivity');
   requestAimImmersive('s-aim-sensitivity');
@@ -703,9 +767,15 @@ function startSensitivityCal() {
 
   const ch = document.getElementById('sens-crosshair');
   ch.style.display = 'block';
-  ch.style.left = SENS.ch.x + 'px';
-  ch.style.top = SENS.ch.y + 'px';
+  updateSensitivityCrosshair();
   document.getElementById('sens-joy-wrap').style.display = 'none';
+  if (!isMobile) {
+    requestDesktopPointerLock(arena);
+    initDesktopSensitivityControls();
+    document.getElementById('fire-btn').style.display = 'none';
+    moveSensTarget();
+    return;
+  }
 
   let sensLookId = null;
   let sensLX = 0;
@@ -729,17 +799,8 @@ function startSensitivityCal() {
       const dy = touch.clientY - sensLY;
       sensLX = touch.clientX;
       sensLY = touch.clientY;
-      const speed = AIM_SENSITIVITY * 0.18;
-      SENS.ch.x = clamp(SENS.ch.x + dx * speed, 0, currentRect.width);
-      SENS.ch.y = clamp(SENS.ch.y + dy * speed, 0, currentRect.height);
-      ch.style.left = SENS.ch.x + 'px';
-      ch.style.top = SENS.ch.y + 'px';
-
-      const target = document.getElementById('sens-target');
-      if (target) {
-        const dist = Math.hypot(SENS.ch.x - parseFloat(target.style.left), SENS.ch.y - parseFloat(target.style.top));
-        target.style.boxShadow = dist < 35 ? '0 0 0 4px rgba(239,68,68,.5)' : '';
-      }
+      applyCrosshairDelta(SENS.ch, currentRect, dx, dy);
+      updateSensitivityCrosshair();
     }
   };
 
@@ -803,11 +864,8 @@ function startSensitivityCal() {
       if (sensDrag) {
         const dx = touch.clientX - sensFPX;
         const dy = touch.clientY - sensFPY;
-        const speed = AIM_SENSITIVITY * 0.18;
-        SENS.ch.x = clamp(SENS.ch.x + dx * speed, 0, currentRect.width);
-        SENS.ch.y = clamp(SENS.ch.y + dy * speed, 0, currentRect.height);
-        ch.style.left = SENS.ch.x + 'px';
-        ch.style.top = SENS.ch.y + 'px';
+        applyCrosshairDelta(SENS.ch, currentRect, dx, dy);
+        updateSensitivityCrosshair();
       }
       sensFPX = touch.clientX;
       sensFPY = touch.clientY;
@@ -840,8 +898,6 @@ function startSensitivityCal() {
     fireBtn.removeEventListener('touchcancel', onSensFireEnd);
     fireBtn.style.display = 'none';
   };
-
-  SENS.raf = requestAnimationFrame(animateSensCH);
   moveSensTarget();
 }
 
@@ -856,17 +912,53 @@ function cleanupSensitivity() {
     SENS._cleanFire();
     SENS._cleanFire = null;
   }
+  if (SENS._cleanDesktop) {
+    SENS._cleanDesktop();
+    SENS._cleanDesktop = null;
+  }
+  exitDesktopPointerLock();
   document.getElementById('sens-crosshair').style.display = 'none';
   document.getElementById('fire-btn').style.display = 'none';
 }
 
-function updateSensitivity(value) {
-  AIM_SENSITIVITY = parseInt(value, 10);
-  document.getElementById('sens-value').textContent = AIM_SENSITIVITY;
+function updateSensitivity(key, value) {
+  AIM_SENSITIVITY[key] = parseInt(value, 10) || 8;
+  document.getElementById(`sens-${key}-value`).textContent = AIM_SENSITIVITY[key];
 }
 
-function animateSensCH() {
-  SENS.raf = requestAnimationFrame(animateSensCH);
+function updateSensitivityCrosshair() {
+  const ch = document.getElementById('sens-crosshair');
+  setCrosshairPosition(ch, SENS.ch);
+  const target = document.getElementById('sens-target');
+  if (!target) return;
+  const dist = Math.hypot(SENS.ch.x - parseFloat(target.style.left), SENS.ch.y - parseFloat(target.style.top));
+  target.style.boxShadow = dist < 35 ? '0 0 0 4px rgba(239,68,68,.5)' : '';
+}
+
+function initDesktopSensitivityControls() {
+  const arena = document.getElementById('sens-arena');
+  const onMove = event => {
+    if (document.pointerLockElement && document.pointerLockElement !== arena) return;
+    if (!document.pointerLockElement && !arena.matches(':hover')) return;
+    const rect = arena.getBoundingClientRect();
+    applyCrosshairDelta(SENS.ch, rect, event.movementX || 0, event.movementY || 0);
+    updateSensitivityCrosshair();
+  };
+
+  const onMouseDown = event => {
+    if (event.button !== 0) return;
+    if (!document.pointerLockElement && !arena.contains(event.target)) return;
+    requestDesktopPointerLock(arena);
+    sensFire();
+  };
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mousedown', onMouseDown, true);
+
+  SENS._cleanDesktop = () => {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mousedown', onMouseDown, true);
+  };
 }
 
 function moveSensTarget() {
@@ -903,5 +995,11 @@ function sensFire() {
 
 function startAimFromSensitivity() {
   cleanupSensitivity();
+  rawData.aimSensitivity = {
+    master: AIM_SENSITIVITY.master,
+    horizontal: AIM_SENSITIVITY.horizontal,
+    vertical: AIM_SENSITIVITY.vertical,
+    device
+  };
   startAim();
 }

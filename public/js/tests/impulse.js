@@ -88,6 +88,8 @@ function finishGNG() {
   rawData.gngHits = GNG.hits;
   rawData.gngFalseAlarms = GNG.falseAlarms;
   rawData.gngMisses = GNG.misses;
+  rawData.gngReactionTimes = filterRTOutliers(GNG.rtTimes);
+  rawData.gngReactionTimesRaw = [...GNG.rtTimes];
 
   let score = 85 - GNG.falseAlarms * 32 - GNG.misses * 7;
   if (GNG.rtTimes.length) {
@@ -98,5 +100,6 @@ function finishGNG() {
   }
 
   scores.impulse = clamp(Math.round(score), 0, 100);
+  updateReactionScoreFromRawData();
   showScreen('s-vision-intro');
 }

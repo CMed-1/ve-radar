@@ -90,6 +90,8 @@ function finishReaction2() {
   const valid1 = rawData.reactionTimes; // 已在一测时完成过滤
   const valid2 = filterRTOutliers(RT2.times.filter(time => time !== null));
   rawData.rt2Times = valid2;
+  rawData.rt2TimesRaw = RT2.times.filter(time => time !== null);
+  updateReactionScoreFromRawData();
 
   let rtStability = 50;
   if (valid1.length >= 4 && valid2.length >= 2) {

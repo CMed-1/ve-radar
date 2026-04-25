@@ -27,6 +27,13 @@ initDB();
 app.use('/api', payRouter);
 app.use('/api', adminRouter);
 
+app.get('/api/ping', (_req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  res.json({ success: true, ts: Date.now() });
+});
+
 // ─── 邀请码验证 ───────────────────────────────────────────────
 app.post('/api/verify-code', async (req, res) => {
   try {
@@ -186,7 +193,29 @@ async function callMiniMax(scores, rating, device, rawData) {
 
   let rawSummary = '';
   if (rawData) {
-    if (rawData.reactionTimes && rawData.reactionTimes.length > 0) {
+    const reactionComposite = rawData.reactionBreakdown?.compositeAvgMs;
+    const reactionCorrection = rawData.reactionBreakdown?.correctionMs;
+    if (reactionComposite !== undefined && reactionComposite !== null) {
+      rawSummary += `\n反应速度原始数据：综合反应均值${Math.round(reactionComposite)}ms`;
+      if (rawData.reactionTimes && rawData.reactionTimes.length > 0) {
+        const avgRT = Math.round(rawData.reactionTimes.reduce((a,b)=>a+b,0)/rawData.reactionTimes.length);
+        const bestRT = Math.min(...rawData.reactionTimes);
+        rawSummary += `（一测平均${avgRT}ms，最快${bestRT}ms`;
+        if (rawData.rt2Times && rawData.rt2Times.length > 0) {
+          const rt2Avg = Math.round(rawData.rt2Times.reduce((a,b)=>a+b,0)/rawData.rt2Times.length);
+          rawSummary += `；二测平均${rt2Avg}ms`;
+        }
+        if (rawData.gngReactionTimes && rawData.gngReactionTimes.length > 0) {
+          const gngAvg = Math.round(rawData.gngReactionTimes.reduce((a,b)=>a+b,0)/rawData.gngReactionTimes.length);
+          rawSummary += `；Go平均${gngAvg}ms`;
+        }
+        rawSummary += `）`;
+      }
+      if (reactionCorrection) {
+        rawSummary += `，已扣除设备延迟修正 ${reactionCorrection}ms`;
+      }
+      rawSummary += `（普通人均值260ms，职业FPS选手均值160-180ms）`;
+    } else if (rawData.reactionTimes && rawData.reactionTimes.length > 0) {
       const avgRT = Math.round(rawData.reactionTimes.reduce((a,b)=>a+b,0)/rawData.reactionTimes.length);
       const bestRT = Math.min(...rawData.reactionTimes);
       rawSummary += `\n反应速度原始数据：平均${avgRT}ms（普通人均值260ms，职业FPS选手均值160-180ms），最快${bestRT}ms`;

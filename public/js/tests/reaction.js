@@ -94,15 +94,6 @@ function finishReaction() {
   const filtered = filterRTOutliers(valid);
   rawData.reactionTimes = filtered;
   rawData.reactionTimesRaw = valid; // 原始数据保留供调试
-  const avg = filtered.length ? filtered.reduce((sum, time) => sum + time, 0) / filtered.length : 400;
-
-  let score;
-  if (avg < 190) score = 100;
-  else if (avg < 210) score = Math.round(90 + (210 - avg) / 20 * 10);
-  else if (avg < 260) score = Math.round(50 + (260 - avg) / 50 * 40);
-  else if (avg < 350) score = Math.round(15 + (350 - avg) / 90 * 35);
-  else score = Math.max(0, Math.round(15 - (avg - 350) / 150 * 15));
-
-  scores.reaction = clamp(score, 0, 100);
+  updateReactionScoreFromRawData();
   showScreen('s-gng-intro');
 }

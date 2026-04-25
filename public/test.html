@@ -187,6 +187,21 @@
   /* ── 最终计算屏 ── */
   .calc-spinner{width:48px;height:48px;border:2px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin 1s linear infinite;margin-bottom:24px;}
   @keyframes spin{to{transform:rotate(360deg)}}
+  .preflight-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;width:100%;max-width:720px;margin:18px auto 24px;}
+  .preflight-card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:18px 16px;text-align:left;}
+  .preflight-num{font-size:28px;font-weight:800;color:var(--cyan);font-variant-numeric:tabular-nums;}
+  .preflight-label{font-size:12px;color:var(--sub);margin-top:6px;}
+  .preflight-sub{font-size:11px;color:var(--sub);margin-top:8px;line-height:1.6;}
+  #preflight-tap-zone{display:none;width:100%;max-width:720px;min-height:150px;border:2px dashed rgba(118,185,0,.55);border-radius:10px;background:rgba(118,185,0,.08);align-items:center;justify-content:center;flex-direction:column;gap:10px;touch-action:manipulation;user-select:none;margin-bottom:18px;}
+  #preflight-tap-zone.armed{display:flex;}
+  #preflight-tap-zone.hit{background:rgba(118,185,0,.18);border-color:var(--cyan);}
+  .aim-sens-panel{width:100%;max-width:520px;margin:0 auto 14px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,.03);}
+  .aim-slider-row{display:grid;grid-template-columns:86px minmax(0,1fr) 40px;align-items:center;gap:12px;margin-bottom:10px;}
+  .aim-slider-row:last-child{margin-bottom:0;}
+  .aim-slider-label{font-size:13px;color:var(--sub);white-space:nowrap;}
+  .aim-slider-value{font-size:16px;font-weight:700;color:var(--cyan);text-align:right;font-variant-numeric:tabular-nums;}
+  .aim-sens-meta{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:14px;flex-wrap:wrap;}
+  .aim-sens-hits{font-size:13px;color:var(--sub);}
 
   .mobile-device #s-aim-test,
   .mobile-device #s-aim-sensitivity{max-width:none;width:100%;}
@@ -218,12 +233,14 @@
   .mobile-device #s-aim-test.active,
   .mobile-device #s-aim-sensitivity.active{
     position:fixed;
-    inset:0;
+    left:0;
+    top:0;
     z-index:10000;
     max-width:none;
-    width:100vw;
-    height:100dvh;
+    width:var(--vvw,100vw);
+    height:var(--vvh,100dvh);
     min-height:100vh;
+    transform:translate(var(--vv-left,0px), var(--vv-top,0px));
     padding:calc(env(safe-area-inset-top,0px) + 8px) calc(env(safe-area-inset-right,0px) + 10px) calc(env(safe-area-inset-bottom,0px) + 10px) calc(env(safe-area-inset-left,0px) + 10px);
     background:radial-gradient(circle at 50% 20%,rgba(118,185,0,.08),transparent 42%),#000;
     overflow:hidden;
@@ -265,28 +282,96 @@
   .mobile-device #s-aim-test.active .aim-hud-num{font-size:17px;}
   .mobile-device #s-aim-test.active .aim-hud-label{font-size:9px;}
   .mobile-device #s-aim-sensitivity.active{
-    justify-content:flex-start;
-    gap:8px;
+    display:grid;
+    grid-template-rows:auto auto auto minmax(0,1fr) auto;
+    align-content:stretch;
+    gap:6px;
   }
   .mobile-device #s-aim-sensitivity.active .test-title{font-size:20px;margin-bottom:0;}
   .mobile-device #s-aim-sensitivity.active .test-desc{
     max-width:none;
-    margin-bottom:4px;
-    font-size:12px;
-    line-height:1.5;
+    margin-bottom:0;
+    font-size:11px;
+    line-height:1.45;
     padding-right:112px;
   }
   .mobile-device #s-aim-sensitivity.active #sens-arena{
-    flex:1 1 auto;
     width:100% !important;
-    height:auto !important;
-    min-height:0 !important;
+    height:100% !important;
+    min-height:180px !important;
     max-height:none !important;
-    margin:0 auto 6px !important;
+    margin:0 auto !important;
     border-radius:10px !important;
   }
-  .mobile-device #s-aim-sensitivity.active #sens-joy-wrap{display:none!important;}
-  .mobile-device #s-aim-sensitivity.active #sens-start-btn{padding:10px 22px;font-size:13px;}
+  .mobile-device #s-aim-sensitivity.active .aim-sens-panel{
+    max-width:none;
+    margin:0;
+    padding:10px 12px;
+    border-radius:10px;
+    background:rgba(0,0,0,.72);
+    backdrop-filter:blur(10px);
+  }
+  .mobile-device #s-aim-sensitivity.active .aim-slider-row{
+    grid-template-columns:70px minmax(0,1fr) 28px;
+    gap:8px;
+    margin-bottom:8px;
+  }
+  .mobile-device #s-aim-sensitivity.active .aim-slider-label{font-size:11px;}
+  .mobile-device #s-aim-sensitivity.active .aim-slider-value{font-size:13px;}
+  .mobile-device #s-aim-sensitivity.active .aim-sens-meta{
+    margin-top:10px;
+    gap:8px;
+  }
+  .mobile-device #s-aim-sensitivity.active .aim-sens-hits{font-size:11px;padding-right:112px;line-height:1.5;}
+  .mobile-device #s-aim-sensitivity.active #sens-start-btn{padding:10px 18px;font-size:12px;}
+  @media (max-height: 520px) {
+    .mobile-device #fire-btn{
+      width:76px;
+      height:76px;
+      right:calc(env(safe-area-inset-right,0px) + 12px);
+      bottom:calc(env(safe-area-inset-bottom,0px) + 10px);
+      font-size:12px;
+    }
+    .mobile-device #s-aim-test.active #aim-test-index{
+      margin-bottom:4px;
+      font-size:9px;
+      padding-right:96px;
+    }
+    .mobile-device #s-aim-test.active .aim-hud{
+      right:calc(env(safe-area-inset-right,0px) + 92px);
+      bottom:calc(env(safe-area-inset-bottom,0px) + 10px);
+      gap:4px;
+    }
+    .mobile-device #s-aim-test.active .aim-hud-item{
+      min-width:48px;
+      padding:5px 6px;
+    }
+    .mobile-device #s-aim-test.active .aim-hud-num{font-size:15px;}
+    .mobile-device #s-aim-sensitivity.active{
+      gap:4px;
+    }
+    .mobile-device #s-aim-sensitivity.active .test-title{font-size:18px;}
+    .mobile-device #s-aim-sensitivity.active .test-desc{
+      font-size:10px;
+      padding-right:96px;
+    }
+    .mobile-device #s-aim-sensitivity.active .aim-sens-panel{
+      padding:8px 10px;
+    }
+    .mobile-device #s-aim-sensitivity.active .aim-slider-row{
+      grid-template-columns:62px minmax(0,1fr) 26px;
+      gap:6px;
+      margin-bottom:6px;
+    }
+    .mobile-device #s-aim-sensitivity.active .aim-sens-hits{
+      font-size:10px;
+      padding-right:96px;
+    }
+    .mobile-device #s-aim-sensitivity.active #sens-start-btn{
+      padding:9px 14px;
+      font-size:11px;
+    }
+  }
 </style>
 </head>
 <body>
@@ -302,15 +387,55 @@
 <div class="top-bar">
   <div class="logo-sm">VE天赋雷达</div>
   <div class="progress-wrap"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
-  <div class="progress-text" id="progress-text">测试 1/9</div>
+  <div class="progress-text" id="progress-text">环境预检</div>
 </div>
 
 <div class="main">
 
 <!-- ═══════════════════════════════════════════
+     测前环境预检
+════════════════════════════════════════════ -->
+<div class="screen active" id="s-preflight">
+  <div class="test-index">READY CHECK</div>
+  <div class="test-title">设备与网络预检</div>
+  <div class="test-desc">正式测试前先测浏览器输入延迟和当前网络 RTT。网络只记录，反应评分只按设备延迟做有限修正，避免明显高估。</div>
+  <div class="tip-box">
+    <h4>📋 预检说明</h4>
+    <ul>
+      <li>先自动测一次网络往返延迟（RTT）</li>
+      <li>再连续点击下方区域 5 次，估算设备 / 浏览器输入延迟</li>
+      <li>该结果只用于校正反应测试误差，不会单独计分</li>
+      <li>请尽量关闭后台高负载 App，保持当前网络稳定</li>
+    </ul>
+  </div>
+  <div class="preflight-grid">
+    <div class="preflight-card">
+      <div class="preflight-num" id="preflight-device-num">—</div>
+      <div class="preflight-label">设备延迟估计</div>
+      <div class="preflight-sub" id="preflight-device-num-sub">开始后会检测浏览器输入 / 刷新延迟</div>
+    </div>
+    <div class="preflight-card">
+      <div class="preflight-num" id="preflight-network-num">—</div>
+      <div class="preflight-label">网络 RTT</div>
+      <div class="preflight-sub" id="preflight-network-num-sub">开始后会检测真实网络 RTT</div>
+    </div>
+  </div>
+  <div id="preflight-tap-zone" onpointerdown="handlePreflightTap(event)">
+    <div style="font-size:20px;font-weight:800;color:var(--cyan);">连续点击这里 5 次</div>
+    <div style="font-size:13px;color:var(--sub);">用于估算设备输入延迟</div>
+    <div style="font-size:14px;color:#fff;font-weight:700;" id="preflight-tap-count">0/5</div>
+  </div>
+  <div id="preflight-status" style="min-height:22px;font-size:13px;color:var(--sub);margin-bottom:18px;">点击下方按钮开始预检</div>
+  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+    <button class="btn-start" id="preflight-run-btn" onclick="beginPreflight()">开始环境预检</button>
+    <button class="btn-start" id="preflight-continue-btn" onclick="continueAfterPreflight()" disabled>预检完成，进入测试</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
      TEST 1: 反应速度 - 说明
 ════════════════════════════════════════════ -->
-<div class="screen active" id="s-reaction-intro">
+<div class="screen" id="s-reaction-intro">
   <div class="test-index">TEST 01 / 09</div>
   <div class="test-title">反应速度测试</div>
   <div class="test-desc">测量你从看到刺激到做出反应的神经传导时间，这是电竞最核心的生理天赋指标。</div>
@@ -446,7 +571,7 @@
   <div style="margin-top:24px;display:flex;gap:32px;justify-content:center;">
     <div style="text-align:center;"><div id="nb-hits" style="font-size:24px;font-weight:700;color:var(--cyan);font-variant-numeric:tabular-nums;">0</div><div style="font-size:11px;color:var(--sub);margin-top:4px;">正确命中</div></div>
     <div style="text-align:center;"><div id="nb-fa" style="font-size:24px;font-weight:700;color:var(--red);font-variant-numeric:tabular-nums;">0</div><div style="font-size:11px;color:var(--sub);margin-top:4px;">误触</div></div>
-    <div style="text-align:center;"><div id="nb-progress" style="font-size:24px;font-weight:700;color:var(--sub);font-variant-numeric:tabular-nums;">0/20</div><div style="font-size:11px;color:var(--sub);margin-top:4px;">进度</div></div>
+    <div style="text-align:center;"><div id="nb-progress" style="font-size:24px;font-weight:700;color:var(--sub);font-variant-numeric:tabular-nums;">0/24</div><div style="font-size:11px;color:var(--sub);margin-top:4px;">进度</div></div>
   </div>
 </div>
 
@@ -484,8 +609,8 @@
 ════════════════════════════════════════════ -->
 <div class="screen" id="s-aim-sensitivity">
   <div class="test-index" id="aim-sens-index">TEST 05 / 09 — 灵敏度校准</div>
-  <div class="test-title">调整灵敏度</div>
-  <div class="test-desc">拖动屏幕空白区域或右下射击键来移动准星。先命中 3 个目标，再开始正式测试，找到最适合你的手感。</div>
+  <div class="test-title" id="aim-sens-title">调整灵敏度</div>
+  <div class="test-desc" id="aim-sens-desc">拖动屏幕空白区域或右下射击键来移动准星。先命中 3 个目标，再开始正式测试，找到最适合你的手感。</div>
   <div id="sens-arena" style="width:100%;max-width:520px;height:220px;background:#0a0a0a;border:1px solid var(--border);border-radius:4px;position:relative;overflow:hidden;margin:0 auto 20px;touch-action:none;">
     <div id="sens-crosshair" style="position:absolute;width:36px;height:36px;pointer-events:none;z-index:10;transform:translate(-50%,-50%);display:none;">
       <div style="position:absolute;width:100%;height:2px;top:50%;left:0;transform:translateY(-50%);background:rgba(118,185,0,.9);border-radius:1px;"></div>
@@ -494,15 +619,28 @@
     </div>
     <div id="sens-target" style="position:absolute;width:54px;height:54px;border-radius:50%;background:radial-gradient(circle at 38% 38%,rgba(255,255,255,0.9) 0%,rgba(118,185,0,0.9) 20%,rgba(118,185,0,0.35) 55%,transparent 100%);border:2px solid var(--cyan);transform:translate(-50%,-50%);top:50%;left:50%;transition:transform .15s;"></div>
   </div>
-  <div style="width:100%;max-width:520px;margin:0 auto 12px;display:flex;align-items:center;gap:16px;">
-    <span style="font-size:13px;color:var(--sub);white-space:nowrap;">灵敏度</span>
-    <input type="range" id="sens-slider" min="1" max="10" value="5" style="flex:1;accent-color:var(--cyan);" oninput="updateSensitivity(this.value)">
-    <span id="sens-value" style="font-size:16px;font-weight:700;color:var(--cyan);min-width:20px;text-align:right;">5</span>
+  <div class="aim-sens-panel">
+    <div class="aim-slider-row">
+      <span class="aim-slider-label">总灵敏度</span>
+      <input type="range" id="sens-master-slider" min="2" max="18" value="8" style="width:100%;accent-color:var(--cyan);" oninput="updateSensitivity('master', this.value)">
+      <span class="aim-slider-value" id="sens-master-value">8</span>
+    </div>
+    <div class="aim-slider-row">
+      <span class="aim-slider-label">水平灵敏度</span>
+      <input type="range" id="sens-horizontal-slider" min="2" max="18" value="8" style="width:100%;accent-color:var(--cyan);" oninput="updateSensitivity('horizontal', this.value)">
+      <span class="aim-slider-value" id="sens-horizontal-value">8</span>
+    </div>
+    <div class="aim-slider-row">
+      <span class="aim-slider-label">垂直灵敏度</span>
+      <input type="range" id="sens-vertical-slider" min="2" max="18" value="8" style="width:100%;accent-color:var(--cyan);" oninput="updateSensitivity('vertical', this.value)">
+      <span class="aim-slider-value" id="sens-vertical-value">8</span>
+    </div>
+    <div class="aim-sens-meta">
+      <div class="aim-sens-hits">已命中 <span id="sens-hits-count" style="color:var(--cyan);font-weight:700;">0</span> 个目标 · 命中 3 个后可开始</div>
+      <button id="sens-start-btn" class="btn-start" onclick="startAimFromSensitivity()" disabled>确认灵敏度，开始正式测试</button>
+    </div>
   </div>
-  <div style="font-size:14px;color:var(--sub);margin-bottom:24px;">已命中 <span id="sens-hits-count" style="color:var(--cyan);font-weight:700;">0</span> 个目标 · 命中 3 个后可开始</div>
-  <!-- 摇杆放在底部 -->
-  <div id="sens-joy-wrap" style="margin:0 auto 20px;"><div id="sens-joy-zone" style="width:120px;height:120px;"></div></div>
-  <button id="sens-start-btn" class="btn-start" onclick="startAimFromSensitivity()" disabled>确认灵敏度，开始正式测试</button>
+  <div id="sens-joy-wrap" style="display:none;"></div>
 </div>
 
 <!-- ═══════════════════════════════════════════
@@ -680,6 +818,7 @@
 
 <script src="/js/score-model.js"></script>
 <script src="/js/scores.js"></script>
+<script src="/js/tests/preflight.js"></script>
 <script src="/js/tests/reaction.js"></script>
 <script src="/js/tests/impulse.js"></script>
 <script src="/js/tests/vision.js"></script>

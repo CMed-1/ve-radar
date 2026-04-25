@@ -8,7 +8,7 @@ const {
   getReferralStats,
   recalculateTestResultScores
 } = require('../db');
-const { calcRatingLabel } = require('../public/js/score-model');
+const { calcRatingLabel, calcReactionScoreDetails } = require('../public/js/score-model');
 const { clearPaymentCookie } = require('./pay');
 
 const router = express.Router();
@@ -102,7 +102,11 @@ function getAimEffectiveKpm(raw) {
 
 function summarizeRawData(rawData) {
   const parts = [];
-  if (Array.isArray(rawData?.reactionTimes) && rawData.reactionTimes.length) {
+  const reactionComposite = finiteNumber(rawData?.reactionBreakdown?.compositeAvgMs);
+  const reactionCorrection = finiteNumber(rawData?.reactionBreakdown?.correctionMs);
+  if (reactionComposite !== null) {
+    parts.push(`综合RT均值${Math.round(reactionComposite)}ms${reactionCorrection !== null ? `（修正${Math.round(reactionCorrection)}ms）` : ''}`);
+  } else if (Array.isArray(rawData?.reactionTimes) && rawData.reactionTimes.length) {
     const valid = rawData.reactionTimes.map(Number).filter(Number.isFinite);
     if (valid.length) {
       const avg = Math.round(valid.reduce((sum, time) => sum + time, 0) / valid.length);
@@ -144,7 +148,10 @@ const CALIBRATION_METRICS = [
   { key: 'scoreAim', group: '总分/七维', label: '手眼协调分', unit: '分', direction: 'higher' },
   { key: 'scoreFocus', group: '总分/七维', label: '专注稳定分', unit: '分', direction: 'higher' },
   { key: 'scoreColor', group: '总分/七维', label: '色觉感知分', unit: '分', direction: 'higher' },
+  { key: 'reactionCompositeMs', group: '反应速度', label: '综合反应均值', unit: 'ms', direction: 'lower' },
   { key: 'reactionAvgMs', group: '反应速度', label: '一测平均反应', unit: 'ms', direction: 'lower' },
+  { key: 'gngGoAvgMs', group: '反应速度', label: 'Go平均反应', unit: 'ms', direction: 'lower' },
+  { key: 'reactionCorrectionMs', group: '反应速度', label: '设备修正延迟', unit: 'ms', direction: 'lower' },
   { key: 'reactionBestMs', group: '反应速度', label: '最快反应', unit: 'ms', direction: 'lower' },
   { key: 'reactionStdMs', group: '反应速度', label: '一测反应波动', unit: 'ms', direction: 'lower' },
   { key: 'rt2AvgMs', group: '专注稳定', label: '二测平均反应', unit: 'ms', direction: 'lower' },
@@ -190,6 +197,11 @@ function extractCalibrationMetrics(row) {
   addMetric(metrics, 'scoreAim', scores.aim);
   addMetric(metrics, 'scoreFocus', scores.focus);
   addMetric(metrics, 'scoreColor', scores.color);
+
+  const reactionDetails = calcReactionScoreDetails(raw);
+  addMetric(metrics, 'reactionCompositeMs', reactionDetails.compositeAvg);
+  addMetric(metrics, 'reactionCorrectionMs', reactionDetails.correctionMs);
+  addMetric(metrics, 'gngGoAvgMs', reactionDetails.sources.gngGo?.observedAvg);
 
   const reactionTimes = Array.isArray(raw.reactionTimes) ? raw.reactionTimes.map(finiteNumber).filter(value => value !== null) : [];
   if (reactionTimes.length) {

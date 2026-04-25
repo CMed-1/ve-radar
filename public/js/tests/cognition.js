@@ -45,6 +45,7 @@ function startNback() {
   showScreen('s-nback-test');
   document.getElementById('nb-hits').textContent = '0';
   document.getElementById('nb-fa').textContent = '0';
+  document.getElementById('nb-current').textContent = '0';
   document.getElementById('nb-progress').textContent = '0/24';
   document.getElementById('nback-feedback').textContent = '';
   document.getElementById('nback-display').textContent = '';
@@ -145,6 +146,7 @@ function showNbackStimulus() {
   display.textContent = letter;
   display.style.borderColor = 'var(--border)';
   document.getElementById('nback-feedback').textContent = '';
+  document.getElementById('nb-current').textContent = String(NB.idx + 1);
   document.getElementById('nb-progress').textContent = NB.idx + 1 + '/24';
 
   NB.displayTimer = setTimeout(() => {

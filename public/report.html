@@ -780,10 +780,31 @@ function closeCriteriaOutside(e) {
 function buildCriteriaContent() {
   const raw = JSON.parse(sessionStorage.getItem('ve_rawdata') || '{}');
   const avg = VEScoreModel.calcWeightedAverage(scores, 1).toFixed(1);
+  const reactionComposite = raw.reactionBreakdown?.compositeAvgMs;
+  const reactionCorrection = raw.reactionBreakdown?.correctionMs;
 
-  const myRT = raw.reactionTimes && raw.reactionTimes.length
-    ? Math.round(raw.reactionTimes.reduce((a,b)=>a+b,0)/raw.reactionTimes.length) + 'ms'
-    : '—';
+  let myRT = '—';
+  if (reactionComposite !== undefined && reactionComposite !== null) {
+    myRT = `综合 ${Math.round(reactionComposite)}ms`;
+    const parts = [];
+    if (raw.reactionTimes && raw.reactionTimes.length) {
+      parts.push(`一测 ${Math.round(raw.reactionTimes.reduce((a,b)=>a+b,0)/raw.reactionTimes.length)}ms`);
+    }
+    if (raw.rt2Times && raw.rt2Times.length) {
+      parts.push(`二测 ${Math.round(raw.rt2Times.reduce((a,b)=>a+b,0)/raw.rt2Times.length)}ms`);
+    }
+    if (raw.gngReactionTimes && raw.gngReactionTimes.length) {
+      parts.push(`Go ${Math.round(raw.gngReactionTimes.reduce((a,b)=>a+b,0)/raw.gngReactionTimes.length)}ms`);
+    }
+    if (reactionCorrection) {
+      parts.push(`设备修正 ${reactionCorrection}ms`);
+    }
+    if (parts.length) {
+      myRT += `<br><span style="font-size:12px;color:var(--sub);">${parts.join(' / ')}</span>`;
+    }
+  } else if (raw.reactionTimes && raw.reactionTimes.length) {
+    myRT = Math.round(raw.reactionTimes.reduce((a,b)=>a+b,0)/raw.reactionTimes.length) + 'ms';
+  }
   const myFA = raw.gngFalseAlarms !== undefined ? raw.gngFalseAlarms + '次误触' : '—';
   const myVis = raw.visionCorrect !== undefined ? raw.visionCorrect + '/' + raw.visionTotal + ' 题' : '—';
   const rawKpmText = raw.aimRawKpm !== undefined ? `，原始KPM ${raw.aimRawKpm}` : '';
@@ -1311,9 +1332,21 @@ function renderDataDetail() {
   const raw = JSON.parse(sessionStorage.getItem('ve_rawdata') || '{}');
   const container = document.getElementById('data-grid');
   const items = [];
+  const reactionComposite = raw.reactionBreakdown?.compositeAvgMs;
+  const reactionCorrection = raw.reactionBreakdown?.correctionMs;
 
   // 反应速度
-  if (raw.reactionTimes && raw.reactionTimes.length) {
+  if (reactionComposite !== undefined && reactionComposite !== null) {
+    items.push({
+      num: Math.round(reactionComposite) + 'ms',
+      label: '综合反应时间',
+      bench: reactionCorrection ? `已扣设备修正 ${reactionCorrection}ms` : '融合一测 / Go / 二测'
+    });
+    if (raw.reactionTimes && raw.reactionTimes.length) {
+      const bestRT = Math.min(...raw.reactionTimes);
+      items.push({ num: bestRT + 'ms', label: '一测最快反应', bench: '职业选手均值 160-180ms' });
+    }
+  } else if (raw.reactionTimes && raw.reactionTimes.length) {
     const avgRT = Math.round(raw.reactionTimes.reduce((a,b)=>a+b,0)/raw.reactionTimes.length);
     const bestRT = Math.min(...raw.reactionTimes);
     items.push({ num: avgRT + 'ms', label: '平均反应时间', bench: '普通人均值 260ms' });
@@ -1481,8 +1514,13 @@ async function downloadPDF() {
     // 3. 生成反应时间折线图（如有数据）
     const raw = JSON.parse(sessionStorage.getItem('ve_rawdata') || '{}');
     let lineImg = null;
-    if (raw.reactionTimes && raw.reactionTimes.length > 2) {
-      lineImg = await renderLineChartImage(raw.reactionTimes);
+    const reactionSeries = raw.reactionTimes && raw.reactionTimes.length > 2
+      ? raw.reactionTimes
+      : raw.gngReactionTimes && raw.gngReactionTimes.length > 2
+        ? raw.gngReactionTimes
+        : null;
+    if (reactionSeries) {
+      lineImg = await renderLineChartImage(reactionSeries);
     }
 
     // 4. 构建 PDF HTML 内容
@@ -1649,7 +1687,26 @@ function buildPDFContent(radarImg, barImg, lineImg) {
 
   // 实测数据摘要
   const dataLines = [];
-  if (raw.reactionTimes && raw.reactionTimes.length) {
+  if (raw.reactionBreakdown?.compositeAvgMs !== undefined && raw.reactionBreakdown?.compositeAvgMs !== null) {
+    const parts = [`反应速度：综合 ${Math.round(raw.reactionBreakdown.compositeAvgMs)}ms`];
+    if (raw.reactionTimes && raw.reactionTimes.length) {
+      const avgRT = Math.round(raw.reactionTimes.reduce((a,b)=>a+b,0)/raw.reactionTimes.length);
+      const bestRT = Math.min(...raw.reactionTimes);
+      parts.push(`一测平均 ${avgRT}ms`, `最快 ${bestRT}ms`);
+    }
+    if (raw.gngReactionTimes && raw.gngReactionTimes.length) {
+      const gngAvg = Math.round(raw.gngReactionTimes.reduce((a,b)=>a+b,0)/raw.gngReactionTimes.length);
+      parts.push(`Go平均 ${gngAvg}ms`);
+    }
+    if (raw.rt2Times && raw.rt2Times.length) {
+      const rt2Avg = Math.round(raw.rt2Times.reduce((a,b)=>a+b,0)/raw.rt2Times.length);
+      parts.push(`二测平均 ${rt2Avg}ms`);
+    }
+    if (raw.reactionBreakdown.correctionMs) {
+      parts.push(`设备修正 ${raw.reactionBreakdown.correctionMs}ms`);
+    }
+    dataLines.push(parts.join(' · '));
+  } else if (raw.reactionTimes && raw.reactionTimes.length) {
     const avgRT = Math.round(raw.reactionTimes.reduce((a,b)=>a+b,0)/raw.reactionTimes.length);
     const bestRT = Math.min(...raw.reactionTimes);
     dataLines.push(`反应速度：平均 ${avgRT}ms（普通人均值 260ms）· 最快 ${bestRT}ms`);

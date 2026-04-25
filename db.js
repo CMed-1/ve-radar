@@ -2,7 +2,7 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 const { nanoid } = require('nanoid');
-const { calcWeightedAverage } = require('./public/js/score-model');
+const { calcWeightedAverage, calcReactionScoreDetails } = require('./public/js/score-model');
 
 // Render 持久化磁盘挂载在 /var/data（由 Render 负责创建该目录）
 // 本地开发回退到项目目录
@@ -153,23 +153,50 @@ function saveTestResult({ device, inviteCode, scores, rawData }) {
 }
 
 function recalculateTestResultScores() {
-  const rows = db.prepare('SELECT id, avg_score, scores FROM test_results').all();
-  const update = db.prepare('UPDATE test_results SET avg_score = ? WHERE id = ?');
+  const rows = db.prepare('SELECT id, avg_score, scores, raw_data FROM test_results').all();
+  const update = db.prepare('UPDATE test_results SET avg_score = ?, scores = ? WHERE id = ?');
   const changes = [];
 
   const run = db.transaction(() => {
     rows.forEach(row => {
       let scores = {};
+      let rawData = {};
       try {
         scores = JSON.parse(row.scores || '{}');
       } catch (_) {
         scores = {};
       }
-      const nextAvg = calcWeightedAverage(scores, 1);
+      try {
+        rawData = JSON.parse(row.raw_data || '{}');
+      } catch (_) {
+        rawData = {};
+      }
+
+      const nextScores = { ...scores };
+      const reactionDetails = calcReactionScoreDetails(rawData);
+      const hasReactionData = Object.values(reactionDetails.sources || {}).some(source => source && source.count > 0);
+      if (hasReactionData && Number.isFinite(reactionDetails.score)) {
+        nextScores.reaction = reactionDetails.score;
+      }
+
+      const nextAvg = calcWeightedAverage(nextScores, 1);
       const prevAvg = row.avg_score === null || row.avg_score === undefined ? null : Number(row.avg_score);
-      if (prevAvg === null || Math.abs(prevAvg - nextAvg) >= 0.05) {
-        update.run(nextAvg, row.id);
-        changes.push({ id: row.id, before: prevAvg, after: nextAvg });
+      const prevReaction = Number(scores.reaction);
+      const nextReaction = Number(nextScores.reaction);
+      const changedAvg = prevAvg === null || Math.abs(prevAvg - nextAvg) >= 0.05;
+      const changedReaction = !Number.isFinite(prevReaction)
+        ? Number.isFinite(nextReaction)
+        : Math.abs(prevReaction - nextReaction) >= 0.05;
+
+      if (changedAvg || changedReaction) {
+        update.run(nextAvg, JSON.stringify(nextScores), row.id);
+        changes.push({
+          id: row.id,
+          beforeAvg: prevAvg,
+          afterAvg: nextAvg,
+          beforeReaction: Number.isFinite(prevReaction) ? prevReaction : null,
+          afterReaction: Number.isFinite(nextReaction) ? nextReaction : null
+        });
       }
     });
   });
