@@ -292,6 +292,9 @@
     transition: background .2s;
   }
   .dim-card:hover { background: #1a1a1a; }
+  @media (min-width: 780px) {
+    .dim-card.color-dim { grid-column: 2; }
+  }
   .dim-icon { font-size:24px; margin-bottom:12px; }
   .dim-name {
     font-family:'Inter',sans-serif; font-size:13px; font-weight:600;
@@ -686,7 +689,7 @@
     <div class="dim-card"><div class="dim-icon">🧠</div><div class="dim-name">认知处理速度</div><div class="dim-desc">快速整合信息、制定决策、执行操作的综合认知能力。</div></div>
     <div class="dim-card"><div class="dim-icon">🛡</div><div class="dim-name">冲动抑制</div><div class="dim-desc">在高压下抑制错误操作的能力。区分FPS天才与MOBA大脑的关键维度。</div></div>
     <div class="dim-card"><div class="dim-icon">🔋</div><div class="dim-name">专注稳定性</div><div class="dim-desc">长时间保持稳定发挥、不因压力和疲劳退步的心理素质。</div></div>
-    <div class="dim-card"><div class="dim-icon">🎨</div><div class="dim-name">色觉感知</div><div class="dim-desc">快速识别目标颜色并精准辨别细微色差的能力，FPS游戏中敌我判断的隐藏优势。</div></div>
+    <div class="dim-card color-dim"><div class="dim-icon">🎨</div><div class="dim-name">色觉感知</div><div class="dim-desc">快速识别目标颜色并精准辨别细微色差的能力，FPS游戏中敌我判断的隐藏优势。</div></div>
   </div>
 </section>
 
