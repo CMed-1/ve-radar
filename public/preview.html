@@ -111,7 +111,31 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',s
   font-family:'Inter',sans-serif;
 }
 .teaser-content{filter:blur(4px);user-select:none;pointer-events:none;}
+.teaser-reveal-content{filter:none;user-select:auto;pointer-events:auto;}
 .teaser-bar{height:12px;background:#1e1e1e;border-radius:2px;margin-bottom:7px;}
+.teaser-dims{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-bottom:10px;
+}
+.teaser-dim-chip{
+  display:inline-flex;
+  align-items:center;
+  padding:8px 14px;
+  border-radius:999px;
+  border:1px solid rgba(118,185,0,0.35);
+  background:rgba(118,185,0,0.08);
+  color:var(--text);
+  font-size:13px;
+  font-weight:600;
+  letter-spacing:.5px;
+}
+.teaser-reveal-note{
+  font-size:12px;
+  color:var(--sub);
+  line-height:1.7;
+}
 .method-box{
   background:#0d0d0d;
   border:1px solid rgba(118,185,0,0.18);
@@ -445,8 +469,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',s
   <!-- 门控预览区（无邀请码且未付费时显示） -->
   <div id="gate-teasers" style="display:none;margin-top:20px;">
     <div class="teaser-section">
-      <div class="teaser-title">七维评分详情 · DIMENSION SCORES</div>
-      <div class="teaser-content teaser-scores-grid" id="teaser-scores"></div>
+      <div class="teaser-title">优势方向预览 · TOP DIMENSIONS</div>
+      <div class="teaser-reveal-content" id="teaser-top-dims"></div>
     </div>
     <div class="teaser-section">
       <div class="teaser-title">AI 天赋分析摘要 · AI REPORT</div>
@@ -589,6 +613,15 @@ function calcRating(s) {
   return VEScoreModel.calcRatingKey(s);
 }
 
+function getTopDimensions(scores, count = 2) {
+  return [...DIM_KEYS]
+    .sort((a, b) => {
+      const diff = (scores[b] || 0) - (scores[a] || 0);
+      return diff !== 0 ? diff : DIM_KEYS.indexOf(a) - DIM_KEYS.indexOf(b);
+    })
+    .slice(0, count);
+}
+
 
 async function fetchPaidAccess() {
   try {
@@ -674,7 +707,7 @@ async function startPayment(mode, channel, buttonEl) {
   }
 }
 
-function applyGate() {
+function applyGate(scores) {
   const hero = document.querySelector('.result-hero');
   hero.classList.add('gate-blur');
   if (!hero.querySelector('.hero-blur-overlay')) {
@@ -704,15 +737,15 @@ function applyGate() {
       '</div>'
     );
   }
-  // 2. 填充并显示维度分数预览（模糊）
-  const scoresEl = document.getElementById('teaser-scores');
-  if (scoresEl) {
-    scoresEl.innerHTML = DIM_KEYS.map(k => {
-      return '<div style="background:#0a0a0a;padding:8px 4px;text-align:center;border-radius:2px;">' +
-        '<div style="font-size:9px;color:#444;margin-bottom:4px;">' + DIM_NAMES[k] + '</div>' +
-        '<div style="font-size:15px;font-weight:700;color:#333;">--</div>' +
-        '</div>';
-    }).join('');
+  // 2. 公开显示最强两项维度名称，其余仍锁定
+  const topDimsEl = document.getElementById('teaser-top-dims');
+  if (topDimsEl) {
+    const topDims = getTopDimensions(scores || {}, 2);
+    topDimsEl.innerHTML =
+      '<div class="teaser-dims">' +
+      topDims.map(key => `<span class="teaser-dim-chip">${DIM_NAMES[key]}</span>`).join('') +
+      '</div>' +
+      '<div class="teaser-reveal-note">未付费预览仅公开你的两项优势方向。完整七维分数、雷达图、内部参考分位与完整分析需解锁后查看。</div>';
   }
   // 3. 显示 teaser 区域
   document.getElementById('gate-teasers').style.display = 'block';
@@ -771,7 +804,7 @@ async function init() {
   } else {
     sessionStorage.removeItem('ve_paid');
     sessionStorage.removeItem('ve_report_mode');
-    applyGate();
+    applyGate(scores);
   }
 
   // 俱乐部推荐区
