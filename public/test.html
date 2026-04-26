@@ -826,5 +826,35 @@
 <script src="/js/tests/aim.js"></script>
 <script src="/js/tests/color.js"></script>
 <script src="/js/tests/focus.js"></script>
+<script>
+// ── 管理员调试：跳过前置测试直接进入指定环节 ──────────
+(function() {
+  const skip = sessionStorage.getItem('ve_debug_skip');
+  if (!skip) return;
+  sessionStorage.removeItem('ve_debug_skip');
+
+  // 跳转表：跳到对应测试的 intro 页（用户在此页点开始）
+  const JUMP = {
+    '1': () => showScreen('s-reaction-intro'),
+    '2': () => showScreen('s-gng-intro'),
+    '3': () => showScreen('s-vision-intro'),
+    '4': () => showScreen('s-nback-intro'),
+    '5': () => openAimIntro(1),          // Aim 一测
+    '6': () => showScreen('s-grid-intro'),
+    '7': () => showScreen('s-color-intro'),
+    '8': () => openAimIntro(2),          // Aim 二测
+    '9': () => showScreen('s-reaction2-intro'),
+  };
+
+  const fn = JUMP[skip];
+  if (!fn) return;
+
+  // 隐藏预检屏、跳转
+  const preflight = document.getElementById('s-preflight');
+  if (preflight) preflight.classList.remove('active');
+  // 等所有脚本初始化完毕再跳
+  setTimeout(fn, 120);
+})();
+</script>
 </body>
 </html>
