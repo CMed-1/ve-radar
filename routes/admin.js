@@ -8,7 +8,13 @@ const {
   getReferralStats,
   recalculateTestResultScores
 } = require('../db');
-const { calcRatingLabel, calcReactionScoreDetails } = require('../public/js/score-model');
+const {
+  calcRatingLabel,
+  calcReactionScoreDetails,
+  getAimRawKpm,
+  getAimEffectiveKpm,
+  getAimRoundEffectiveKpm
+} = require('../public/js/score-model');
 const { clearPaymentCookie } = require('./pay');
 
 const router = express.Router();
@@ -74,30 +80,6 @@ function summarizeMetric(values) {
 function addMetric(metrics, key, value) {
   const num = finiteNumber(value);
   if (num !== null) metrics[key] = num;
-}
-
-function computeAimEffectiveKpm(rawKpm, accuracyPct, avgHitTime) {
-  const raw = finiteNumber(rawKpm);
-  const acc = finiteNumber(accuracyPct);
-  const time = finiteNumber(avgHitTime);
-  if (raw === null) return null;
-  const accuracy = acc === null ? 1 : Math.max(0, Math.min(1, acc / 100));
-  const responseKpm = time && time > 0 ? Math.round(60000 / time) : raw;
-  const responseAdjustedKpm = Math.round(raw * 0.45 + responseKpm * 0.55);
-  const accuracyFactor = Math.max(0.85, Math.min(1, 0.85 + accuracy * 0.15));
-  return Math.max(0, Math.min(200, Math.round(Math.min(raw, responseAdjustedKpm) * accuracyFactor)));
-}
-
-function getAimRawKpm(raw) {
-  const rawKpm = finiteNumber(raw?.aimRawKpm);
-  if (rawKpm !== null) return rawKpm;
-  return finiteNumber(raw?.aimKpm);
-}
-
-function getAimEffectiveKpm(raw) {
-  const stored = finiteNumber(raw?.aimEffectiveKpm);
-  if (stored !== null) return stored;
-  return computeAimEffectiveKpm(getAimRawKpm(raw), raw?.aimAccuracy, raw?.aimAvgTime);
 }
 
 function summarizeRawData(rawData) {
@@ -242,8 +224,8 @@ function extractCalibrationMetrics(row) {
   addMetric(metrics, 'aimAvgTime', raw.aimAvgTime);
   if (Array.isArray(raw.aimRounds) && raw.aimRounds.length >= 2) {
     const [round1, round2] = raw.aimRounds;
-    const round1Kpm = finiteNumber(round1?.effectiveKpm) ?? computeAimEffectiveKpm(finiteNumber(round1?.rawKpm) ?? round1?.kpm, round1?.accuracy, round1?.avgHitTime);
-    const round2Kpm = finiteNumber(round2?.effectiveKpm) ?? computeAimEffectiveKpm(finiteNumber(round2?.rawKpm) ?? round2?.kpm, round2?.accuracy, round2?.avgHitTime);
+    const round1Kpm = getAimRoundEffectiveKpm(round1);
+    const round2Kpm = getAimRoundEffectiveKpm(round2);
     addMetric(metrics, 'aimRound1Kpm', round1Kpm);
     addMetric(metrics, 'aimRound2Kpm', round2Kpm);
     addMetric(metrics, 'aimKpmDelta', round2Kpm !== null && round1Kpm !== null ? round2Kpm - round1Kpm : null);

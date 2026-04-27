@@ -739,8 +739,7 @@
 <script>
 const { jsPDF } = window.jspdf;
 
-const { DIM_NAMES } = VEScoreModel;
-const DIM_KEYS = ['reaction','impulse','vision','cognition','aim','focus','color'];
+const { DIM_NAMES, DIM_KEYS, DIM_BENCHMARKS, calcRoleTracks } = VEScoreModel;
 
 const GAME_MAP = {
   reaction:['FPS','射击类'],
@@ -1017,64 +1016,8 @@ const RATING_SVG = {
   below: `<svg width="90" height="110" viewBox="0 0 90 110" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="rsg-below" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6B7280"/><stop offset="100%" stop-color="#374151"/></linearGradient></defs><path d="M45,5 L85,20 L85,58 Q85,88 45,105 Q5,88 5,58 L5,20 Z" fill="rgba(107,114,128,0.1)" stroke="url(#rsg-below)" stroke-width="2.5"/><path d="M45,16 L74,28 L74,57 Q74,79 45,93 Q16,79 16,57 L16,28 Z" fill="none" stroke="rgba(107,114,128,0.2)" stroke-width="1"/><circle cx="45" cy="57" r="18" fill="none" stroke="url(#rsg-below)" stroke-width="2" opacity="0.7"/><circle cx="45" cy="57" r="10" fill="none" stroke="url(#rsg-below)" stroke-width="1.5" opacity="0.6"/><circle cx="45" cy="57" r="3" fill="url(#rsg-below)"/><line x1="27" y1="57" x2="35" y2="57" stroke="#6B7280" stroke-width="1.5"/><line x1="55" y1="57" x2="63" y2="57" stroke="#6B7280" stroke-width="1.5"/><line x1="45" y1="39" x2="45" y2="47" stroke="#6B7280" stroke-width="1.5"/><line x1="45" y1="67" x2="45" y2="75" stroke="#6B7280" stroke-width="1.5"/><text x="45" y="108" text-anchor="middle" font-size="8.5" fill="rgba(107,114,128,0.65)" font-family="Orbitron,sans-serif" letter-spacing="1">RISING</text></svg>`
 };
 
-// ── 角色方向推荐（双赛道）─────────────────────
-function weightedFit(weights, s) {
-  return Object.entries(weights).reduce((sum, [key, weight]) => sum + (s[key] || 0) * weight, 0);
-}
-
-function buildRoleReason(track, key, s, avg, spread) {
-  const { reaction=0, impulse=0, vision=0, cognition=0, aim=0, focus=0 } = s;
-  if (track === 'fps') {
-    if (key === 'duelist') return `反应速度 ${reaction} 分和手眼协调 ${aim} 分是这条线的主驱动，更适合承担先手切入、抢第一枪和近距离换血。若要把这个位置真正打稳，后续仍要继续盯住专注稳定性 ${focus} 分。`;
-    if (key === 'sniper') return `手眼协调 ${aim} 分、专注稳定性 ${focus} 分和动态视力 ${vision} 分更适合长视距守点与精准击发。这类位置更看重“慢下来后仍能稳定命中”，而不是单纯拼第一反应。`;
-    if (key === 'controller') return `认知处理 ${cognition} 分与冲动抑制 ${impulse} 分更突出，说明你对节奏控制、信息判断和技能释放时机更敏感。这类位置更吃读局与控场，不必把全部价值压在枪法上。`;
-    return `七维均分 ${avg.toFixed(1)} 分，能力离散度约 ${spread.toFixed(0)} 分，说明你的结构并不偏科。弹性位更适合你按队伍需求切换职责，而不是被单一分工锁死。`;
-  }
-  if (key === 'jungler') return `认知处理 ${cognition} 分、反应速度 ${reaction} 分和动态视力 ${vision} 分的组合，更适合打野这种需要找时机、看线权和快速切入的角色。它比纯对线位更依赖全图节奏判断。`;
-  if (key === 'adc') return `手眼协调 ${aim} 分与专注稳定性 ${focus} 分更适合持续输出位。ADC 需要在长团中保持稳定手感和安全站位，你的结构更接近这种“持续兑现”逻辑。`;
-  if (key === 'mid') return `认知处理 ${cognition} 分、动态视力 ${vision} 分和反应速度 ${reaction} 分组合较好，更适合需要快速读图、支援和切换资源判断的中路。它强调节奏判断，不只是对线压制。`;
-  if (key === 'support') return `冲动抑制 ${impulse} 分、认知处理 ${cognition} 分与专注稳定性 ${focus} 分更适合辅助位。你更像是先做正确判断、再执行协同的人，而不是盲目抢操作。`;
-  return `专注稳定性 ${focus} 分和冲动抑制 ${impulse} 分让你更适合独立对线、稳定换血和承担边路压力。上单位看重的是对线耐心和后程抗压，而不是全程高爆发。`;
-}
-
-function calcRoleTracks(s) {
-  const values = DIM_KEYS.map(k => s[k] || 0);
-  const avg = values.reduce((a, b) => a + b, 0) / values.length;
-  const spread = Math.max(...values) - Math.min(...values);
-  const pickRole = (track, list) => {
-    const ranked = list.map(item => {
-      let fit = weightedFit(item.weights, s);
-      if (item.key === 'flex') fit += spread <= 16 ? 6 : spread <= 24 ? 2 : -4;
-      return { ...item, fit: Math.round(fit), reason: buildRoleReason(track, item.key, s, avg, spread) };
-    }).sort((a, b) => b.fit - a.fit);
-    return ranked[0];
-  };
-  const fps = pickRole('fps', [
-    { key:'duelist', role:'突击手 · Duelist', icon:'⚡', gameName:'Valorant / CS2', weights:{ reaction:0.36, aim:0.34, vision:0.16, impulse:0.08, focus:0.06 } },
-    { key:'sniper', role:'狙击手 · Sniper', icon:'🎯', gameName:'Valorant / CS2', weights:{ aim:0.34, focus:0.30, reaction:0.18, vision:0.18 } },
-    { key:'controller', role:'控场 / 指挥 · Controller', icon:'🧠', gameName:'Valorant / CS2', weights:{ cognition:0.32, impulse:0.24, focus:0.18, vision:0.14, aim:0.12 } },
-    { key:'flex', role:'弹性位 · Flex', icon:'🎮', gameName:'Valorant / CS2', weights:{ reaction:0.18, aim:0.18, cognition:0.20, impulse:0.18, focus:0.18, vision:0.08 } }
-  ]);
-  const moba = pickRole('moba', [
-    { key:'jungler', role:'打野 · Jungler', icon:'🗡️', gameName:'英雄联盟 / 王者荣耀', weights:{ cognition:0.30, reaction:0.22, vision:0.18, focus:0.16, impulse:0.14 } },
-    { key:'adc', role:'ADC · 射手', icon:'🏹', gameName:'英雄联盟 / 王者荣耀', weights:{ aim:0.34, focus:0.24, reaction:0.18, impulse:0.12, vision:0.12 } },
-    { key:'mid', role:'中单 · Mid Lane', icon:'⭐', gameName:'英雄联盟 / 王者荣耀', weights:{ cognition:0.34, vision:0.22, reaction:0.18, impulse:0.16, focus:0.10 } },
-    { key:'support', role:'辅助 · Support', icon:'🛡️', gameName:'英雄联盟 / 王者荣耀', weights:{ impulse:0.34, cognition:0.26, focus:0.20, vision:0.10, reaction:0.10 } },
-    { key:'top', role:'上单 · Top Lane', icon:'⚔️', gameName:'英雄联盟 / 王者荣耀', weights:{ focus:0.28, impulse:0.24, reaction:0.20, cognition:0.18, aim:0.10 } }
-  ]);
-  const fpsFit = Math.round(weightedFit({ reaction:0.28, aim:0.28, vision:0.16, focus:0.12, color:0.08, cognition:0.05, impulse:0.03 }, s));
-  const mobaFit = Math.round(weightedFit({ cognition:0.28, impulse:0.22, focus:0.18, vision:0.12, reaction:0.10, aim:0.06, color:0.04 }, s));
-  const diff = fpsFit - mobaFit;
-  const primaryTrack = Math.abs(diff) <= 4 ? 'balanced' : (diff > 0 ? 'fps' : 'moba');
-  const profileText = primaryTrack === 'balanced'
-    ? `当前两条赛道的适配度接近，FPS 匹配度 ${fpsFit}，MOBA 匹配度 ${mobaFit}。更合理的做法不是只看单项高分，而是结合你后续复测的稳定性与真实对局偏好继续收敛方向。`
-    : `当前更建议优先尝试 ${primaryTrack === 'fps' ? 'FPS / 射击类' : 'MOBA / 策略对抗类'}。这是因为相关维度形成了更完整的能力链路：FPS 匹配度 ${fpsFit}，MOBA 匹配度 ${mobaFit}。`;
-  return { fps, moba, fpsFit, mobaFit, primaryTrack, profileText };
-}
-
 // ── 专属训练计划（针对最弱维度）──────────────────
 function calcTrainingPlan(s) {
-  const dNames = { reaction:'反应速度', impulse:'冲动抑制', vision:'动态视力', cognition:'认知处理速度', aim:'手眼协调', focus:'专注稳定性', color:'色觉感知' };
   const plans = {
     reaction:{ tool:'Human Benchmark', site:'humanbenchmark.com', task:'反应时间 + 数字点击模式', freq:'每日 10 分钟 · 持续 3 周', target:'目标：平均反应时降低 20-30ms' },
     impulse: { tool:'BrainHQ Go/No-Go', site:'brainhq.com', task:'冲动控制专项练习', freq:'每日 15 分钟 · 持续 4 周', target:'目标：误触次数稳定降至 0-1 次' },
@@ -1087,7 +1030,7 @@ function calcTrainingPlan(s) {
   const sorted = Object.entries(s).sort((a,b)=>a[1]-b[1]);
   const [wk,wv] = sorted[0];
   const [sk] = sorted[1] || [sorted[0][0]];
-  return { worstDim:dNames[wk], worstScore:wv, secDim:dNames[sk], main:plans[wk]||plans.reaction, sec:plans[sk]||plans.aim };
+  return { worstDim:DIM_NAMES[wk], worstScore:wv, secDim:DIM_NAMES[sk], main:plans[wk]||plans.reaction, sec:plans[sk]||plans.aim };
 }
 
 // ── 渲染角色卡（进阶） ─────────────────────────
@@ -1310,10 +1253,7 @@ function renderChart() {
 }
 
 // 每个维度的普通人均分（基于测试标准校准）
-const BENCHMARKS = {
-  reaction: 50, impulse: 55, vision: 47,
-  cognition: 52, aim: 47, focus: 55, color: 52
-};
+const BENCHMARKS = DIM_BENCHMARKS;
 
 function renderDimList() {
   const container = document.getElementById('dim-list');
@@ -1421,7 +1361,7 @@ function renderDataDetail() {
 
 function renderGameTags() {
   // 找出最强维度，推荐对应游戏
-  const best = DIM_KEYS.sort((a,b)=>(scores[b]||0)-(scores[a]||0)).slice(0,2);
+  const best = [...DIM_KEYS].sort((a,b)=>(scores[b]||0)-(scores[a]||0)).slice(0,2);
   const games = new Set();
   best.forEach(k => (GAME_MAP[k]||[]).forEach(g=>games.add(g)));
   const all = ['FPS','MOBA','RTS','格斗类','射击类','赛车竞速'];

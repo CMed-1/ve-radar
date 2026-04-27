@@ -10,7 +10,13 @@ const {
   recordReferralClick,
   recordReferralConversion
 } = require('./db');
-const { calcWeightedAverage, calcRatingLabel } = require('./public/js/score-model');
+const {
+  DIM_NAMES,
+  DIM_BENCHMARKS,
+  calcWeightedAverage,
+  calcRoleTracks,
+  getAimRawKpm
+} = require('./public/js/score-model');
 const { router: payRouter } = require('./routes/pay');
 const adminRouter = require('./routes/admin');
 
@@ -117,60 +123,77 @@ app.post('/api/generate-report', async (req, res) => {
   }
 });
 
-// ─── AI：角色赛道计算 ─────────────────────────────────────────
-function weightedFit(weights, scores) {
-  return Object.entries(weights).reduce((sum, [key, weight]) => sum + (scores[key] || 0) * weight, 0);
+function averageRounded(values) {
+  if (!Array.isArray(values) || !values.length) return null;
+  const nums = values.map(Number).filter(Number.isFinite);
+  if (!nums.length) return null;
+  return Math.round(nums.reduce((sum, value) => sum + value, 0) / nums.length);
 }
 
-function buildRoleReason(track, key, scores, avg, spread) {
-  const { reaction=0, impulse=0, vision=0, cognition=0, aim=0, focus=0 } = scores;
-  if (track === 'fps') {
-    if (key === 'duelist') return `反应速度 ${reaction} 分和手眼协调 ${aim} 分是主驱动，更适合先手切入与抢第一枪。若要把这个位置真正打稳，还要继续看专注稳定性 ${focus} 分是否能撑住长局。`;
-    if (key === 'sniper') return `手眼协调 ${aim} 分、专注稳定性 ${focus} 分和动态视力 ${vision} 分更适合守点、架枪和精准击发。这类位置看重的是高压下的稳定兑现。`;
-    if (key === 'controller') return `认知处理 ${cognition} 分与冲动抑制 ${impulse} 分更突出，说明你对信息判断、技能时机和节奏控制更敏感，适合承担控场与指挥型职责。`;
-    return `七维均分 ${avg.toFixed(1)} 分，能力离散度约 ${spread.toFixed(0)} 分，结构不算偏科。弹性位更适合你按队伍需求切换职责，而不是被单一分工锁死。`;
+function formatSigned(value, suffix = '') {
+  const num = Number(value) || 0;
+  return `${num > 0 ? '+' : ''}${num}${suffix}`;
+}
+
+function buildRawSummary(rawData) {
+  if (!rawData) return '';
+
+  let summary = '';
+  const reactionComposite = rawData.reactionBreakdown?.compositeAvgMs;
+  const reactionCorrection = rawData.reactionBreakdown?.correctionMs;
+  if (reactionComposite !== undefined && reactionComposite !== null) {
+    summary += `\n反应速度原始数据：综合反应均值${Math.round(reactionComposite)}ms`;
+    const reactionParts = [];
+    const reactionAvg = averageRounded(rawData.reactionTimes);
+    const reactionBest = Array.isArray(rawData.reactionTimes) && rawData.reactionTimes.length ? Math.min(...rawData.reactionTimes) : null;
+    const rt2Avg = averageRounded(rawData.rt2Times);
+    const gngAvg = averageRounded(rawData.gngReactionTimes);
+    if (reactionAvg !== null) reactionParts.push(`一测平均${reactionAvg}ms`);
+    if (reactionBest !== null) reactionParts.push(`最快${reactionBest}ms`);
+    if (rt2Avg !== null) reactionParts.push(`二测平均${rt2Avg}ms`);
+    if (gngAvg !== null) reactionParts.push(`Go平均${gngAvg}ms`);
+    if (reactionParts.length) summary += `（${reactionParts.join('，')}）`;
+    if (reactionCorrection) summary += `，已扣除设备延迟修正 ${reactionCorrection}ms`;
+    summary += `（普通人均值260ms，职业FPS选手均值160-180ms）`;
+  } else {
+    const reactionAvg = averageRounded(rawData.reactionTimes);
+    const reactionBest = Array.isArray(rawData.reactionTimes) && rawData.reactionTimes.length ? Math.min(...rawData.reactionTimes) : null;
+    if (reactionAvg !== null && reactionBest !== null) {
+      summary += `\n反应速度原始数据：平均${reactionAvg}ms（普通人均值260ms，职业FPS选手均值160-180ms），最快${reactionBest}ms`;
+    }
   }
-  if (key === 'jungler') return `认知处理 ${cognition} 分、反应速度 ${reaction} 分和动态视力 ${vision} 分的组合，更适合打野这种需要找时机、看线权和快速切入的角色。`;
-  if (key === 'adc') return `手眼协调 ${aim} 分与专注稳定性 ${focus} 分更适合持续输出位。ADC 更看重长团中的稳定手感与输出纪律。`;
-  if (key === 'mid') return `认知处理 ${cognition} 分、动态视力 ${vision} 分和反应速度 ${reaction} 分组合较好，更适合需要快速读图、支援和切换资源判断的中路。`;
-  if (key === 'support') return `冲动抑制 ${impulse} 分、认知处理 ${cognition} 分与专注稳定性 ${focus} 分更适合辅助位。你更像是先做正确判断、再执行协同的人。`;
-  return `专注稳定性 ${focus} 分和冲动抑制 ${impulse} 分让你更适合独立对线、稳定换血和承担边路压力。上单位更看重对线耐心和后程抗压。`;
-}
 
-function calcRoleTracks(scores) {
-  const keys = ['reaction','impulse','vision','cognition','aim','focus','color'];
-  const values = keys.map(key => scores[key] || 0);
-  const avg = values.reduce((a, b) => a + b, 0) / values.length;
-  const spread = Math.max(...values) - Math.min(...values);
-  const pickRole = (track, list) => {
-    const ranked = list.map(item => {
-      let fit = weightedFit(item.weights, scores);
-      if (item.key === 'flex') fit += spread <= 16 ? 6 : spread <= 24 ? 2 : -4;
-      return { ...item, fit: Math.round(fit), reason: buildRoleReason(track, item.key, scores, avg, spread) };
-    }).sort((a, b) => b.fit - a.fit);
-    return ranked[0];
-  };
-  const fps = pickRole('fps', [
-    { key:'duelist', role:'突击手 · Duelist', gameName:'Valorant / CS2', weights:{ reaction:0.36, aim:0.34, vision:0.16, impulse:0.08, focus:0.06 } },
-    { key:'sniper', role:'狙击手 · Sniper', gameName:'Valorant / CS2', weights:{ aim:0.34, focus:0.30, reaction:0.18, vision:0.18 } },
-    { key:'controller', role:'控场 / 指挥 · Controller', gameName:'Valorant / CS2', weights:{ cognition:0.32, impulse:0.24, focus:0.18, vision:0.14, aim:0.12 } },
-    { key:'flex', role:'弹性位 · Flex', gameName:'Valorant / CS2', weights:{ reaction:0.18, aim:0.18, cognition:0.20, impulse:0.18, focus:0.18, vision:0.08 } }
-  ]);
-  const moba = pickRole('moba', [
-    { key:'jungler', role:'打野 · Jungler', gameName:'英雄联盟 / 王者荣耀', weights:{ cognition:0.30, reaction:0.22, vision:0.18, focus:0.16, impulse:0.14 } },
-    { key:'adc', role:'ADC · 射手', gameName:'英雄联盟 / 王者荣耀', weights:{ aim:0.34, focus:0.24, reaction:0.18, impulse:0.12, vision:0.12 } },
-    { key:'mid', role:'中单 · Mid Lane', gameName:'英雄联盟 / 王者荣耀', weights:{ cognition:0.34, vision:0.22, reaction:0.18, impulse:0.16, focus:0.10 } },
-    { key:'support', role:'辅助 · Support', gameName:'英雄联盟 / 王者荣耀', weights:{ impulse:0.34, cognition:0.26, focus:0.20, vision:0.10, reaction:0.10 } },
-    { key:'top', role:'上单 · Top Lane', gameName:'英雄联盟 / 王者荣耀', weights:{ focus:0.28, impulse:0.24, reaction:0.20, cognition:0.18, aim:0.10 } }
-  ]);
-  const fpsFit = Math.round(weightedFit({ reaction:0.28, aim:0.28, vision:0.16, focus:0.12, color:0.08, cognition:0.05, impulse:0.03 }, scores));
-  const mobaFit = Math.round(weightedFit({ cognition:0.28, impulse:0.22, focus:0.18, vision:0.12, reaction:0.10, aim:0.06, color:0.04 }, scores));
-  const diff = fpsFit - mobaFit;
-  const primaryTrack = Math.abs(diff) <= 4 ? 'balanced' : (diff > 0 ? 'fps' : 'moba');
-  const profileText = primaryTrack === 'balanced'
-    ? `当前两条赛道的适配度接近，FPS 匹配度 ${fpsFit}，MOBA 匹配度 ${mobaFit}。更合理的做法不是只看单项高分，而是继续结合复测稳定性和真实对局反馈收敛方向。`
-    : `当前更建议优先尝试 ${primaryTrack === 'fps' ? 'FPS / 射击类' : 'MOBA / 策略对抗类'}。原因是相关维度形成了更完整的能力链路：FPS 匹配度 ${fpsFit}，MOBA 匹配度 ${mobaFit}。`;
-  return { fps, moba, fpsFit, mobaFit, primaryTrack, profileText };
+  if (Array.isArray(rawData.aimRounds) && rawData.aimRounds.length === 2) {
+    const [r1, r2] = rawData.aimRounds;
+    const r1RawKpm = r1?.rawKpm !== undefined ? `，原始KPM=${r1.rawKpm}` : '';
+    const r2RawKpm = r2?.rawKpm !== undefined ? `，原始KPM=${r2.rawKpm}` : '';
+    summary += `\nAim双轮原始数据：第一轮 命中${r1.hits}个、命中率${r1.accuracy}%、有效KPM=${r1.kpm}${r1RawKpm}、平均命中时间${r1.avgHitTime}ms；第二轮 命中${r2.hits}个、命中率${r2.accuracy}%、有效KPM=${r2.kpm}${r2RawKpm}、平均命中时间${r2.avgHitTime}ms`;
+    if (rawData.aimConsistency) {
+      summary += `；前后差值：命中率${formatSigned(rawData.aimConsistency.accuracyDelta, '%')}，有效KPM${formatSigned(rawData.aimConsistency.kpmDelta)}，平均命中时间${formatSigned(rawData.aimConsistency.avgTimeDelta, 'ms')}`;
+    }
+  } else if (rawData.aimHits !== undefined) {
+    const rawKpm = getAimRawKpm(rawData);
+    const rawKpmText = rawKpm !== null ? `，原始KPM=${rawKpm}` : '';
+    summary += `\nAim测试原始数据：命中${rawData.aimHits}个，命中率${rawData.aimAccuracy}%，有效KPM=${rawData.aimKpm}${rawKpmText}（内部参考有效KPM≈44），平均命中时间${rawData.aimAvgTime}ms`;
+  }
+
+  if (rawData.visionCorrect !== undefined) {
+    summary += `\n动态视力：${rawData.visionCorrect}/${rawData.visionTotal}题正确`;
+  }
+  if (rawData.gngFalseAlarms !== undefined) {
+    summary += `\n冲动抑制：误触${rawData.gngFalseAlarms}次，漏触${rawData.gngMisses}次`;
+  }
+  if (rawData.focusBreakdown) {
+    summary += `\n专注稳定性拆解：RT稳定性 ${rawData.focusBreakdown.rtStability} 分，Aim前后稳定性 ${rawData.focusBreakdown.aimConsistency} 分`;
+  }
+  if (rawData.colorP1Hits !== undefined) {
+    const p1Acc = rawData.colorP1Total ? Math.round(rawData.colorP1Hits / rawData.colorP1Total * 100) : 0;
+    summary += `\n色觉感知：红色识别准确率${p1Acc}%`;
+    if (rawData.colorP1AvgRT) summary += `，平均反应时${rawData.colorP1AvgRT}ms（优秀基准<350ms）`;
+    if (rawData.colorP2Correct !== undefined) summary += `，色差辨别${rawData.colorP2Correct}/${rawData.colorP2Total}正确`;
+  }
+
+  return summary;
 }
 
 // ─── MiniMax API 调用（进阶版）───────────────────────────────
@@ -181,76 +204,14 @@ async function callMiniMax(scores, rating, device, rawData) {
   const worst = sorted[sorted.length - 1];
   const second_best = sorted[1];
 
-  const dimNames = {
-    reaction:'反应速度', impulse:'冲动抑制',
-    vision:'动态视力', cognition:'认知处理速度',
-    aim:'手眼协调', focus:'专注稳定性', color:'色觉感知'
-  };
   const roleTracks = calcRoleTracks(scores);
-  const benchmarks = { reaction:50, impulse:55, vision:47, cognition:52, aim:47, focus:55, color:52 };
-  const aboveAvg = Object.entries(scores).filter(([k,v]) => v > benchmarks[k]).map(([k,v]) => `${dimNames[k]}(${v}分,均值${benchmarks[k]})`);
-  const belowAvg = Object.entries(scores).filter(([k,v]) => v <= benchmarks[k]).map(([k,v]) => `${dimNames[k]}(${v}分,均值${benchmarks[k]})`);
-
-  let rawSummary = '';
-  if (rawData) {
-    const reactionComposite = rawData.reactionBreakdown?.compositeAvgMs;
-    const reactionCorrection = rawData.reactionBreakdown?.correctionMs;
-    if (reactionComposite !== undefined && reactionComposite !== null) {
-      rawSummary += `\n反应速度原始数据：综合反应均值${Math.round(reactionComposite)}ms`;
-      if (rawData.reactionTimes && rawData.reactionTimes.length > 0) {
-        const avgRT = Math.round(rawData.reactionTimes.reduce((a,b)=>a+b,0)/rawData.reactionTimes.length);
-        const bestRT = Math.min(...rawData.reactionTimes);
-        rawSummary += `（一测平均${avgRT}ms，最快${bestRT}ms`;
-        if (rawData.rt2Times && rawData.rt2Times.length > 0) {
-          const rt2Avg = Math.round(rawData.rt2Times.reduce((a,b)=>a+b,0)/rawData.rt2Times.length);
-          rawSummary += `；二测平均${rt2Avg}ms`;
-        }
-        if (rawData.gngReactionTimes && rawData.gngReactionTimes.length > 0) {
-          const gngAvg = Math.round(rawData.gngReactionTimes.reduce((a,b)=>a+b,0)/rawData.gngReactionTimes.length);
-          rawSummary += `；Go平均${gngAvg}ms`;
-        }
-        rawSummary += `）`;
-      }
-      if (reactionCorrection) {
-        rawSummary += `，已扣除设备延迟修正 ${reactionCorrection}ms`;
-      }
-      rawSummary += `（普通人均值260ms，职业FPS选手均值160-180ms）`;
-    } else if (rawData.reactionTimes && rawData.reactionTimes.length > 0) {
-      const avgRT = Math.round(rawData.reactionTimes.reduce((a,b)=>a+b,0)/rawData.reactionTimes.length);
-      const bestRT = Math.min(...rawData.reactionTimes);
-      rawSummary += `\n反应速度原始数据：平均${avgRT}ms（普通人均值260ms，职业FPS选手均值160-180ms），最快${bestRT}ms`;
-    }
-    if (rawData.aimRounds && rawData.aimRounds.length === 2) {
-      const [r1, r2] = rawData.aimRounds;
-      const r1RawKpm = r1.rawKpm !== undefined ? `，原始KPM=${r1.rawKpm}` : '';
-      const r2RawKpm = r2.rawKpm !== undefined ? `，原始KPM=${r2.rawKpm}` : '';
-      rawSummary += `\nAim双轮原始数据：第一轮 命中${r1.hits}个、命中率${r1.accuracy}%、有效KPM=${r1.kpm}${r1RawKpm}、平均命中时间${r1.avgHitTime}ms；第二轮 命中${r2.hits}个、命中率${r2.accuracy}%、有效KPM=${r2.kpm}${r2RawKpm}、平均命中时间${r2.avgHitTime}ms`;
-      if (rawData.aimConsistency) {
-        const accDelta = rawData.aimConsistency.accuracyDelta || 0;
-        const kpmDelta = rawData.aimConsistency.kpmDelta || 0;
-        const timeDelta = rawData.aimConsistency.avgTimeDelta || 0;
-        rawSummary += `；前后差值：命中率${accDelta > 0 ? '+' : ''}${accDelta}%，有效KPM${kpmDelta > 0 ? '+' : ''}${kpmDelta}，平均命中时间${timeDelta > 0 ? '+' : ''}${timeDelta}ms`;
-      }
-    } else if (rawData.aimHits !== undefined) {
-      const rawKpmText = rawData.aimRawKpm !== undefined ? `，原始KPM=${rawData.aimRawKpm}` : '';
-      rawSummary += `\nAim测试原始数据：命中${rawData.aimHits}个，命中率${rawData.aimAccuracy}%，有效KPM=${rawData.aimKpm}${rawKpmText}（内部参考有效KPM≈44），平均命中时间${rawData.aimAvgTime}ms`;
-    }
-    if (rawData.visionCorrect !== undefined) {
-      rawSummary += `\n动态视力：${rawData.visionCorrect}/${rawData.visionTotal}题正确`;
-    }
-    if (rawData.gngFalseAlarms !== undefined) {
-      rawSummary += `\n冲动抑制：误触${rawData.gngFalseAlarms}次，漏触${rawData.gngMisses}次`;
-    }
-    if (rawData.focusBreakdown) {
-      rawSummary += `\n专注稳定性拆解：RT稳定性 ${rawData.focusBreakdown.rtStability} 分，Aim前后稳定性 ${rawData.focusBreakdown.aimConsistency} 分`;
-    }
-    if (rawData.colorP1Hits !== undefined) {
-      const p1Acc = rawData.colorP1Total ? Math.round(rawData.colorP1Hits / rawData.colorP1Total * 100) : 0;
-      rawSummary += `\n色觉感知：红色识别准确率${p1Acc}%`;
-      if (rawData.colorP1AvgRT) rawSummary += `，平均反应时${rawData.colorP1AvgRT}ms（优秀基准<350ms）`;
-      if (rawData.colorP2Correct !== undefined) rawSummary += `，色差辨别${rawData.colorP2Correct}/${rawData.colorP2Total}正确`;
-    }
-  }
+  const aboveAvg = Object.entries(scores)
+    .filter(([key, value]) => value > DIM_BENCHMARKS[key])
+    .map(([key, value]) => `${DIM_NAMES[key]}(${value}分,均值${DIM_BENCHMARKS[key]})`);
+  const belowAvg = Object.entries(scores)
+    .filter(([key, value]) => value <= DIM_BENCHMARKS[key])
+    .map(([key, value]) => `${DIM_NAMES[key]}(${value}分,均值${DIM_BENCHMARKS[key]})`);
+  const rawSummary = buildRawSummary(rawData);
 
   const gameType = roleTracks.primaryTrack === 'balanced'
     ? '双赛道均可尝试（需继续看复测表现）'
@@ -263,19 +224,19 @@ async function callMiniMax(scores, rating, device, rawData) {
 
 【本次测评者的具体数据】
 七维得分（满分100）：
-- 反应速度：${scores.reaction}分（普通人均分50）
-- 冲动抑制：${scores.impulse}分（普通人均分55）
-- 动态视力：${scores.vision}分（普通人均分47）
-- 认知处理速度：${scores.cognition}分（普通人均分52）
-- 手眼协调：${scores.aim}分（普通人均分47）
-- 专注稳定性：${scores.focus}分（普通人均分55）
-- 色觉感知：${scores.color !== undefined ? scores.color : '未测'}分（普通人均分52）
+- 反应速度：${scores.reaction}分（普通人均分${DIM_BENCHMARKS.reaction}）
+- 冲动抑制：${scores.impulse}分（普通人均分${DIM_BENCHMARKS.impulse}）
+- 动态视力：${scores.vision}分（普通人均分${DIM_BENCHMARKS.vision}）
+- 认知处理速度：${scores.cognition}分（普通人均分${DIM_BENCHMARKS.cognition}）
+- 手眼协调：${scores.aim}分（普通人均分${DIM_BENCHMARKS.aim}）
+- 专注稳定性：${scores.focus}分（普通人均分${DIM_BENCHMARKS.focus}）
+- 色觉感知：${scores.color !== undefined ? scores.color : '未测'}分（普通人均分${DIM_BENCHMARKS.color}）
 
 综合加权分：${avg}分
 综合评级：【${rating}】
-最强维度：${dimNames[best[0]]}（${best[1]}分，超过普通人${best[1]-benchmarks[best[0]]}分）
-第二强：${dimNames[second_best[0]]}（${second_best[1]}分）
-最弱维度：${dimNames[worst[0]]}（${worst[1]}分）
+最强维度：${DIM_NAMES[best[0]]}（${best[1]}分，超过普通人${best[1] - DIM_BENCHMARKS[best[0]]}分）
+第二强：${DIM_NAMES[second_best[0]]}（${second_best[1]}分）
+最弱维度：${DIM_NAMES[worst[0]]}（${worst[1]}分）
 超过均值的维度：${aboveAvg.length > 0 ? aboveAvg.join('、') : '暂无'}
 低于均值的维度：${belowAvg.length > 0 ? belowAvg.join('、') : '全部超过均值'}
 ${rawSummary}
@@ -343,10 +304,6 @@ ${rawSummary}
 
 // ─── MiniMax 基础版报告（约150字，结构化3段）──────────────────
 async function callMiniMaxBasic(scores, rating, rawData) {
-  const dimNames = {
-    reaction:'反应速度', impulse:'冲动抑制', vision:'动态视力',
-    cognition:'认知处理速度', aim:'手眼协调', focus:'专注稳定性', color:'色觉感知'
-  };
   const avg = calcWeightedAverage(scores, 1).toFixed(1);
   const sorted = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
   const best = sorted[0];
@@ -363,9 +320,9 @@ async function callMiniMaxBasic(scores, rating, rawData) {
 
 数据：
 - 综合加权分：${avg}分，评级：${rating}
-- 最强维度：${dimNames[best[0]]}（${best[1]}分）
-- 最弱维度：${dimNames[worst[0]]}（${worst[1]}分）
-- 各维度：${Object.entries(scores).map(([k,v])=>`${dimNames[k]}${v}`).join('、')}
+- 最强维度：${DIM_NAMES[best[0]]}（${best[1]}分）
+- 最弱维度：${DIM_NAMES[worst[0]]}（${worst[1]}分）
+- 各维度：${Object.entries(scores).map(([k,v])=>`${DIM_NAMES[k]}${v}`).join('、')}
 - FPS建议：${roleTracks.fps.role}
 - MOBA建议：${roleTracks.moba.role}
 
@@ -400,14 +357,13 @@ function fallbackReport(scores, rating, mode = 'advanced') {
   const best = sorted[0];
   const worst = sorted[sorted.length-1];
   const roleTracks = calcRoleTracks(scores);
-  const dimNames = { reaction:'反应速度', impulse:'冲动抑制', vision:'动态视力', cognition:'认知处理速度', aim:'手眼协调', focus:'专注稳定性', color:'色觉感知' };
 
   if (mode === 'basic') {
-    return `综合评分 ${avg} 分，评级「${rating}」，整体表现${parseFloat(avg)>=70?'高于大多数测评者':'处于中等水平'}。\n\n最突出的能力是${dimNames[best[0]]}（${best[1]}分），而${dimNames[worst[0]]}（${worst[1]}分）仍是当前最需要补强的限制项。\n\n当前更建议优先尝试${roleTracks.primaryTrack === 'moba' ? ' MOBA / 策略对抗类' : roleTracks.primaryTrack === 'fps' ? ' FPS / 射击类' : '双赛道并行观察'}；若玩 FPS，更适合${roleTracks.fps.role.split(' · ')[0]}，若玩 MOBA，更适合${roleTracks.moba.role.split(' · ')[0]}。`;
+    return `综合评分 ${avg} 分，评级「${rating}」，整体表现${parseFloat(avg)>=70?'高于大多数测评者':'处于中等水平'}。\n\n最突出的能力是${DIM_NAMES[best[0]]}（${best[1]}分），而${DIM_NAMES[worst[0]]}（${worst[1]}分）仍是当前最需要补强的限制项。\n\n当前更建议优先尝试${roleTracks.primaryTrack === 'moba' ? ' MOBA / 策略对抗类' : roleTracks.primaryTrack === 'fps' ? ' FPS / 射击类' : '双赛道并行观察'}；若玩 FPS，更适合${roleTracks.fps.role.split(' · ')[0]}，若玩 MOBA，更适合${roleTracks.moba.role.split(' · ')[0]}。`;
   }
 
   const fitGame = roleTracks.primaryTrack === 'moba' ? 'MOBA/策略对抗类' : roleTracks.primaryTrack === 'fps' ? 'FPS/射击类' : '双赛道并行';
-  return `综合评分 ${avg} 分，评级「${rating}」。从七维数据看，你当前的能力结构${roleTracks.primaryTrack === 'balanced' ? '相对均衡' : roleTracks.primaryTrack === 'fps' ? '偏操作输出型' : '偏决策控制型'}：${dimNames[best[0]]}达到 ${best[1]} 分，是整组数据里最突出的单项，而${dimNames[worst[0]]}只有 ${worst[1]} 分，说明真正限制上限的环节依然存在。\n\n在操作链路上，反应速度 ${scores.reaction} 分、手眼协调 ${scores.aim} 分、动态视力 ${scores.vision} 分共同决定了你处理瞬时信息并完成输出的效率；在决策与控制层面，认知处理 ${scores.cognition} 分、冲动抑制 ${scores.impulse} 分和专注稳定性 ${scores.focus} 分则更接近"后续能否稳定兑现"的上限。\n\n从双赛道匹配看，若玩 FPS，你更适合${roleTracks.fps.role}，匹配度 ${roleTracks.fps.fit}；若玩 MOBA，你更适合${roleTracks.moba.role}，匹配度 ${roleTracks.moba.fit}。当前更建议优先发展 ${fitGame}，因为这条线上的相关维度已经形成了更完整的能力链路。\n\n训练上建议先把${dimNames[worst[0]]}作为第一优先级，每天 15-20 分钟做单项训练，再用 10 分钟做与最强维度的组合练习，避免只补短板导致整体节奏断裂。连续训练 3-4 周后，重点看失误率、稳定性和第二轮表现是否改善。\n\n这组数据说明你已经有比较清晰的能力轮廓，但离"稳定兑现"还有优化空间。后续最关键的不是继续堆时长，而是围绕最弱项做更精确的训练闭环。`;
+  return `综合评分 ${avg} 分，评级「${rating}」。从七维数据看，你当前的能力结构${roleTracks.primaryTrack === 'balanced' ? '相对均衡' : roleTracks.primaryTrack === 'fps' ? '偏操作输出型' : '偏决策控制型'}：${DIM_NAMES[best[0]]}达到 ${best[1]} 分，是整组数据里最突出的单项，而${DIM_NAMES[worst[0]]}只有 ${worst[1]} 分，说明真正限制上限的环节依然存在。\n\n在操作链路上，反应速度 ${scores.reaction} 分、手眼协调 ${scores.aim} 分、动态视力 ${scores.vision} 分共同决定了你处理瞬时信息并完成输出的效率；在决策与控制层面，认知处理 ${scores.cognition} 分、冲动抑制 ${scores.impulse} 分和专注稳定性 ${scores.focus} 分则更接近"后续能否稳定兑现"的上限。\n\n从双赛道匹配看，若玩 FPS，你更适合${roleTracks.fps.role}，匹配度 ${roleTracks.fps.fit}；若玩 MOBA，你更适合${roleTracks.moba.role}，匹配度 ${roleTracks.moba.fit}。当前更建议优先发展 ${fitGame}，因为这条线上的相关维度已经形成了更完整的能力链路。\n\n训练上建议先把${DIM_NAMES[worst[0]]}作为第一优先级，每天 15-20 分钟做单项训练，再用 10 分钟做与最强维度的组合练习，避免只补短板导致整体节奏断裂。连续训练 3-4 周后，重点看失误率、稳定性和第二轮表现是否改善。\n\n这组数据说明你已经有比较清晰的能力轮廓，但离"稳定兑现"还有优化空间。后续最关键的不是继续堆时长，而是围绕最弱项做更精确的训练闭环。`;
 }
 
 app.listen(PORT, () => {
