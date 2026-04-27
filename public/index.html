@@ -371,6 +371,32 @@
   @media(max-width:560px) { .science-grid { grid-template-columns:1fr; } }
 
   /* ── Footer ── */
+  .service-card {
+    max-width: 960px;
+    margin: 0 auto 28px;
+    padding: 16px 20px;
+    border: 1px solid var(--border);
+    border-left: 3px solid #3a3a3a;
+    border-radius: 4px;
+    background: #0b0b0b;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .service-title {
+    font-size: 11px;
+    color: #666;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-family: 'Orbitron', sans-serif;
+  }
+  .service-text {
+    font-size: 13px;
+    color: var(--sub);
+    line-height: 1.7;
+    text-align: right;
+  }
   footer {
     text-align:center; padding:32px; color:var(--sub); font-size:13px;
     border-top:1px solid var(--border); position:relative; z-index:1;
@@ -418,6 +444,8 @@
     nav { padding:12px 20px; }
     .nav-links { display:none; }
     .partner-banner { flex-direction:column; padding:28px; gap:24px; }
+    .service-card { flex-direction: column; align-items: flex-start; }
+    .service-text { text-align: left; }
     .stats { flex-wrap:wrap; }
     .stat-item {
       flex:0 0 50%; border-radius:0 !important;
@@ -740,6 +768,13 @@
     </div>
   </div>
 </section>
+
+<div style="padding:0 24px;position:relative;z-index:1;">
+  <div class="service-card">
+    <div class="service-title">Support Contact</div>
+    <div class="service-text">VE电竞客服：QQ 2095338526</div>
+  </div>
+</div>
 
 <footer>
   © 2024 VE天赋雷达 · ESPORTS TALENT RADAR · 保留所有权利
