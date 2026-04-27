@@ -25,18 +25,18 @@ const PORT = process.env.PORT || 3000;
 const MINIMAX_API_URL = 'https://api.minimaxi.com/anthropic/v1/messages';
 const MINIMAX_REPORT_CONFIG = Object.freeze({
   advanced: {
-    model: process.env.MINIMAX_MODEL_ADVANCED || 'MiniMax-M2.7',
-    maxTokens: 1600,
+    model: process.env.MINIMAX_MODEL_ADVANCED || 'MiniMax-M2.7-highspeed',
+    maxTokens: 1400,
     temperature: 0.45,
     topP: 0.85,
-    timeoutMs: 35000
+    timeoutMs: 60000
   },
   basic: {
-    model: process.env.MINIMAX_MODEL_BASIC || 'MiniMax-M2.7',
-    maxTokens: 420,
+    model: process.env.MINIMAX_MODEL_BASIC || 'MiniMax-M2.7-highspeed',
+    maxTokens: 360,
     temperature: 0.3,
     topP: 0.8,
-    timeoutMs: 25000
+    timeoutMs: 30000
   }
 });
 
