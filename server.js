@@ -25,14 +25,14 @@ const PORT = process.env.PORT || 3000;
 const MINIMAX_API_URL = 'https://api.minimaxi.com/anthropic/v1/messages';
 const MINIMAX_REPORT_CONFIG = Object.freeze({
   advanced: {
-    model: process.env.MINIMAX_MODEL_ADVANCED || 'MiniMax-M2.7-highspeed',
+    model: process.env.MINIMAX_MODEL_ADVANCED || 'MiniMax-M2.7',
     maxTokens: 1400,
     temperature: 0.45,
     topP: 0.85,
     timeoutMs: 60000
   },
   basic: {
-    model: process.env.MINIMAX_MODEL_BASIC || 'MiniMax-M2.7-highspeed',
+    model: process.env.MINIMAX_MODEL_BASIC || 'MiniMax-M2.7',
     maxTokens: 360,
     temperature: 0.3,
     topP: 0.8,
@@ -132,6 +132,13 @@ app.post('/api/test-result', (req, res) => {
 // ─── 生成 AI 报告文字 ─────────────────────────────────────────
 app.post('/api/generate-report', async (req, res) => {
   const { scores, rating, device, rawData, mode = 'advanced' } = req.body;
+  if (!hasValidScorePayload(scores) || typeof rating !== 'string' || !rating.trim()) {
+    return res.status(400).json({
+      success: false,
+      message: 'invalid_report_request',
+      source: 'invalid-request'
+    });
+  }
 
   try {
     const result = await callMiniMaxReport({ scores, rating, device, rawData, mode });
@@ -152,9 +159,10 @@ app.post('/api/generate-report', async (req, res) => {
   } catch (err) {
     const fallbackReason = toFallbackReason(err);
     console.warn('[generate-report] fallback', { mode, fallbackReason });
+    const text = buildSafeFallbackText(scores, rating, mode);
     res.json({
       success: true,
-      text: fallbackReport(scores, rating, mode),
+      text,
       source: 'fallback',
       model: null,
       requestId: null,
@@ -168,6 +176,24 @@ function averageRounded(values) {
   const nums = values.map(Number).filter(Number.isFinite);
   if (!nums.length) return null;
   return Math.round(nums.reduce((sum, value) => sum + value, 0) / nums.length);
+}
+
+function hasValidScorePayload(scores) {
+  return Boolean(scores)
+    && typeof scores === 'object'
+    && Object.keys(DIM_NAMES).every((key) => Number.isFinite(Number(scores[key])));
+}
+
+function buildSafeFallbackText(scores, rating, mode) {
+  if (!hasValidScorePayload(scores) || typeof rating !== 'string' || !rating.trim()) {
+    return '报告生成暂时不可用，请稍后重试。';
+  }
+  try {
+    return fallbackReport(scores, rating, mode);
+  } catch (fallbackErr) {
+    console.error('[generate-report] fallback text failed', fallbackErr.message);
+    return '报告生成暂时不可用，请稍后重试。';
+  }
 }
 
 function formatSigned(value, suffix = '') {
