@@ -1400,12 +1400,25 @@ async function generateReport() {
     });
     const data = await res.json();
     if (data.success && data.text) {
+      window.__veReportMeta = {
+        source: data.source || 'unknown',
+        model: data.model || null,
+        requestId: data.requestId || null,
+        fallbackReason: data.fallbackReason || null
+      };
+      if (data.source === 'fallback') {
+        console.warn('[VE report] fallback active', window.__veReportMeta);
+      } else {
+        console.info('[VE report] minimax active', window.__veReportMeta);
+      }
       reportTextContent = data.text;
       typewriterEffect(data.text);
     } else {
+      window.__veReportMeta = { source: 'local-fallback', model: null, requestId: null, fallbackReason: 'empty_response' };
       document.getElementById('report-text').textContent = fallbackText();
     }
   } catch(e) {
+    window.__veReportMeta = { source: 'local-fallback', model: null, requestId: null, fallbackReason: e?.message || 'fetch_error' };
     document.getElementById('report-text').textContent = fallbackText();
   } finally {
     document.getElementById('loading-screen').style.display = 'none';

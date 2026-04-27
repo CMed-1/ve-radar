@@ -22,12 +22,33 @@ const adminRouter = require('./routes/admin');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const MINIMAX_API_URL = 'https://api.minimaxi.com/anthropic/v1/messages';
+const MINIMAX_REPORT_CONFIG = Object.freeze({
+  advanced: {
+    model: process.env.MINIMAX_MODEL_ADVANCED || 'MiniMax-M2.7',
+    maxTokens: 1600,
+    temperature: 0.45,
+    topP: 0.85,
+    timeoutMs: 35000
+  },
+  basic: {
+    model: process.env.MINIMAX_MODEL_BASIC || 'MiniMax-M2.7',
+    maxTokens: 420,
+    temperature: 0.3,
+    topP: 0.8,
+    timeoutMs: 25000
+  }
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 initDB();
+
+if (!process.env.MINIMAX_API_KEY) {
+  console.warn('[minimax] MINIMAX_API_KEY 未配置，AI 报告将回退到本地模板');
+}
 
 // ─── 路由模块 ─────────────────────────────────────────────────
 app.use('/api', payRouter);
@@ -110,16 +131,35 @@ app.post('/api/test-result', (req, res) => {
 
 // ─── 生成 AI 报告文字 ─────────────────────────────────────────
 app.post('/api/generate-report', async (req, res) => {
+  const { scores, rating, device, rawData, mode = 'advanced' } = req.body;
+
   try {
-    const { scores, rating, device, rawData, mode = 'advanced' } = req.body;
-    const text = mode === 'basic'
-      ? await callMiniMaxBasic(scores, rating, rawData)
-      : await callMiniMax(scores, rating, device, rawData);
-    res.json({ success: true, text });
+    const result = await callMiniMaxReport({ scores, rating, device, rawData, mode });
+    console.info('[generate-report] minimax success', {
+      mode,
+      model: result.model,
+      requestId: result.requestId,
+      usage: result.usage || null
+    });
+    res.json({
+      success: true,
+      text: result.text,
+      source: 'minimax',
+      model: result.model,
+      requestId: result.requestId,
+      fallbackReason: null
+    });
   } catch (err) {
-    console.error('MiniMax API 错误:', err.message);
-    const { scores, rating, mode = 'advanced' } = req.body;
-    res.json({ success: true, text: fallbackReport(scores, rating, mode) });
+    const fallbackReason = toFallbackReason(err);
+    console.warn('[generate-report] fallback', { mode, fallbackReason });
+    res.json({
+      success: true,
+      text: fallbackReport(scores, rating, mode),
+      source: 'fallback',
+      model: null,
+      requestId: null,
+      fallbackReason
+    });
   }
 });
 
@@ -196,14 +236,12 @@ function buildRawSummary(rawData) {
   return summary;
 }
 
-// ─── MiniMax API 调用（进阶版）───────────────────────────────
-async function callMiniMax(scores, rating, device, rawData) {
+function buildReportFacts(scores, rating, device, rawData) {
   const avg = calcWeightedAverage(scores, 1).toFixed(1);
   const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
   const best = sorted[0];
+  const secondBest = sorted[1];
   const worst = sorted[sorted.length - 1];
-  const second_best = sorted[1];
-
   const roleTracks = calcRoleTracks(scores);
   const aboveAvg = Object.entries(scores)
     .filter(([key, value]) => value > DIM_BENCHMARKS[key])
@@ -212,143 +250,176 @@ async function callMiniMax(scores, rating, device, rawData) {
     .filter(([key, value]) => value <= DIM_BENCHMARKS[key])
     .map(([key, value]) => `${DIM_NAMES[key]}(${value}分,均值${DIM_BENCHMARKS[key]})`);
   const rawSummary = buildRawSummary(rawData);
-
   const gameType = roleTracks.primaryTrack === 'balanced'
     ? '双赛道均可尝试（需继续看复测表现）'
     : roleTracks.primaryTrack === 'fps'
-      ? 'FPS（如Valorant、CS2）'
+      ? 'FPS（如 Valorant、CS2）'
       : 'MOBA（如英雄联盟、王者荣耀）';
   const gameReason = roleTracks.profileText;
+  const deviceLabel = device === 'mobile'
+    ? '手机 / 触屏'
+    : device === 'pc'
+      ? '电脑 / 鼠标键盘'
+      : '未标注';
+  const worstGapText = worst[1] >= DIM_BENCHMARKS[worst[0]]
+    ? `高出${worst[1] - DIM_BENCHMARKS[worst[0]]}分`
+    : `低于${DIM_BENCHMARKS[worst[0]] - worst[1]}分`;
 
-  const prompt = `你是VE天赋雷达平台的资深电竞能力评估师，负责输出版本化测评报告。你的写作风格专业、克制、直接，用具体数字说话，不营销，不喊口号，也不把倾向判断写成绝对结论。
+  const factBlock = [
+    '【VE-M7测评事实块】',
+    `设备形态：${deviceLabel}`,
+    `综合加权分：${avg}分`,
+    `综合评级：${rating}`,
+    `最强维度：${DIM_NAMES[best[0]]} ${best[1]}分（内部参考均值${DIM_BENCHMARKS[best[0]]}，高出${best[1] - DIM_BENCHMARKS[best[0]]}分）`,
+    `第二强维度：${DIM_NAMES[secondBest[0]]} ${secondBest[1]}分`,
+    `最弱维度：${DIM_NAMES[worst[0]]} ${worst[1]}分（内部参考均值${DIM_BENCHMARKS[worst[0]]}，${worstGapText}）`,
+    `高于内部参考的维度：${aboveAvg.length ? aboveAvg.join('、') : '暂无'}`,
+    `低于或等于内部参考的维度：${belowAvg.length ? belowAvg.join('、') : '暂无'}`,
+    '七维分数：',
+    ...Object.entries(scores).map(([key, value]) => `- ${DIM_NAMES[key]}：${value}分（内部参考均值${DIM_BENCHMARKS[key]}）`),
+    `优先赛道判断：${gameType}`,
+    `赛道判断理由：${gameReason}`,
+    `FPS建议角色：${roleTracks.fps.role}（匹配度 ${roleTracks.fps.fit}）—— ${roleTracks.fps.reason}`,
+    `MOBA建议角色：${roleTracks.moba.role}（匹配度 ${roleTracks.moba.fit}）—— ${roleTracks.moba.reason}`,
+    rawSummary ? `原始测评摘要：${rawSummary.replace(/\n/g, '；').replace(/^；/, '')}` : '原始测评摘要：无'
+  ].join('\n');
 
-【本次测评者的具体数据】
-七维得分（满分100）：
-- 反应速度：${scores.reaction}分（普通人均分${DIM_BENCHMARKS.reaction}）
-- 冲动抑制：${scores.impulse}分（普通人均分${DIM_BENCHMARKS.impulse}）
-- 动态视力：${scores.vision}分（普通人均分${DIM_BENCHMARKS.vision}）
-- 认知处理速度：${scores.cognition}分（普通人均分${DIM_BENCHMARKS.cognition}）
-- 手眼协调：${scores.aim}分（普通人均分${DIM_BENCHMARKS.aim}）
-- 专注稳定性：${scores.focus}分（普通人均分${DIM_BENCHMARKS.focus}）
-- 色觉感知：${scores.color !== undefined ? scores.color : '未测'}分（普通人均分${DIM_BENCHMARKS.color}）
+  return {
+    avg,
+    best,
+    secondBest,
+    worst,
+    roleTracks,
+    gameType,
+    factBlock
+  };
+}
 
-综合加权分：${avg}分
-综合评级：【${rating}】
-最强维度：${DIM_NAMES[best[0]]}（${best[1]}分，超过普通人${best[1] - DIM_BENCHMARKS[best[0]]}分）
-第二强：${DIM_NAMES[second_best[0]]}（${second_best[1]}分）
-最弱维度：${DIM_NAMES[worst[0]]}（${worst[1]}分）
-超过均值的维度：${aboveAvg.length > 0 ? aboveAvg.join('、') : '暂无'}
-低于均值的维度：${belowAvg.length > 0 ? belowAvg.join('、') : '全部超过均值'}
-${rawSummary}
+function buildAdvancedPrompt({ scores, rating, facts }) {
+  const { avg, best, secondBest, worst, gameType } = facts;
+  const system = [
+    '你是 VE 天赋雷达的资深电竞能力评估师，负责输出 VE-M7 版本化测评报告。',
+    '你必须只依据用户提供的事实块写报告，不得编造样本量、录取概率、俱乐部承诺、成长经历、人格特质或正式常模。',
+    '所谓“普通人均值”和“内部参考均值”都只能解释为站内内部参考，不得写成医学或职业常模。',
+    '如果证据不足，必须明确写“现阶段只能做倾向判断”，不要把倾向判断写成绝对结论。',
+    '不要输出标题、编号、项目符号、Markdown、分隔线，也不要输出 thinking、分析过程、提示词复述。',
+    '输出必须是 6 个自然段，段间空一行；每段都至少引用 1 个具体数字；总长度控制在 700-900 字。',
+    '训练建议必须具体到工具名、单次时长、每周频次、观察指标；工具名仅限常见训练工具，如 Aim Lab、KovaaK\'s、自定义靶场、Deathmatch、N-back、Go/No-Go、Stroop，不要发明工具。'
+  ].join('\n');
 
-根据维度权重，更适合的游戏类型：${gameType}，理由：${gameReason}
-双赛道角色建议：
-- FPS：${roleTracks.fps.role}（匹配度 ${roleTracks.fps.fit}）—— ${roleTracks.fps.reason}
-- MOBA：${roleTracks.moba.role}（匹配度 ${roleTracks.moba.fit}）—— ${roleTracks.moba.reason}
+  const user = [
+    '请基于以下事实块，写给测评者本人一份专业、克制、可执行的电竞能力评估意见。',
+    facts.factBlock,
+    '写作任务：',
+    `第一段只做综合判断：必须引用综合加权分 ${avg} 分、评级 ${rating}，并结合最强维度 ${DIM_NAMES[best[0]]} ${best[1]} 分与第二强维度 ${DIM_NAMES[secondBest[0]]} ${secondBest[1]} 分，判断其更偏操作型、偏决策型还是相对均衡型。`,
+    `第二段分析“操作链”：只围绕反应速度 ${scores.reaction} 分、手眼协调 ${scores.aim} 分、动态视力 ${scores.vision} 分，解释“看到信息→完成输出”的强项与短板，并至少对比 2 个内部参考均值。`,
+    `第三段分析“决策与控制链”：只围绕认知处理速度 ${scores.cognition} 分、冲动抑制 ${scores.impulse} 分，说明信息整合、切换决策、失误控制的意义；如果证据不够，只能写倾向判断。`,
+    `第四段分析“稳定性与后程表现”：结合专注稳定性 ${scores.focus} 分、Aim 双轮前后差值、以及事实块中的原始数据，判断连续对抗下的稳定兑现能力，并指出边界条件。`,
+    `第五段必须同时给出 FPS 与 MOBA 两条赛道建议：先分别解释 FPS 建议角色和 MOBA 建议角色，再判断当前更应优先尝试 ${gameType} 还是继续双赛道观察，理由必须回到数据。`,
+    `第六段给 3 条按优先级排序的训练建议：至少一条瞄准/操作训练、一条决策/抑制训练、一条稳定性训练。每条都要写工具名、单次时长、每周频次、观察指标，并把最弱维度 ${DIM_NAMES[worst[0]]} ${worst[1]} 分作为首要优化目标。`,
+    '语言要求：像俱乐部评估师写给选手本人的反馈，直接、克制、不营销；可以指出潜力，但必须同时指出风险点和兑现条件；不要重复同一句结论。'
+  ].join('\n\n');
 
-【写作要求】
-请写一份约700-900字的结构化电竞能力评估意见，分6段，每段之间空一行：
+  return { system, user };
+}
 
-第一段（综合判断）：
-先用综合加权分 ${avg} 分和评级「${rating}」给出整体结论，明确说明这是偏操作型、偏决策型还是相对均衡型能力结构。必须引用至少两个具体数字，不要空泛夸赞。
+function buildBasicPrompt({ scores, rating, facts }) {
+  const { avg, best, worst, gameType } = facts;
+  const system = [
+    '你是 VE 天赋雷达的电竞能力评估师。',
+    '只依据事实块输出结论，不得编造样本量、职业概率、俱乐部承诺或正式常模。',
+    '输出必须是 3 个自然段，段间空一行，纯文本无标题，控制在 180-240 字。',
+    '每段都至少引用 1 个具体数字，语言简洁专业，不夸张。'
+  ].join('\n');
 
-第二段（操作链分析）：
-分析反应速度、手眼协调、动态视力三项如何共同作用于实战操作。要指出这名测评者在"看到信息→完成瞄准/操作输出"这条链路上的强项和短板，用分数与普通人均分对比，避免编造不存在的职业常模。
+  const user = [
+    '请根据以下事实块生成基础版测评结论。',
+    facts.factBlock,
+    '写作任务：',
+    `第一段：用综合加权分 ${avg} 分和评级 ${rating} 定调，并点明整体是偏操作、偏决策还是相对均衡。`,
+    `第二段：点出最强维度 ${DIM_NAMES[best[0]]} ${best[1]} 分的意义，以及最弱维度 ${DIM_NAMES[worst[0]]} ${worst[1]} 分带来的限制。`,
+    `第三段：说明当前更建议优先尝试 ${gameType} 的原因，同时各用半句点出 FPS 建议角色与 MOBA 建议角色，并给 1 条具体训练建议（要写工具名、单次时长、每周频次和观察指标）。`
+  ].join('\n\n');
 
-第三段（决策与控制链分析）：
-分析认知处理速度、冲动抑制两项，说明其在信息整合、决策切换、失误控制上的意义。若数据只支持倾向判断，就直接说"现阶段只能做倾向判断"，不要装作结论非常绝对。
+  return { system, user };
+}
 
-第四段（稳定性与后程表现）：
-结合专注稳定性、两轮 Aim 前后差值、以及可用原始数据，判断其在连续对抗、疲劳后程、压力下维持输出的能力。这里要写得像评估报告，不要写成鼓励文。
+function sanitizeReportText(text) {
+  return String(text || '')
+    .replace(/<think>[\s\S]*?<\/think>\s*/gi, '')
+    .replace(/^\s*```[\s\S]*?```\s*$/gm, '')
+    .trim();
+}
 
-第五段（项目与角色匹配）：
-基于全部 7 项数据，同时给出 FPS 建议角色和 MOBA 建议角色，再判断当前更应优先尝试哪一条赛道。理由必须落回到数据，不要只给结论，也不要只写一个项目。
+function extractMiniMaxText(data) {
+  const textBlocks = Array.isArray(data?.content)
+    ? data.content
+        .filter((block) => block?.type === 'text' && typeof block.text === 'string')
+        .map((block) => block.text.trim())
+        .filter(Boolean)
+    : [];
+  if (textBlocks.length) return sanitizeReportText(textBlocks.join('\n'));
 
-第六段（训练优先级）：
-给出 2-3 条按优先级排序的训练建议，每条都要包含工具名、训练时长、训练频率、观察指标。结尾只做克制收束，不喊口号，不使用"被选中""天赋爆表"这类营销表达。
+  const fallbackText = data?.choices?.[0]?.message?.content;
+  if (typeof fallbackText === 'string' && fallbackText.trim()) {
+    return sanitizeReportText(fallbackText);
+  }
 
-额外约束：
-1. 每段至少引用一个具体数字。
-2. 语言要专业、克制、像俱乐部评估师写给选手本人的反馈。
-3. 不要使用标题、markdown、编号、分隔线。
-4. 不要重复同一个结论，不要堆砌形容词。
-5. 可以指出优势，但必须同时说边界条件和风险点。
+  throw new Error('MiniMax 返回为空');
+}
 
-输出纯文本，无标题，无markdown符号，无分隔线。`;
+function toFallbackReason(err) {
+  if (!err) return 'unknown_error';
+  const apiStatus = err.response?.data?.base_resp?.status_msg || err.response?.data?.error?.message;
+  const statusCode = err.response?.status;
+  if (apiStatus && statusCode) return `http_${statusCode}: ${apiStatus}`;
+  if (apiStatus) return apiStatus;
+  if (statusCode) return `http_${statusCode}`;
+  if (err.code === 'ECONNABORTED') return 'timeout';
+  return err.message || 'unknown_error';
+}
+
+async function callMiniMaxReport({ scores, rating, device, rawData, mode = 'advanced' }) {
+  if (!process.env.MINIMAX_API_KEY) {
+    throw new Error('MINIMAX_API_KEY missing');
+  }
+
+  const normalizedMode = mode === 'basic' ? 'basic' : 'advanced';
+  const config = MINIMAX_REPORT_CONFIG[normalizedMode];
+  const facts = buildReportFacts(scores, rating, device, rawData);
+  const prompt = normalizedMode === 'basic'
+    ? buildBasicPrompt({ scores, rating, facts })
+    : buildAdvancedPrompt({ scores, rating, facts });
 
   const response = await axios.post(
-    'https://api.minimax.chat/v1/text/chatcompletion_pro',
+    MINIMAX_API_URL,
     {
-      model: 'abab6.5s-chat',
-      tokens_to_generate: 2400,
-      reply_constraints: { sender_type: 'BOT', sender_name: 'VE评估师' },
-      bot_setting: [{
-        bot_name: 'VE评估师',
-        content: '你是VE天赋雷达平台的资深电竞能力评估师，擅长依据量化测评数据写结构化评估意见。你的风格专业、克制、直接，用数据下判断，不营销，不喊口号，不夸张。'
-      }],
-      messages: [{ sender_type: 'USER', sender_name: '用户', text: prompt }]
+      model: config.model,
+      system: prompt.system,
+      messages: [{ role: 'user', content: prompt.user }],
+      max_tokens: config.maxTokens,
+      temperature: config.temperature,
+      top_p: config.topP
     },
     {
       headers: {
         Authorization: `Bearer ${process.env.MINIMAX_API_KEY}`,
         'Content-Type': 'application/json'
       },
-      timeout: 35000
+      timeout: config.timeoutMs
     }
   );
 
-  const reply = response.data?.reply || response.data?.choices?.[0]?.messages?.[0]?.text;
-  if (!reply) throw new Error('API返回为空');
-  return reply;
-}
+  if (response.data?.base_resp?.status_code && response.data.base_resp.status_code !== 0) {
+    throw new Error(response.data.base_resp.status_msg || `MiniMax status ${response.data.base_resp.status_code}`);
+  }
 
-// ─── MiniMax 基础版报告（约150字，结构化3段）──────────────────
-async function callMiniMaxBasic(scores, rating, rawData) {
-  const avg = calcWeightedAverage(scores, 1).toFixed(1);
-  const sorted = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
-  const best = sorted[0];
-  const worst = sorted[sorted.length-1];
-  const roleTracks = calcRoleTracks(scores);
-
-  const gameType = roleTracks.primaryTrack === 'balanced'
-    ? '双赛道均可尝试'
-    : roleTracks.primaryTrack === 'fps'
-      ? 'FPS（Valorant / CS2）'
-      : 'MOBA（英雄联盟 / 王者荣耀）';
-
-  const prompt = `你是VE天赋雷达的电竞能力评估专家。请根据以下数据生成一份简洁的基础版测评结论，约150字，分3段，段间空行，纯文本无标题。
-
-数据：
-- 综合加权分：${avg}分，评级：${rating}
-- 最强维度：${DIM_NAMES[best[0]]}（${best[1]}分）
-- 最弱维度：${DIM_NAMES[worst[0]]}（${worst[1]}分）
-- 各维度：${Object.entries(scores).map(([k,v])=>`${DIM_NAMES[k]}${v}`).join('、')}
-- FPS建议：${roleTracks.fps.role}
-- MOBA建议：${roleTracks.moba.role}
-
-第一段（2句）：用评级和综合加权分定调，说明综合表现。
-第二段（2句）：点出最强维度的意义和最弱维度需要注意的地方。
-第三段（2句）：说明当前更建议优先尝试 ${gameType}，并同时简要点出 FPS 建议角色和 MOBA 建议角色，最后给一条具体训练建议。
-
-要求：用具体数字，不写废话，不夸张，语言直接。`;
-
-  const response = await axios.post(
-    'https://api.minimax.chat/v1/text/chatcompletion_pro',
-    {
-      model: 'abab6.5s-chat',
-      tokens_to_generate: 400,
-      reply_constraints: { sender_type: 'BOT', sender_name: 'VE评估师' },
-      bot_setting: [{ bot_name: 'VE评估师', content: '你是VE天赋雷达的电竞能力评估专家，语言简洁专业，善用数字说话。' }],
-      messages: [{ sender_type: 'USER', sender_name: '用户', text: prompt }]
-    },
-    {
-      headers: { Authorization: `Bearer ${process.env.MINIMAX_API_KEY}`, 'Content-Type': 'application/json' },
-      timeout: 25000
-    }
-  );
-  const reply = response.data?.reply || response.data?.choices?.[0]?.messages?.[0]?.text;
-  if (!reply) throw new Error('API返回为空');
-  return reply;
+  return {
+    text: extractMiniMaxText(response.data),
+    model: response.data?.model || config.model,
+    requestId: response.data?.id || null,
+    usage: response.data?.usage || null
+  };
 }
 
 function fallbackReport(scores, rating, mode = 'advanced') {
