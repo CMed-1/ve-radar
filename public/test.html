@@ -829,9 +829,13 @@
 <script>
 // ── 管理员调试：跳过前置测试直接进入指定环节 ──────────
 (function() {
-  const skip = sessionStorage.getItem('ve_debug_skip');
+  const params = new URLSearchParams(window.location.search);
+  const skip = params.get('debugSkip') || sessionStorage.getItem('ve_debug_skip');
   if (!skip) return;
   sessionStorage.removeItem('ve_debug_skip');
+  if (params.has('debugSkip') || params.has('device')) {
+    history.replaceState(null, '', '/test.html');
+  }
 
   // 跳转表：跳到对应测试的 intro 页（用户在此页点开始）
   const JUMP = {

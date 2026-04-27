@@ -427,6 +427,9 @@ function switchTab(tab) {
 
 // ── 测试快速入口 ────────────────────────────────
 let debugDevice = 'pc';
+function shouldReuseCurrentTab() {
+  return window.matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+}
 function selectDebugDevice(d) {
   debugDevice = d;
   document.getElementById('debug-btn-pc').classList.toggle('active', d==='pc');
@@ -437,7 +440,7 @@ function jumpToTest(num) {
   sessionStorage.setItem('ve_debug_skip', String(num));
   sessionStorage.removeItem('ve_invited');
   sessionStorage.removeItem('ve_code');
-  window.open('/test.html', '_blank');
+  openAdminTarget(`/test.html?device=${encodeURIComponent(debugDevice)}&debugSkip=${encodeURIComponent(num)}`);
 }
 
 // ── 生成邀请码 ────────────────────────────────
@@ -906,6 +909,10 @@ async function resetPreviewAccess() {
 }
 
 function openAdminTarget(url) {
+  if (shouldReuseCurrentTab()) {
+    window.location.href = url;
+    return;
+  }
   const previewWin = window.open(url, '_blank');
   if (!previewWin) {
     window.location.href = url;

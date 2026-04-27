@@ -1,8 +1,16 @@
 const TOTAL_TESTS = 9;
-const device = sessionStorage.getItem('ve_device') || 'pc';
+const testUrlParams = new URLSearchParams(window.location.search);
+const deviceFromQuery = testUrlParams.get('device');
+const hasValidDeviceQuery = deviceFromQuery === 'pc' || deviceFromQuery === 'mobile';
+
+if (!sessionStorage.getItem('ve_device') && hasValidDeviceQuery) {
+  sessionStorage.setItem('ve_device', deviceFromQuery);
+}
+
+const device = sessionStorage.getItem('ve_device') || (hasValidDeviceQuery ? deviceFromQuery : 'pc');
 const isMobile = device === 'mobile';
 
-if (!sessionStorage.getItem('ve_device')) {
+if (!sessionStorage.getItem('ve_device') && !hasValidDeviceQuery) {
   window.location.href = '/';
 }
 
