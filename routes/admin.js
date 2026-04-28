@@ -5,6 +5,7 @@ const {
   getAllCodes,
   getAllContacts,
   getAllTestResults,
+  getAllPaidPayments,
   getReferralStats,
   recalculateTestResultScores
 } = require('../db');
@@ -384,6 +385,37 @@ router.post('/admin/test-results/recalculate', async (req, res) => {
     res.json({ success: true, total: result.total, updated: result.updated, sample: result.changes.slice(0, 20) });
   } catch (err) {
     console.error('[admin/test-results/recalculate]', err.message);
+    res.status(500).json({ success: false, message: '服务器错误，请稍后重试' });
+  }
+});
+
+// ─── 管理员：付款订单列表 ────────────────────────────────────
+router.post('/admin/payments', async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (password !== process.env.ADMIN_PASSWORD) {
+      return res.json({ success: false, message: '管理员密码错误' });
+    }
+    const rows = getAllPaidPayments();
+    const paidRows = rows.filter(r => r.status === 'PAID');
+    res.json({
+      success: true,
+      total: rows.length,
+      paidCount: paidRows.length,
+      payments: rows.map(r => ({
+        orderNo: r.order_no,
+        mode: r.mode,
+        channel: r.channel,
+        amount: r.amount,
+        status: r.status,
+        paidAt: r.paid_at,
+        createdAt: r.created_at,
+        refCode: r.ref_code || '',
+        hasSid: !!r.sid
+      }))
+    });
+  } catch (err) {
+    console.error('[admin/payments]', err.message);
     res.status(500).json({ success: false, message: '服务器错误，请稍后重试' });
   }
 });

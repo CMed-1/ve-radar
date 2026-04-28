@@ -282,6 +282,16 @@ function markPaymentPaid({ orderNo, providerTradeNo, rawNotify }) {
   return { updated: true, row: getPaymentByOrderNo(orderNo) };
 }
 
+function getAllPaidPayments(limit = 500) {
+  const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 500, 1), 10000);
+  return db.prepare(
+    `SELECT order_no, mode, channel, amount, status, paid_at, created_at, ref_code, sid
+     FROM payments
+     ORDER BY created_at DESC
+     LIMIT ?`
+  ).all(safeLimit);
+}
+
 module.exports = {
   initDB,
   generateCode,
@@ -296,6 +306,7 @@ module.exports = {
   recalculateTestResultScores,
   getTestResultCount,
   getAllTestResults,
+  getAllPaidPayments,
   createPayment,
   getPaymentByOrderNo,
   getPaymentByToken,

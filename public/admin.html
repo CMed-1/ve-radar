@@ -133,6 +133,7 @@
     <button class="tab-btn active" onclick="switchTab('codes')">邀请码管理</button>
     <button class="tab-btn" onclick="switchTab('contacts')">联系方式库</button>
     <button class="tab-btn" onclick="switchTab('tests')">测试数据</button>
+    <button class="tab-btn" onclick="switchTab('payments')" style="color:#10B981;">💰 付款订单</button>
     <button class="tab-btn" onclick="switchTab('calibration')">样本校准</button>
     <button class="tab-btn" onclick="switchTab('referral')">推广统计</button>
     <button class="tab-btn" onclick="switchTab('stats')">数据概览</button>
@@ -193,6 +194,22 @@
       <table class="data-table" id="tests-table">
         <thead><tr><th>ID</th><th>时间</th><th>设备</th><th>付费转化</th><th>综合加权分</th><th>评级</th><th>七维分数</th><th>原始摘要</th></tr></thead>
         <tbody id="tests-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 付款订单面板 -->
+  <div class="panel" id="panel-payments">
+    <div class="stats-row" id="payment-stats-row"></div>
+    <div class="card">
+      <div class="card-title">付款订单记录 <button class="refresh-btn" onclick="loadPayments()">刷新</button></div>
+      <div class="card-sub">所有通过支付渠道创建的订单，包含历史数据。「已付款」= 支付成功；「创建中」= 下单未付款。</div>
+      <table class="data-table" id="payments-table">
+        <thead><tr>
+          <th>时间</th><th>订单号</th><th>类型</th><th>渠道</th><th>金额</th>
+          <th>状态</th><th>付款时间</th><th>推广码</th><th>转化追踪</th>
+        </tr></thead>
+        <tbody id="payments-tbody"></tbody>
       </table>
     </div>
   </div>
@@ -351,7 +368,7 @@
 <script src="/js/score-model.js"></script>
 <script>
 let adminPwd = '';
-let allCodes = [], allContacts = [], allTestResults = [], calibrationData = null;
+let allCodes = [], allContacts = [], allTestResults = [], allPayments = [], calibrationData = null;
 const DIM_KEYS = ['reaction','impulse','vision','cognition','aim','focus','color'];
 const DIM_NAMES = { reaction:'反应', impulse:'抑制', vision:'视力', cognition:'认知', aim:'Aim', focus:'专注', color:'色觉' };
 const MOCK_PREVIEW_SCORES = {
@@ -413,7 +430,7 @@ function logout() {
 
 // ── 标签切换 ──────────────────────────────────
 function switchTab(tab) {
-  const tabs = ['codes','contacts','tests','calibration','referral','stats','debug'];
+  const tabs = ['codes','contacts','tests','payments','calibration','referral','stats','debug'];
   document.querySelectorAll('.tab-btn').forEach((b,i) => {
     b.classList.toggle('active', tabs[i]===tab);
   });
@@ -421,6 +438,7 @@ function switchTab(tab) {
   document.getElementById('panel-'+tab).classList.add('active');
   if (tab==='contacts') loadContacts();
   if (tab==='tests') loadTestResults();
+  if (tab==='payments') loadPayments();
   if (tab==='calibration') loadCalibrationStats();
   if (tab==='referral') loadReferralStats();
   if (tab==='stats') renderStats();
@@ -527,6 +545,64 @@ async function loadTestResults() {
     renderTestResults();
     renderStats();
   }
+}
+
+async function loadPayments() {
+  const res = await fetch('/api/admin/payments', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: adminPwd })
+  });
+  const data = await res.json();
+  if (data.success) {
+    allPayments = data.payments;
+    renderPayments();
+  }
+}
+
+function renderPayments() {
+  const tbody = document.getElementById('payments-tbody');
+  if (!tbody) return;
+
+  const paid = allPayments.filter(p => p.status === 'PAID');
+  const pending = allPayments.filter(p => p.status !== 'PAID');
+  const totalAmt = paid.reduce((s, p) => s + parseFloat(p.amount || 0), 0);
+  const basicPaid = paid.filter(p => p.mode === 'basic').length;
+  const advancedPaid = paid.filter(p => p.mode === 'advanced').length;
+
+  const statsEl = document.getElementById('payment-stats-row');
+  if (statsEl) {
+    statsEl.innerHTML = `
+      <div class="stat-card"><div class="stat-num" style="color:#10B981">${paid.length}</div><div class="stat-label">已付款订单</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:#F59E0B">¥${totalAmt.toFixed(2)}</div><div class="stat-label">累计收入</div></div>
+      <div class="stat-card"><div class="stat-num">${basicPaid}</div><div class="stat-label">基础版</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--cyan)">${advancedPaid}</div><div class="stat-label">进阶版</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:#555">${pending.length}</div><div class="stat-label">未付款订单</div></div>`;
+  }
+
+  tbody.innerHTML = allPayments.map(p => {
+    const isPaid = p.status === 'PAID';
+    const statusBadge = isPaid
+      ? '<span style="color:#10B981;font-weight:700;">✓ 已付款</span>'
+      : '<span style="color:#555;">创建中</span>';
+    const modeBadge = p.mode === 'advanced'
+      ? '<span style="color:var(--cyan);">进阶版</span>'
+      : '<span style="color:#76b900;">基础版</span>';
+    const channelLabel = p.channel === 'wxpay' ? '微信' : p.channel === 'alipay' ? '支付宝' : p.channel;
+    const sidBadge = p.hasSid
+      ? '<span style="color:#555;font-size:11px;">有追踪</span>'
+      : '<span style="color:#333;font-size:11px;">历史单</span>';
+    return `<tr style="${isPaid ? '' : 'opacity:.5'}">
+      <td style="color:var(--sub)">${(p.createdAt || '').slice(0,16)}</td>
+      <td style="font-family:monospace;font-size:11px;color:#555">${p.orderNo}</td>
+      <td>${modeBadge}</td>
+      <td>${channelLabel}</td>
+      <td style="color:#10B981;font-weight:700;">¥${p.amount}</td>
+      <td>${statusBadge}</td>
+      <td style="color:var(--sub)">${(p.paidAt || '').slice(0,16) || '—'}</td>
+      <td style="font-family:monospace;font-size:11px;color:#555">${p.refCode || '—'}</td>
+      <td>${sidBadge}</td>
+    </tr>`;
+  }).join('');
 }
 
 function scoreChips(scores) {
