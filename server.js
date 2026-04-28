@@ -42,7 +42,17 @@ const MINIMAX_REPORT_CONFIG = Object.freeze({
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(express.static(path.join(__dirname, 'public')));
+// 静态文件：HTML/JS/CSS 强制 no-cache，让浏览器每次都重新验证
+// 避免手机浏览器缓存旧版 JS 导致更新不生效
+app.use(express.static(path.join(__dirname, 'public'), {
+  etag: true,
+  lastModified: true,
+  setHeaders(res, filePath) {
+    if (/\.(js|html|css)$/.test(filePath)) {
+      res.set('Cache-Control', 'no-cache');
+    }
+  }
+}));
 
 initDB();
 
