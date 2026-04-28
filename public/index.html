@@ -291,13 +291,14 @@
   .dims-grid {
     display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
     gap:1px; max-width:900px; margin:0 auto;
-    background: var(--bg);   /* 黑色底，空格融入背景 */
-    border: 1px solid var(--border);
-    border-radius:4px; overflow:hidden;
+    background: var(--bg);   /* 黑色底，空格与背景融合 */
+    /* 去掉外层整体边框，避免包住空格区域 */
+    overflow:hidden;
   }
   .dim-card {
     background: var(--card); padding:28px 24px;
     transition: background .2s;
+    border: 1px solid var(--border);   /* 每张卡自己带边框 */
   }
   .dim-card:hover { background: #1a1a1a; }
   @media (min-width: 780px) {
