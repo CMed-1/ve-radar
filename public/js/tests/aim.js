@@ -26,9 +26,9 @@ const AIM_PHASES = {
 };
 
 const AIM_SENSITIVITY = {
-  master: 8,
-  horizontal: 8,
-  vertical: 8
+  master: 10,
+  horizontal: 10,
+  vertical: 10
 };
 const AIM_GRID = {
   desktop: { cols: 8, rows: 5 },
@@ -76,7 +76,7 @@ let sensTargetTimer = null;
 
 function getAimAxisSpeed(axis) {
   const base = isMobile ? AIM_SPEED_BASE.mobile : AIM_SPEED_BASE.desktop;
-  return base * (AIM_SENSITIVITY.master / 8) * (AIM_SENSITIVITY[axis] / 8);
+  return base * (AIM_SENSITIVITY.master / 10) * (AIM_SENSITIVITY[axis] / 10);
 }
 
 function applyCrosshairDelta(point, rect, dx, dy) {
@@ -224,10 +224,16 @@ function resetAimRoundState() {
 
 function getAimGridConfig(rect, size) {
   const preset = isMobile ? AIM_GRID.mobile : AIM_GRID.desktop;
-  const padX = Math.max(size / 2 + 8, 18);
+  const basePadX = Math.max(size / 2 + 8, 18);
   const padY = Math.max(size / 2 + 8, 18);
-  const usableW = Math.max(rect.width - padX * 2, 1);
+  let padX = basePadX;
+  let usableW = Math.max(rect.width - basePadX * 2, 1);
   const usableH = Math.max(rect.height - padY * 2, 1);
+  if (isMobile) {
+    const shrunkW = usableW * 0.5;
+    padX = basePadX + (usableW - shrunkW) / 2;
+    usableW = shrunkW;
+  }
   return {
     cols: preset.cols,
     rows: preset.rows,
@@ -917,7 +923,8 @@ function cleanupSensitivity() {
 }
 
 function updateSensitivity(key, value) {
-  AIM_SENSITIVITY[key] = parseInt(value, 10) || 8;
+  const parsed = parseFloat(value);
+  AIM_SENSITIVITY[key] = Number.isFinite(parsed) && parsed > 0 ? parsed : 10;
   document.getElementById(`sens-${key}-value`).textContent = AIM_SENSITIVITY[key];
 }
 

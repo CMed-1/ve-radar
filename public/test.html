@@ -196,6 +196,12 @@
   #preflight-tap-zone.armed{display:flex;}
   #preflight-tap-zone.hit{background:rgba(118,185,0,.18);border-color:var(--cyan);}
   .aim-sens-panel{width:100%;max-width:520px;margin:0 auto 14px;padding:14px 16px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,.03);}
+  .aim-pc-tip{width:100%;max-width:520px;margin:0 auto 14px;padding:14px 18px;border:1px solid var(--cyan);border-left:3px solid var(--cyan);border-radius:6px;background:rgba(118,185,0,.06);text-align:left;}
+  .aim-pc-tip h4{color:var(--cyan);font-size:13px;font-weight:700;margin:0 0 8px;letter-spacing:1px;}
+  .aim-pc-tip ol{margin:0;padding-left:20px;color:var(--sub);font-size:13px;line-height:1.85;}
+  .aim-pc-tip ol li{margin-bottom:0;}
+  .aim-pc-tip .kbd{display:inline-block;padding:1px 7px;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:3px;font-size:11px;font-weight:700;color:#fff;margin:0 2px;font-family:monospace;}
+  .mobile-device .aim-pc-tip{display:none;}
   .aim-slider-row{display:grid;grid-template-columns:86px minmax(0,1fr) 40px;align-items:center;gap:12px;margin-bottom:10px;}
   .aim-slider-row:last-child{margin-bottom:0;}
   .aim-slider-label{font-size:13px;color:var(--sub);white-space:nowrap;}
@@ -619,21 +625,31 @@
     </div>
     <div id="sens-target" style="position:absolute;width:54px;height:54px;border-radius:50%;background:radial-gradient(circle at 38% 38%,rgba(255,255,255,0.9) 0%,rgba(118,185,0,0.9) 20%,rgba(118,185,0,0.35) 55%,transparent 100%);border:2px solid var(--cyan);transform:translate(-50%,-50%);top:50%;left:50%;transition:transform .15s;"></div>
   </div>
+  <div class="aim-pc-tip">
+    <h4>📋 PC 操作步骤</h4>
+    <ol>
+      <li>点击上方瞄准框 → 鼠标自动锁定，准星出现</li>
+      <li>移动鼠标控制准星，左键开火，命中 3 个目标后解锁开始按钮</li>
+      <li>觉得灵敏度不合适？按 <span class="kbd">ESC</span> 退出锁定</li>
+      <li>调整下方 3 个滑块（总 / 水平 / 垂直）</li>
+      <li>调好后再次点击瞄准框继续</li>
+    </ol>
+  </div>
   <div class="aim-sens-panel">
     <div class="aim-slider-row">
       <span class="aim-slider-label">总灵敏度</span>
-      <input type="range" id="sens-master-slider" min="2" max="18" value="8" style="width:100%;accent-color:var(--cyan);" oninput="updateSensitivity('master', this.value)">
-      <span class="aim-slider-value" id="sens-master-value">8</span>
+      <input type="range" id="sens-master-slider" min="0.5" max="30" step="0.5" value="10" style="width:100%;accent-color:var(--cyan);" oninput="updateSensitivity('master', this.value)">
+      <span class="aim-slider-value" id="sens-master-value">10</span>
     </div>
     <div class="aim-slider-row">
       <span class="aim-slider-label">水平灵敏度</span>
-      <input type="range" id="sens-horizontal-slider" min="2" max="18" value="8" style="width:100%;accent-color:var(--cyan);" oninput="updateSensitivity('horizontal', this.value)">
-      <span class="aim-slider-value" id="sens-horizontal-value">8</span>
+      <input type="range" id="sens-horizontal-slider" min="0.5" max="30" step="0.5" value="10" style="width:100%;accent-color:var(--cyan);" oninput="updateSensitivity('horizontal', this.value)">
+      <span class="aim-slider-value" id="sens-horizontal-value">10</span>
     </div>
     <div class="aim-slider-row">
       <span class="aim-slider-label">垂直灵敏度</span>
-      <input type="range" id="sens-vertical-slider" min="2" max="18" value="8" style="width:100%;accent-color:var(--cyan);" oninput="updateSensitivity('vertical', this.value)">
-      <span class="aim-slider-value" id="sens-vertical-value">8</span>
+      <input type="range" id="sens-vertical-slider" min="0.5" max="30" step="0.5" value="10" style="width:100%;accent-color:var(--cyan);" oninput="updateSensitivity('vertical', this.value)">
+      <span class="aim-slider-value" id="sens-vertical-value">10</span>
     </div>
     <div class="aim-sens-meta">
       <div class="aim-sens-hits">已命中 <span id="sens-hits-count" style="color:var(--cyan);font-weight:700;">0</span> 个目标 · 命中 3 个后可开始</div>
