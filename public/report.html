@@ -527,7 +527,7 @@
   .version-tag.advanced{background:transparent;border:1px solid var(--green);color:var(--green);}
 
   /* ── PDF目标（隐藏，用于截图） ── */
-  #pdf-target{position:absolute;left:-9999px;top:0;width:800px;background:#000000;padding:40px;font-family:'Inter','Noto Sans SC',sans-serif;color:#fff;}
+  #pdf-target{position:absolute;left:-9999px;top:0;width:800px;background:#000000;font-family:'Inter','Noto Sans SC',sans-serif;color:#fff;}
 </style>
 </head>
 <body>
@@ -1527,10 +1527,14 @@ async function downloadPDF() {
     const imgW = pageWidth;
     const imgH = (canvas.height / canvas.width) * imgW;
 
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
     let y = 0;
     while (y < imgH) {
       if (y > 0) pdf.addPage();
-      pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, -y, imgW, imgH);
+      // 黑色底色填满整页，消除最后一页底部白边
+      pdf.setFillColor(0, 0, 0);
+      pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+      pdf.addImage(imgData, 'JPEG', 0, -y, imgW, imgH);
       y += pageHeight;
     }
 
@@ -1762,7 +1766,7 @@ function buildPDFContent(radarImg, barImg, lineImg) {
   const accentColor = ratingKey==='genius' ? '#FCD34D' : ratingKey==='pro' ? '#76b900' : '#a78bfa';
   const raw = JSON.parse(sessionStorage.getItem('ve_rawdata') || '{}');
   const dateStr = new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
-  const pct = VEScoreModel.scoreToPercentile(parseFloat(avg));
+  const pct = Math.round(VEScoreModel.scoreToPercentile(parseFloat(avg)) * 10) / 10;
   const r = calcRoleTracks(scores);
   const p = calcTrainingPlan(scores);
 
