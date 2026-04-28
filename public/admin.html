@@ -259,6 +259,7 @@
       <div class="score-grid" id="manual-score-grid"></div>
       <div class="score-actions">
         <button class="btn-gen" onclick="openManualPreview('locked')">打开未付费预览</button>
+        <button class="btn-gen" style="background:linear-gradient(135deg,#a78bfa,#7C3AED);" onclick="openManualPreview('basic')">打开基础版演示报告</button>
         <button class="btn-gen btn-debug" onclick="openManualPreview('advanced')">打开进阶演示报告</button>
       </div>
       <div class="score-preview" id="manual-score-preview">调整分数后会显示综合加权分和预计评级。</div>
@@ -887,6 +888,11 @@ async function openManualPreview(target) {
       sessionStorage.setItem('ve_invited', 'true');
       sessionStorage.setItem('ve_code', 'VE-DEMO');
       sessionStorage.setItem('ve_report_mode', 'advanced');
+      openAdminTarget('/report.html');
+    } else if (target === 'basic') {
+      sessionStorage.setItem('ve_invited', 'true');
+      sessionStorage.setItem('ve_code', 'VE-DEMO');
+      sessionStorage.setItem('ve_report_mode', 'basic');
       openAdminTarget('/report.html');
     } else {
       openAdminTarget('/preview.html');

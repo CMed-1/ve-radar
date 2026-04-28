@@ -113,28 +113,46 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',s
 .teaser-content{filter:blur(4px);user-select:none;pointer-events:none;}
 .teaser-reveal-content{filter:none;user-select:auto;pointer-events:auto;}
 .teaser-bar{height:12px;background:#1e1e1e;border-radius:2px;margin-bottom:7px;}
-.teaser-dims{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  margin-bottom:10px;
-}
+.teaser-dims{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;}
 .teaser-dim-chip{
-  display:inline-flex;
-  align-items:center;
-  padding:8px 14px;
-  border-radius:999px;
-  border:1px solid rgba(118,185,0,0.35);
-  background:rgba(118,185,0,0.08);
-  color:var(--text);
-  font-size:13px;
-  font-weight:600;
-  letter-spacing:.5px;
+  display:inline-flex;align-items:center;padding:8px 14px;
+  border-radius:999px;border:1px solid rgba(118,185,0,0.35);
+  background:rgba(118,185,0,0.08);color:var(--text);font-size:13px;font-weight:600;letter-spacing:.5px;
 }
-.teaser-reveal-note{
-  font-size:12px;
-  color:var(--sub);
-  line-height:1.7;
+.teaser-reveal-note{font-size:12px;color:var(--sub);line-height:1.7;}
+
+/* ── 顶部优势方向 Hero ── */
+.strength-hero{
+  background:linear-gradient(135deg,rgba(118,185,0,0.07) 0%,rgba(0,0,0,0) 70%);
+  border:1px solid rgba(118,185,0,0.28);
+  border-left:3px solid var(--green);
+  border-radius:4px;
+  padding:28px 28px 24px;
+  margin-bottom:28px;
+}
+.strength-eyebrow{
+  font-family:'Orbitron',sans-serif;
+  font-size:9px;letter-spacing:3.5px;color:var(--green);
+  text-transform:uppercase;margin-bottom:14px;
+}
+.strength-title{
+  font-size:clamp(17px,3vw,22px);font-weight:700;color:var(--text);
+  margin-bottom:6px;line-height:1.3;
+}
+.strength-sub{font-size:13px;color:var(--sub);margin-bottom:20px;line-height:1.6;}
+.strength-chips{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:18px;}
+.strength-chip{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:14px 26px;border-radius:999px;
+  border:2px solid var(--green);
+  background:rgba(118,185,0,0.10);
+  color:#fff;font-size:17px;font-weight:700;letter-spacing:.5px;
+  box-shadow:0 0 18px rgba(118,185,0,0.13);
+}
+.strength-chip-icon{font-size:20px;line-height:1;}
+.strength-note{
+  font-size:12px;color:#555;border-top:1px solid #1a1a1a;
+  padding-top:14px;line-height:1.7;
 }
 .method-box{
   background:#0d0d0d;
@@ -440,6 +458,15 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',s
 
   <div class="page-logo">VE ESPORTS TALENT RADAR</div>
 
+  <!-- 顶部优势方向 Hero（始终可见） -->
+  <div class="strength-hero" id="strength-hero" style="display:none;">
+    <div class="strength-eyebrow">核心天赋方向 · TOP STRENGTHS</div>
+    <div class="strength-title">你的突出优势已识别</div>
+    <div class="strength-sub">基于七维行为指标联合分析，以下是你的最强维度</div>
+    <div class="strength-chips" id="strength-chips"></div>
+    <div class="strength-note" id="strength-note"></div>
+  </div>
+
   <!-- 评级展示 -->
   <div class="result-hero">
     <div class="complete-badge"><span class="complete-dot"></span>测评完成</div>
@@ -468,10 +495,6 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',s
 
   <!-- 门控预览区（无邀请码且未付费时显示） -->
   <div id="gate-teasers" style="display:none;margin-top:20px;">
-    <div class="teaser-section">
-      <div class="teaser-title">优势方向预览 · TOP DIMENSIONS</div>
-      <div class="teaser-reveal-content" id="teaser-top-dims"></div>
-    </div>
     <div class="teaser-section">
       <div class="teaser-title">AI 天赋分析摘要 · AI REPORT</div>
       <div class="teaser-content">
@@ -621,6 +644,29 @@ function getTopDimensions(scores, count = 2) {
     .slice(0, count);
 }
 
+const DIM_ICONS = {
+  reaction:'⚡', impulse:'🛡', vision:'👁', cognition:'🧠', aim:'🎯', focus:'🔒', color:'🎨'
+};
+
+function renderStrengthHero(scores) {
+  const topDims = getTopDimensions(scores, 2);
+  const hero = document.getElementById('strength-hero');
+  const chipsEl = document.getElementById('strength-chips');
+  const noteEl = document.getElementById('strength-note');
+  if (!hero || !chipsEl) return;
+
+  chipsEl.innerHTML = topDims.map(key =>
+    `<span class="strength-chip">
+      <span class="strength-chip-icon">${DIM_ICONS[key] || ''}</span>
+      ${DIM_NAMES[key]}
+    </span>`
+  ).join('');
+
+  noteEl.textContent = '解锁完整报告可查看全部七维详细分数、双赛道角色匹配与深度能力分析';
+
+  hero.style.display = 'block';
+}
+
 
 async function fetchPaidAccess() {
   try {
@@ -736,17 +782,7 @@ function applyGate(scores) {
       '</div>'
     );
   }
-  // 2. 公开显示最强两项维度名称，其余仍锁定
-  const topDimsEl = document.getElementById('teaser-top-dims');
-  if (topDimsEl) {
-    const topDims = getTopDimensions(scores || {}, 2);
-    topDimsEl.innerHTML =
-      '<div class="teaser-dims">' +
-      topDims.map(key => `<span class="teaser-dim-chip">${DIM_NAMES[key]}</span>`).join('') +
-      '</div>' +
-      '<div class="teaser-reveal-note">未付费预览仅公开你的两项优势方向。完整七维分数、雷达图、内部参考分位与完整分析需解锁后查看。</div>';
-  }
-  // 3. 显示 teaser 区域
+  // 2. 显示 teaser 区域（top-dims 已移至顶部 strength-hero）
   document.getElementById('gate-teasers').style.display = 'block';
   // 4. 结果未解锁前不展示推荐通道，避免评级侧漏
   const club = document.getElementById('club-section');
@@ -783,6 +819,9 @@ async function init() {
   const isInvited = sessionStorage.getItem('ve_invited') === 'true';
   paidAccess = isInvited ? { access: false, mode: 'advanced' } : await fetchPaidAccess();
   const hasAccess = isInvited || paidAccess.access;
+
+  // 顶部优势方向（所有用户都能看到）
+  renderStrengthHero(scores);
 
   if (hasAccess) {
     document.getElementById('invited-box').style.display = 'block';
