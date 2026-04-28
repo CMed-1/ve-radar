@@ -684,8 +684,6 @@
     <div class="aim-hud-item"><div class="aim-hud-num" id="aim-time">60</div><div class="aim-hud-label">剩余秒</div></div>
   </div>
 </div>
-<div id="fire-btn" style="display:none;">FIRE</div>
-
 <!-- ═══════════════════════════════════════════
      TEST 5: Aim - 结果
 ════════════════════════════════════════════ -->
@@ -815,6 +813,10 @@
 </div>
 
 </div><!-- /main -->
+
+<!-- fire-btn 必须是 body 直属子元素，不能在 .main 内部；
+     否则 Android Chrome requestFullscreen 单个 screen 时，此元素不在全屏层中而消失 -->
+<div id="fire-btn" style="display:none;">FIRE</div>
 
 <script src="/js/score-model.js"></script>
 <script src="/js/scores.js"></script>

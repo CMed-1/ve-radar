@@ -120,24 +120,19 @@ function getAimMeta() {
 function requestAimImmersive(screenId) {
   if (!isMobile) return;
   document.body.classList.add('aim-immersive-active');
-  const el = document.getElementById(screenId);
-  if (el?.requestFullscreen && !document.fullscreenElement) {
-    el.requestFullscreen({ navigationUI: 'hide' })
-      .then(() => {
-        if (screen.orientation?.lock) {
-          return screen.orientation.lock('landscape').catch(() => {});
-        }
-      })
-      .catch(() => {});
+  // 不对单个 screen 元素调用 requestFullscreen：
+  // Android Chrome 全屏后只渲染该元素子树，#fire-btn（body 直属子元素）会消失。
+  // CSS 已通过 position:fixed + z-index:10000 实现视觉全屏，无需 API 全屏。
+  // 仅做横屏锁定（允许失败）。
+  if (screen.orientation?.lock) {
+    screen.orientation.lock('landscape').catch(() => {});
   }
 }
 
 function exitAimImmersive() {
   if (!isMobile) return;
   document.body.classList.remove('aim-immersive-active');
-  if (document.fullscreenElement && document.exitFullscreen) {
-    document.exitFullscreen().catch(() => {});
-  }
+  // 对应 requestAimImmersive 不调 requestFullscreen，这里也不需要 exitFullscreen
 }
 
 function openAimIntro(phase) {
