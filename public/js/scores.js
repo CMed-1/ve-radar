@@ -145,14 +145,24 @@ function startReadCountdown(btn) {
   }, 1000);
 }
 
+function getOrCreateSid() {
+  let sid = sessionStorage.getItem('ve_sid');
+  if (!sid) {
+    sid = 'sid_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
+    sessionStorage.setItem('ve_sid', sid);
+  }
+  return sid;
+}
+
 function saveAnonymousResult() {
   const inviteCode = sessionStorage.getItem('ve_invited') === 'true'
     ? (sessionStorage.getItem('ve_code') || '')
     : '';
+  const sid = getOrCreateSid();
   fetch('/api/test-result', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ scores, rawData, device, inviteCode })
+    body: JSON.stringify({ scores, rawData, device, inviteCode, sid })
   }).catch(() => {});
 }
 

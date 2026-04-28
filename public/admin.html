@@ -191,7 +191,7 @@
         <button class="btn-gen" onclick="exportTestCSV()">导出完整测试数据CSV</button>
       </div>
       <table class="data-table" id="tests-table">
-        <thead><tr><th>ID</th><th>时间</th><th>设备</th><th>邀请码</th><th>综合加权分</th><th>评级</th><th>七维分数</th><th>原始摘要</th></tr></thead>
+        <thead><tr><th>ID</th><th>时间</th><th>设备</th><th>付费转化</th><th>综合加权分</th><th>评级</th><th>七维分数</th><th>原始摘要</th></tr></thead>
         <tbody id="tests-tbody"></tbody>
       </table>
     </div>
@@ -533,6 +533,20 @@ function scoreChips(scores) {
   return DIM_KEYS.map(key => `<span class="score-pill">${DIM_NAMES[key]} ${Math.round(scores?.[key] || 0)}</span>`).join('');
 }
 
+function conversionBadge(conv) {
+  if (!conv) return '<span style="color:#555;font-size:12px;">—</span>';
+  if (conv.type === 'paid') {
+    const modeTag = conv.mode === 'advanced'
+      ? '<span style="font-size:10px;color:#a78bfa;margin-left:4px;">进阶</span>'
+      : '<span style="font-size:10px;color:#76b900;margin-left:4px;">基础</span>';
+    return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:10px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);color:#10B981;font-size:12px;font-weight:600;">✓ 已付费${modeTag}</span>`;
+  }
+  if (conv.type === 'invited') {
+    return '<span style="padding:3px 10px;border-radius:10px;background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);color:var(--cyan);font-size:12px;">邀请码</span>';
+  }
+  return '<span style="padding:3px 10px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:#555;font-size:12px;">未转化</span>';
+}
+
 function renderTestResults() {
   const tbody = document.getElementById('tests-tbody');
   if (!tbody) return;
@@ -543,7 +557,7 @@ function renderTestResults() {
       <td style="font-family:monospace;color:var(--cyan)">${row.id}</td>
       <td style="color:var(--sub)">${(row.createdAt || '').slice(0,16)}</td>
       <td>${row.device || 'unknown'}</td>
-      <td style="font-family:monospace;color:var(--sub)">${row.inviteCode || ''}</td>
+      <td>${conversionBadge(row.conversion)}</td>
       <td><strong>${avg}</strong></td>
       <td><span class="rating-pill ${ratingClass}">${row.rating}</span></td>
       <td>${scoreChips(row.scores)}</td>
@@ -556,12 +570,16 @@ function renderTestResults() {
     const total = allTestResults.length;
     const avg = total ? (allTestResults.reduce((sum, row) => sum + (Number(row.avgScore) || 0), 0) / total).toFixed(1) : '—';
     const genius = allTestResults.filter(row => row.rating.includes('天才')).length;
-    const mobile = allTestResults.filter(row => row.device === 'mobile').length;
+    const paid = allTestResults.filter(row => row.conversion?.type === 'paid').length;
+    const invited = allTestResults.filter(row => row.conversion?.type === 'invited').length;
+    const convRate = total ? ((paid / total) * 100).toFixed(1) : '0';
     statsEl.innerHTML = `
-      <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">最近完成记录</div></div>
+      <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">完成测评</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:#10B981">${paid}</div><div class="stat-label">付费转化</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--cyan)">${invited}</div><div class="stat-label">邀请码免费</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:#F59E0B">${convRate}%</div><div class="stat-label">付费转化率</div></div>
       <div class="stat-card"><div class="stat-num">${avg}</div><div class="stat-label">平均加权分</div></div>
-      <div class="stat-card"><div class="stat-num" style="color:#FCD34D">${genius}</div><div class="stat-label">天才少年档</div></div>
-      <div class="stat-card"><div class="stat-num">${mobile}</div><div class="stat-label">手机端记录</div></div>`;
+      <div class="stat-card"><div class="stat-num" style="color:#FCD34D">${genius}</div><div class="stat-label">天才少年档</div></div>`;
   }
 }
 

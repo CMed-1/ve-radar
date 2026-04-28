@@ -724,7 +724,8 @@ async function startPayment(mode, channel, buttonEl) {
       body: JSON.stringify({
         mode,
         channel,
-        refCode: sessionStorage.getItem('ve_ref_code') || ''
+        refCode: sessionStorage.getItem('ve_ref_code') || '',
+        sid: sessionStorage.getItem('ve_sid') || ''
       })
     });
     const data = await resp.json();

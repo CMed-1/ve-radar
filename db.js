@@ -55,6 +55,7 @@ function initDB() {
     avg_score REAL,
     scores TEXT NOT NULL,
     raw_data TEXT,
+    sid TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   )`);
   db.exec(`CREATE TABLE IF NOT EXISTS payments (
@@ -68,6 +69,7 @@ function initDB() {
     provider_trade_no TEXT,
     report_token TEXT UNIQUE NOT NULL,
     ref_code TEXT,
+    sid TEXT,
     raw_response TEXT,
     raw_notify TEXT,
     paid_at TEXT,
@@ -83,6 +85,15 @@ function initDB() {
   if (!testResultColumns.some(col => col.name === 'invite_code')) {
     db.exec(`ALTER TABLE test_results ADD COLUMN invite_code TEXT`);
     console.log('[DB] test_results 补充 invite_code 字段');
+  }
+  if (!testResultColumns.some(col => col.name === 'sid')) {
+    db.exec(`ALTER TABLE test_results ADD COLUMN sid TEXT`);
+    console.log('[DB] test_results 补充 sid 字段');
+  }
+  const paymentColumns = db.prepare(`PRAGMA table_info(payments)`).all();
+  if (!paymentColumns.some(col => col.name === 'sid')) {
+    db.exec(`ALTER TABLE payments ADD COLUMN sid TEXT`);
+    console.log('[DB] payments 补充 sid 字段');
   }
   console.log('数据库初始化完成');
 }
@@ -142,14 +153,15 @@ function getReferralStats() {
   return Object.values(map).sort((a, b) => b.clicks - a.clicks);
 }
 
-function saveTestResult({ device, inviteCode, scores, rawData }) {
+function saveTestResult({ device, inviteCode, scores, rawData, sid }) {
   const avg = calcWeightedAverage(scores || {}, 1);
   const normalizedInviteCode = typeof inviteCode === 'string' && inviteCode.trim()
     ? inviteCode.trim().toUpperCase()
     : null;
+  const normalizedSid = typeof sid === 'string' && sid.trim() ? sid.trim() : null;
   db.prepare(
-    'INSERT INTO test_results (device, invite_code, avg_score, scores, raw_data) VALUES (?, ?, ?, ?, ?)'
-  ).run(device || 'unknown', normalizedInviteCode, avg, JSON.stringify(scores || {}), JSON.stringify(rawData || {}));
+    'INSERT INTO test_results (device, invite_code, avg_score, scores, raw_data, sid) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(device || 'unknown', normalizedInviteCode, avg, JSON.stringify(scores || {}), JSON.stringify(rawData || {}), normalizedSid);
 }
 
 function recalculateTestResultScores() {
@@ -212,19 +224,23 @@ function getTestResultCount() {
 function getAllTestResults(limit = 300) {
   const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 300, 1), 10000);
   return db.prepare(
-    `SELECT id, device, invite_code, avg_score, scores, raw_data, created_at
-     FROM test_results
-     ORDER BY created_at DESC, id DESC
+    `SELECT t.id, t.device, t.invite_code, t.avg_score, t.scores, t.raw_data, t.sid, t.created_at,
+            p.status AS pay_status, p.mode AS pay_mode, p.paid_at
+     FROM test_results t
+     LEFT JOIN payments p ON p.sid = t.sid AND t.sid IS NOT NULL AND p.status = 'PAID'
+     GROUP BY t.id
+     ORDER BY t.created_at DESC, t.id DESC
      LIMIT ?`
   ).all(safeLimit);
 }
 
-function createPayment({ orderNo, mode, channel, amount, productName, refCode }) {
+function createPayment({ orderNo, mode, channel, amount, productName, refCode, sid }) {
   const reportToken = 'pay_' + nanoid(32);
+  const normalizedSid = typeof sid === 'string' && sid.trim() ? sid.trim() : null;
   db.prepare(
-    `INSERT INTO payments (order_no, mode, channel, amount, product_name, report_token, ref_code)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
-  ).run(orderNo, mode, channel, amount, productName, reportToken, refCode || null);
+    `INSERT INTO payments (order_no, mode, channel, amount, product_name, report_token, ref_code, sid)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(orderNo, mode, channel, amount, productName, reportToken, refCode || null, normalizedSid);
   return getPaymentByOrderNo(orderNo);
 }
 

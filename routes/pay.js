@@ -150,6 +150,7 @@ router.post('/pay/create', async (req, res) => {
     const mode = req.body?.mode === 'advanced' ? 'advanced' : 'basic';
     const channel = normalizeChannel(req.body?.channel);
     const refCode = typeof req.body?.refCode === 'string' ? req.body.refCode.trim().toUpperCase() : '';
+    const sid = typeof req.body?.sid === 'string' ? req.body.sid.trim() : '';
     const product = getPayProduct(mode);
     const orderNo = buildOrderNo(mode);
 
@@ -159,7 +160,8 @@ router.post('/pay/create', async (req, res) => {
       channel,
       amount: product.amount,
       productName: product.name,
-      refCode
+      refCode,
+      sid: sid || null
     });
 
     const payload = {

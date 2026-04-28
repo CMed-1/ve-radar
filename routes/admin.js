@@ -347,6 +347,12 @@ router.post('/admin/test-results', async (req, res) => {
     const results = getAllTestResults(limit).map(row => {
       const scores = parseStoredJson(row.scores, {});
       const rawData = parseStoredJson(row.raw_data, {});
+      // 付费转化：有邀请码 = 免费通过，有 pay_status = 付费
+      const conversion = row.invite_code
+        ? { type: 'invited', label: '邀请码免费', mode: null }
+        : row.pay_status === 'PAID'
+          ? { type: 'paid', label: '已付费', mode: row.pay_mode || null, paidAt: row.paid_at || null }
+          : { type: 'none', label: '未转化', mode: null };
       return {
         id: row.id,
         device: row.device || 'unknown',
@@ -356,7 +362,8 @@ router.post('/admin/test-results', async (req, res) => {
         scores,
         rawSummary: summarizeRawData(rawData),
         rawData,
-        createdAt: row.created_at
+        createdAt: row.created_at,
+        conversion
       };
     });
 
