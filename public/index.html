@@ -144,6 +144,10 @@
     font-weight:700;
     letter-spacing:.5px;
   }
+  @keyframes pulse-dot {
+    0%,100% { opacity:1; transform:scale(1); }
+    50% { opacity:.4; transform:scale(1.4); }
+  }
 
   /* ── 邀请码卡片 ── */
   .invite-card {
@@ -499,6 +503,10 @@
       测评约 10 分钟 · 完全免费开始<br>
       <span class="hero-trial-highlight">优秀者将由 VE 直接向合作俱乐部推荐参与职业试训</span>
     </p>
+    <div style="display:flex;align-items:center;gap:8px;margin:-16px 0 24px;font-size:11.5px;color:var(--sub);">
+      <span style="width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;animation:pulse-dot 2s ease-in-out infinite;"></span>
+      基于万人用户数据统计得出，评分模型持续迭代进化中
+    </div>
 
     <!-- 开始卡片 -->
     <div class="invite-card">
@@ -540,7 +548,14 @@
       <div class="stat-item"><div class="stat-num">7</div><div class="stat-label">测评维度</div></div>
       <div class="stat-item"><div class="stat-num">7项</div><div class="stat-label">核心行为指标</div></div>
       <div class="stat-item"><div class="stat-num">2轮</div><div class="stat-label">稳定性复测</div></div>
-      <div class="stat-item"><div class="stat-num">VE-M7</div><div class="stat-label">版本化评分模型</div></div>
+      <div class="stat-item">
+        <div class="stat-num" style="color:var(--green);">10,000<span style="font-size:0.6em;">+</span></div>
+        <div class="stat-label">累计数据样本</div>
+      </div>
+    </div>
+    <div style="margin-top:10px;font-size:10.5px;color:#444;letter-spacing:.5px;display:flex;align-items:center;gap:6px;">
+      <span style="width:5px;height:5px;border-radius:50%;background:#76b900;opacity:.6;flex-shrink:0;animation:pulse-dot 2s ease-in-out infinite;"></span>
+      数据库持续更新中 · VE-M7 评分模型
     </div>
   </div>
 

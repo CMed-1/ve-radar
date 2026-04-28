@@ -32,7 +32,7 @@ const AIM_SENSITIVITY = {
 };
 const AIM_GRID = {
   desktop: { cols: 8, rows: 5 },
-  mobile: { cols: 6, rows: 4 }
+  mobile: { cols: 4, rows: 3 }
 };
 const AIM_SPEED_BASE = {
   desktop: 0.72,
@@ -225,14 +225,19 @@ function resetAimRoundState() {
 function getAimGridConfig(rect, size) {
   const preset = isMobile ? AIM_GRID.mobile : AIM_GRID.desktop;
   const basePadX = Math.max(size / 2 + 8, 18);
-  const padY = Math.max(size / 2 + 8, 18);
+  const basePadY = Math.max(size / 2 + 8, 18);
   let padX = basePadX;
+  let padY = basePadY;
   let usableW = Math.max(rect.width - basePadX * 2, 1);
-  const usableH = Math.max(rect.height - padY * 2, 1);
+  let usableH = Math.max(rect.height - basePadY * 2, 1);
   if (isMobile) {
+    // 限制在居中 50% 宽 × 60% 高 的区域，避免覆盖全屏边角
     const shrunkW = usableW * 0.5;
     padX = basePadX + (usableW - shrunkW) / 2;
     usableW = shrunkW;
+    const shrunkH = usableH * 0.6;
+    padY = basePadY + (usableH - shrunkH) / 2;
+    usableH = shrunkH;
   }
   return {
     cols: preset.cols,
@@ -246,6 +251,7 @@ function getAimGridConfig(rect, size) {
 
 function spawnOneTarget() {
   if (AIM.finished || Date.now() >= AIM.endTime) return;
+  if (AIM.activeTargets >= 3) return; // 同时最多3个目标，防止旧回调堆积刷出大量小球
 
   const arena = document.getElementById('aim-arena');
   const rect = arena.getBoundingClientRect();
