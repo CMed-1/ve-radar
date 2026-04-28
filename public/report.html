@@ -1418,11 +1418,13 @@ async function generateReport() {
       typewriterEffect(data.text);
     } else {
       window.__veReportMeta = { source: 'local-fallback', model: null, requestId: null, fallbackReason: 'empty_response' };
-      document.getElementById('report-text').textContent = fallbackText();
+      reportTextContent = fallbackText();   // ← 保证分享图可生成
+      document.getElementById('report-text').textContent = reportTextContent;
     }
   } catch(e) {
     window.__veReportMeta = { source: 'local-fallback', model: null, requestId: null, fallbackReason: e?.message || 'fetch_error' };
-    document.getElementById('report-text').textContent = fallbackText();
+    reportTextContent = fallbackText();     // ← 保证分享图可生成
+    document.getElementById('report-text').textContent = reportTextContent;
   } finally {
     document.getElementById('loading-screen').style.display = 'none';
     document.getElementById('report-body').style.display = 'block';
