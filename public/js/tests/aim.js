@@ -224,21 +224,11 @@ function resetAimRoundState() {
 
 function getAimGridConfig(rect, size) {
   const preset = isMobile ? AIM_GRID.mobile : AIM_GRID.desktop;
-  const basePadX = Math.max(size / 2 + 8, 18);
-  const basePadY = Math.max(size / 2 + 8, 18);
-  let padX = basePadX;
-  let padY = basePadY;
-  let usableW = Math.max(rect.width - basePadX * 2, 1);
-  let usableH = Math.max(rect.height - basePadY * 2, 1);
-  if (isMobile) {
-    // 限制在居中 50% 宽 × 60% 高 的区域，避免覆盖全屏边角
-    const shrunkW = usableW * 0.5;
-    padX = basePadX + (usableW - shrunkW) / 2;
-    usableW = shrunkW;
-    const shrunkH = usableH * 0.6;
-    padY = basePadY + (usableH - shrunkH) / 2;
-    usableH = shrunkH;
-  }
+  const padX = Math.max(size / 2 + 8, 18);
+  const padY = Math.max(size / 2 + 8, 18);
+  const usableW = Math.max(rect.width - padX * 2, 1);
+  const usableH = Math.max(rect.height - padY * 2, 1);
+  // 手机端 arena 已通过 CSS 限制为居中小框，无需在 JS 再次收缩生成区域
   return {
     cols: preset.cols,
     rows: preset.rows,

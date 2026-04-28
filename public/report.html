@@ -1546,7 +1546,7 @@ async function downloadPDF() {
 // 生成维度对比柱状图（用户得分 vs 普通人均分）
 async function renderBarChartImage() {
   const cvs = document.createElement('canvas');
-  cvs.width = 720; cvs.height = 300;
+  cvs.width = 720; cvs.height = reportMode === 'advanced' ? 380 : 300;
   const ctx = cvs.getContext('2d');
   // 深色背景
   ctx.fillStyle = '#111111';
@@ -1664,156 +1664,408 @@ async function renderLineChartImage(reactionTimes) {
   return cvs.toDataURL('image/png');
 }
 
+// ── PDF维度描述 & 原始数据摘要 ─────────────────────────────
+const PDF_DIM_DESC = {
+  reaction: '视觉刺激到操作执行的神经传导时间，是 FPS/射击类游戏中最基础的操作指标',
+  impulse:  '在高压环境下正确过滤干扰信号、抑制错误操作的能力，影响决策准确性',
+  vision:   '追踪和识别快速运动目标的能力，对 FPS 目标锁定和 MOBA 团战感知至关重要',
+  cognition:'同时追踪多个信息、快速处理复杂局面的认知带宽，由 N-back 与舒尔特方格测评',
+  aim:      '将目标意图精确转化为瞄准动作的控制精度，KPM 反映效率，准确率反映质量',
+  focus:    '在长时间对局中保持高强度专注、稳定发挥的能力，由 Aim 前后差值与 RT 波动共同评估',
+  color:    '快速辨别敌我颜色特征的感知能力，在 FPS 近战和 MOBA 技能识别中提供优势'
+};
+const PDF_DIM_BENCH_LABEL = {
+  reaction: '天才 <190ms · 职业 <220ms · 均值 ~260ms',
+  impulse:  '天才 0误触 · 职业 ≤1误触 · 均值 1-2误触/6次',
+  vision:   '天才 6/6正确 · 职业 5/6 · 均值 ~3/6',
+  cognition:'天才：各级极速通关 · 职业：各级快速 · 均值：基准时间内',
+  aim:      '天才 KPM≥100, 准确≥90% · 职业 KPM≥60 · 均值 KPM~44',
+  focus:    '天才 方差<10ms · 职业 方差<25ms · 均值 方差~30-40ms',
+  color:    '天才 P1全中极速 · 职业 P1≤1误触 · 均值 ~2误触'
+};
+const PDF_DIM_ICON = { reaction:'⚡', impulse:'🛡', vision:'👁', cognition:'🧠', aim:'🎯', focus:'🔒', color:'🎨' };
+
+function getPDFDimRaw(k, raw) {
+  switch (k) {
+    case 'reaction': {
+      const rt = raw.reactionBreakdown?.compositeAvgMs;
+      if (rt !== undefined && rt !== null) {
+        const parts = [`综合均值 ${Math.round(rt)}ms`];
+        if (Array.isArray(raw.reactionTimes) && raw.reactionTimes.length) parts.push(`最快 ${Math.min(...raw.reactionTimes)}ms`);
+        if (raw.reactionBreakdown?.correctionMs) parts.push(`设备修正 ${raw.reactionBreakdown.correctionMs}ms`);
+        return parts.join(' · ');
+      }
+      if (Array.isArray(raw.reactionTimes) && raw.reactionTimes.length) {
+        const avg = Math.round(raw.reactionTimes.reduce((a,b)=>a+b,0)/raw.reactionTimes.length);
+        return `平均 ${avg}ms · 最快 ${Math.min(...raw.reactionTimes)}ms`;
+      }
+      return '—';
+    }
+    case 'impulse': {
+      const p = [];
+      if (raw.gngHits !== undefined) p.push(`命中 ${raw.gngHits}/17`);
+      if (raw.gngFalseAlarms !== undefined) p.push(`误触 ${raw.gngFalseAlarms}次`);
+      if (raw.gngMisses !== undefined) p.push(`漏触 ${raw.gngMisses}次`);
+      return p.join(' · ') || '—';
+    }
+    case 'vision': {
+      if (raw.visionCorrect !== undefined) return `${raw.visionCorrect}/${raw.visionTotal||10} 题正确`;
+      return '—';
+    }
+    case 'cognition': {
+      const p = [];
+      if (raw.nbScore !== undefined) p.push(`N-back 得分 ${raw.nbScore}`);
+      if (raw.nbHits !== undefined && raw.nbTargets !== undefined) p.push(`命中 ${raw.nbHits}/${raw.nbTargets}`);
+      if (raw.nbFalseAlarms !== undefined) p.push(`误触 ${raw.nbFalseAlarms}次`);
+      if (Array.isArray(raw.gridTimes) && raw.gridTimes.length) {
+        const vals = raw.gridTimes.map(x=>Number(x?.time)).filter(Number.isFinite);
+        if (vals.length) p.push(`舒尔特均耗 ${(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1)}s/格`);
+      }
+      return p.join(' · ') || '—';
+    }
+    case 'aim': {
+      const p = [];
+      if (raw.aimHits !== undefined) p.push(`命中 ${raw.aimHits}个`);
+      if (raw.aimAccuracy !== undefined) p.push(`准确率 ${raw.aimAccuracy}%`);
+      if (raw.aimKpm !== undefined) p.push(`有效KPM ${raw.aimKpm}`);
+      if (Array.isArray(raw.aimRounds) && raw.aimRounds.length === 2)
+        p.push(`一测KPM ${raw.aimRounds[0].kpm} → 二测KPM ${raw.aimRounds[1].kpm}`);
+      return p.join(' · ') || '—';
+    }
+    case 'focus': {
+      const p = [];
+      if (Array.isArray(raw.aimRounds) && raw.aimRounds.length === 2) {
+        const d = Math.abs(raw.aimRounds[0].kpm - raw.aimRounds[1].kpm);
+        p.push(`两轮KPM差 ${d}`);
+      }
+      if (raw.aimConsistency !== undefined) p.push(`稳定性指数 ${raw.aimConsistency}`);
+      if (Array.isArray(raw.rt2Times) && raw.rt2Times.length && Array.isArray(raw.reactionTimes) && raw.reactionTimes.length) {
+        const r1 = Math.round(raw.reactionTimes.reduce((a,b)=>a+b,0)/raw.reactionTimes.length);
+        const r2 = Math.round(raw.rt2Times.reduce((a,b)=>a+b,0)/raw.rt2Times.length);
+        p.push(`RT一测${r1}ms → 二测${r2}ms`);
+      }
+      return p.join(' · ') || '—';
+    }
+    case 'color': {
+      const p = [];
+      if (raw.colorP1Hits !== undefined && raw.colorP1Total) p.push(`P1识别 ${raw.colorP1Hits}/${raw.colorP1Total}`);
+      if (raw.colorP2Correct !== undefined) p.push(`色差辨别 ${raw.colorP2Correct}/${raw.colorP2Total||5}`);
+      return p.join(' · ') || '—';
+    }
+    default: return '—';
+  }
+}
+
 function buildPDFContent(radarImg, barImg, lineImg) {
   const cfg = RATING_CONFIG[ratingKey];
   const avg = VEScoreModel.calcWeightedAverage(scores, 1).toFixed(1);
   const accentColor = ratingKey==='genius' ? '#FCD34D' : ratingKey==='pro' ? '#76b900' : '#a78bfa';
   const raw = JSON.parse(sessionStorage.getItem('ve_rawdata') || '{}');
   const dateStr = new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric'});
+  const pct = VEScoreModel.scoreToPercentile(parseFloat(avg));
+  const r = calcRoleTracks(scores);
+  const p = calcTrainingPlan(scores);
 
-  // 实测数据摘要
-  const dataLines = [];
-  if (raw.reactionBreakdown?.compositeAvgMs !== undefined && raw.reactionBreakdown?.compositeAvgMs !== null) {
-    const parts = [`反应速度：综合 ${Math.round(raw.reactionBreakdown.compositeAvgMs)}ms`];
-    if (raw.reactionTimes && raw.reactionTimes.length) {
-      const avgRT = Math.round(raw.reactionTimes.reduce((a,b)=>a+b,0)/raw.reactionTimes.length);
-      const bestRT = Math.min(...raw.reactionTimes);
-      parts.push(`一测平均 ${avgRT}ms`, `最快 ${bestRT}ms`);
-    }
-    if (raw.gngReactionTimes && raw.gngReactionTimes.length) {
-      const gngAvg = Math.round(raw.gngReactionTimes.reduce((a,b)=>a+b,0)/raw.gngReactionTimes.length);
-      parts.push(`Go平均 ${gngAvg}ms`);
-    }
-    if (raw.rt2Times && raw.rt2Times.length) {
-      const rt2Avg = Math.round(raw.rt2Times.reduce((a,b)=>a+b,0)/raw.rt2Times.length);
-      parts.push(`二测平均 ${rt2Avg}ms`);
-    }
-    if (raw.reactionBreakdown.correctionMs) {
-      parts.push(`设备修正 ${raw.reactionBreakdown.correctionMs}ms`);
-    }
-    dataLines.push(parts.join(' · '));
-  } else if (raw.reactionTimes && raw.reactionTimes.length) {
-    const avgRT = Math.round(raw.reactionTimes.reduce((a,b)=>a+b,0)/raw.reactionTimes.length);
-    const bestRT = Math.min(...raw.reactionTimes);
-    dataLines.push(`反应速度：平均 ${avgRT}ms（普通人均值 260ms）· 最快 ${bestRT}ms`);
-  }
-  if (raw.gngHits !== undefined) {
-    dataLines.push(`冲动抑制：命中 ${raw.gngHits}/17 · 误触 ${raw.gngFalseAlarms} 次`);
-  }
-  if (raw.visionCorrect !== undefined) {
-    dataLines.push(`动态视力：${raw.visionCorrect}/${raw.visionTotal} 题正确（普通人均值 ~5/10）`);
-  }
-  if (raw.aimHits !== undefined) {
-    const rawKpmText = raw.aimRawKpm !== undefined ? ` · 原始KPM ${raw.aimRawKpm}` : '';
-    let aimLine = `手眼协调：两轮合计命中 ${raw.aimHits} 个 · 准确率 ${raw.aimAccuracy}% · 有效KPM ${raw.aimKpm}${rawKpmText}（内部参考有效KPM≈44；两轮约88命中）`;
-    if (raw.aimRounds && raw.aimRounds.length === 2) {
-      aimLine += ` · 一测 ${raw.aimRounds[0].accuracy}%/有效KPM ${raw.aimRounds[0].kpm} · 二测 ${raw.aimRounds[1].accuracy}%/有效KPM ${raw.aimRounds[1].kpm}`;
-    }
-    dataLines.push(aimLine);
-  }
-  if (raw.colorP1Hits !== undefined) {
-    const p1Acc = raw.colorP1Total ? Math.round(raw.colorP1Hits/raw.colorP1Total*100) : 0;
-    dataLines.push(`色觉感知：识别准确率 ${p1Acc}%${raw.colorP2Correct !== undefined ? ` · 色差辨别 ${raw.colorP2Correct}/${raw.colorP2Total} 正确` : ''}`);
-  }
+  // ── 维度评分条 HTML 生成器 ──
+  const dimBar = (k) => {
+    const s = scores[k] || 0;
+    const bench = BENCHMARKS[k];
+    const diff = s - bench;
+    const c = diff > 0 ? '#76b900' : diff < 0 ? '#EF4444' : '#a7a7a7';
+    return `<div style="background:rgba(255,255,255,0.06);border-radius:4px;height:10px;position:relative;margin:8px 0 4px;">
+      <div style="position:absolute;left:0;top:0;height:10px;width:${s}%;background:linear-gradient(90deg,${c},rgba(118,185,0,.4));border-radius:4px;"></div>
+      <div style="position:absolute;top:-4px;left:${bench}%;width:2px;height:18px;background:#F8B73C;transform:translateX(-50%);border-radius:1px;"></div>
+    </div>
+    <div style="font-size:11px;color:#555;margin-bottom:0;">得分 <span style="color:${c};font-weight:700;">${s}</span> / 100 &nbsp;·&nbsp; 均值标记 <span style="color:#F8B73C;">▌</span>${bench} &nbsp;·&nbsp; vs均值 <span style="color:${c};">${diff>0?'+':''}${diff}</span></div>`;
+  };
 
+  // ── 通用页头 ──
+  const pdfHeader = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:40px;padding-bottom:20px;border-bottom:2px solid #76b900;">
+      <div>
+        <div style="font-size:9px;color:#76b900;letter-spacing:4px;margin-bottom:8px;text-transform:uppercase;">VE ESPORTS TALENT RADAR &nbsp;·&nbsp; ${reportMode === 'basic' ? 'BASIC REPORT' : 'ADVANCED REPORT'}</div>
+        <div style="font-size:26px;font-weight:700;color:#fff;letter-spacing:.5px;">电竞天赋测评报告</div>
+        <div style="font-size:12px;color:#555;margin-top:6px;">${dateStr} &nbsp;·&nbsp; 基于万人用户数据统计 · 模型持续进化中</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="padding:12px 28px;border:2px solid ${accentColor};border-radius:4px;font-size:13px;font-weight:700;color:${accentColor};display:inline-block;margin-bottom:8px;">${cfg.label}</div>
+        <div style="font-size:12px;color:#a7a7a7;">综合加权分 <span style="color:#fff;font-weight:700;font-size:20px;">${avg}</span> / 100</div>
+        <div style="font-size:11px;color:#555;margin-top:4px;">超越了 ${pct}% 的测评者</div>
+      </div>
+    </div>`;
+
+  // ── 评分表格行 ──
   const dimRows = DIM_KEYS.map(k => {
     const s = scores[k] || 0;
     const bench = BENCHMARKS[k];
     const diff = s - bench;
-    const diffStr = diff > 0 ? `+${diff}` : `${diff}`;
-    const diffColor = diff > 0 ? '#76b900' : diff < 0 ? '#EF4444' : '#a7a7a7';
-    return `
-      <tr>
-        <td style="padding:7px 12px;color:#a7a7a7;font-size:13px;">${DIM_NAMES[k]}</td>
-        <td style="padding:7px 12px;text-align:center;">
-          <div style="background:rgba(255,255,255,0.06);border-radius:4px;height:8px;position:relative;">
-            <div style="position:absolute;left:0;top:0;height:8px;width:${s}%;background:linear-gradient(90deg,#76b900,rgba(118,185,0,.5));border-radius:4px;"></div>
-            <div style="position:absolute;top:-3px;left:${bench}%;width:2px;height:14px;background:#F8B73C;border-radius:1px;transform:translateX(-50%);"></div>
-          </div>
-        </td>
-        <td style="padding:7px 12px;text-align:center;font-family:monospace;color:#fff;font-size:14px;font-weight:700;">${s}</td>
-        <td style="padding:7px 12px;text-align:center;color:${diffColor};font-size:12px;">${diffStr}</td>
-      </tr>`;
+    const c = diff > 0 ? '#76b900' : diff < 0 ? '#EF4444' : '#a7a7a7';
+    return `<tr>
+      <td style="padding:6px 10px;color:#a7a7a7;font-size:13px;white-space:nowrap;">${PDF_DIM_ICON[k]} ${DIM_NAMES[k]}</td>
+      <td style="padding:6px 10px;">
+        <div style="background:rgba(255,255,255,0.06);border-radius:3px;height:7px;position:relative;">
+          <div style="position:absolute;left:0;top:0;height:7px;width:${s}%;background:${c};border-radius:3px;opacity:.8;"></div>
+          <div style="position:absolute;top:-3px;left:${bench}%;width:2px;height:13px;background:#F8B73C;transform:translateX(-50%);"></div>
+        </div>
+      </td>
+      <td style="padding:6px 10px;text-align:center;color:#fff;font-weight:700;font-size:14px;">${s}</td>
+      <td style="padding:6px 10px;text-align:center;color:${c};font-size:12px;">${diff>0?'+':''}${diff}</td>
+    </tr>`;
   }).join('');
 
-  return `
-    <div style="background:#000000;color:#fff;padding:48px 48px 60px;font-family:sans-serif;width:800px;">
-
-      <!-- 页头 -->
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:36px;padding-bottom:20px;border-bottom:2px solid #76b900;">
-        <div>
-          <div style="font-size:10px;color:#76b900;letter-spacing:4px;margin-bottom:6px;text-transform:uppercase;">VE ESPORTS TALENT RADAR</div>
-          <div style="font-size:28px;font-weight:700;color:#fff;letter-spacing:.5px;">电竞天赋测评报告</div>
-          <div style="font-size:12px;color:#a7a7a7;margin-top:4px;">${dateStr}</div>
-        </div>
-        <div style="text-align:right;">
-          <div style="padding:10px 24px;border:2px solid ${accentColor};border-radius:4px;font-size:14px;font-weight:700;color:${accentColor};display:inline-block;">${cfg.label}</div>
-          <div style="font-size:12px;color:#a7a7a7;margin-top:6px;">综合加权分 <span style="color:#fff;font-weight:700;">${avg}</span> / 100</div>
-        </div>
-      </div>
-
-      <!-- 雷达图 + 维度表格 -->
-      <div style="display:flex;gap:32px;margin-bottom:32px;align-items:flex-start;">
-        <div style="flex:0 0 240px;">
-          <div style="font-size:10px;color:#76b900;letter-spacing:2px;margin-bottom:12px;text-transform:uppercase;">天赋雷达图</div>
-          <img src="${radarImg}" style="width:240px;height:240px;object-fit:contain;" />
+  // ════════════════════════════════════════════════
+  //  基础版 PDF（精简 2 页）
+  // ════════════════════════════════════════════════
+  if (reportMode === 'basic') {
+    return `<div style="background:#000;color:#fff;padding:44px 44px 56px;font-family:sans-serif;width:800px;">
+      ${pdfHeader}
+      <!-- 雷达图 + 评分表 -->
+      <div style="display:flex;gap:28px;margin-bottom:32px;align-items:flex-start;">
+        <div style="flex:0 0 220px;">
+          <div style="font-size:9px;color:#76b900;letter-spacing:2px;margin-bottom:10px;text-transform:uppercase;">天赋雷达图</div>
+          <img src="${radarImg}" style="width:220px;height:220px;object-fit:contain;" />
         </div>
         <div style="flex:1;">
-          <div style="font-size:10px;color:#76b900;letter-spacing:2px;margin-bottom:12px;text-transform:uppercase;">七维度评分详情 <span style="color:#F8B73C;font-size:9px;">▌ = 普通人均分</span></div>
+          <div style="font-size:9px;color:#76b900;letter-spacing:2px;margin-bottom:10px;text-transform:uppercase;">七维度评分 <span style="color:#F8B73C;font-size:9px;">▌ = 普通人均分</span></div>
           <table style="width:100%;border-collapse:collapse;">
-            <thead>
-              <tr style="border-bottom:1px solid #2a2a2a;">
-                <th style="padding:5px 12px;text-align:left;font-size:11px;color:#757575;font-weight:500;text-transform:uppercase;letter-spacing:.5px;">维度</th>
-                <th style="padding:5px 12px;font-size:11px;color:#757575;font-weight:500;min-width:140px;text-transform:uppercase;letter-spacing:.5px;">得分条</th>
-                <th style="padding:5px 12px;text-align:center;font-size:11px;color:#757575;font-weight:500;text-transform:uppercase;letter-spacing:.5px;">分数</th>
-                <th style="padding:5px 12px;text-align:center;font-size:11px;color:#757575;font-weight:500;text-transform:uppercase;letter-spacing:.5px;">vs均值</th>
-              </tr>
-            </thead>
+            <thead><tr style="border-bottom:1px solid #222;">
+              <th style="padding:4px 10px;text-align:left;font-size:10px;color:#555;font-weight:400;">维度</th>
+              <th style="padding:4px 10px;font-size:10px;color:#555;font-weight:400;min-width:130px;">得分条</th>
+              <th style="padding:4px 10px;text-align:center;font-size:10px;color:#555;font-weight:400;">分数</th>
+              <th style="padding:4px 10px;text-align:center;font-size:10px;color:#555;font-weight:400;">vs均值</th>
+            </tr></thead>
             <tbody>${dimRows}</tbody>
           </table>
         </div>
       </div>
-
-      <!-- 维度对比柱状图 -->
+      <!-- 对比柱状图 -->
       <div style="margin-bottom:32px;">
-        <div style="font-size:10px;color:#76b900;letter-spacing:2px;margin-bottom:12px;text-transform:uppercase;">维度得分对比（你 vs 普通人）</div>
-        <div style="background:#111111;border:1px solid #2a2a2a;border-radius:4px;padding:16px;">
+        <div style="font-size:9px;color:#76b900;letter-spacing:2px;margin-bottom:10px;text-transform:uppercase;">维度得分对比（你 vs 普通人）</div>
+        <div style="background:#111;border:1px solid #2a2a2a;border-radius:4px;padding:14px;">
           <img src="${barImg}" style="width:100%;height:auto;" />
         </div>
       </div>
-
-      ${lineImg ? `
-      <!-- 反应时间折线图 -->
+      <!-- AI 分析 -->
       <div style="margin-bottom:32px;">
-        <div style="font-size:10px;color:#76b900;letter-spacing:2px;margin-bottom:12px;text-transform:uppercase;">反应速度趋势（各轮次）</div>
-        <div style="background:#111111;border:1px solid #2a2a2a;border-radius:4px;padding:16px;">
-          <img src="${lineImg}" style="width:100%;height:auto;" />
-        </div>
-      </div>` : ''}
-
-      <!-- 实测数据摘要 -->
-      ${dataLines.length ? `
-      <div style="margin-bottom:32px;">
-        <div style="font-size:10px;color:#76b900;letter-spacing:2px;margin-bottom:12px;text-transform:uppercase;">实测数据摘要</div>
-        <div style="background:#111111;border:1px solid #2a2a2a;border-left:3px solid #76b900;border-radius:4px;padding:16px 20px;">
-          ${dataLines.map(l=>`<div style="font-size:13px;color:#a7a7a7;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);">${l}</div>`).join('')}
-        </div>
-      </div>` : ''}
-
-      <!-- 专业分析报告 -->
-      <div style="margin-bottom:32px;">
-        <div style="font-size:10px;color:#76b900;letter-spacing:2px;margin-bottom:12px;text-transform:uppercase;">AI专业分析报告</div>
-        <div style="background:#111111;border:1px solid #2a2a2a;border-radius:4px;padding:24px;">
-          <div style="font-size:14px;color:#a7a7a7;line-height:2.1;white-space:pre-wrap;">${reportTextContent || fallbackText()}</div>
+        <div style="font-size:9px;color:#76b900;letter-spacing:2px;margin-bottom:10px;text-transform:uppercase;">AI 分析报告 · BASIC</div>
+        <div style="background:#111;border:1px solid #2a2a2a;border-left:3px solid #76b900;border-radius:4px;padding:20px 24px;">
+          <div style="font-size:13px;color:#b0b0b0;line-height:1.9;white-space:pre-wrap;">${reportTextContent || fallbackText()}</div>
         </div>
       </div>
-
+      <!-- 赛道推荐 -->
+      <div style="margin-bottom:24px;">
+        <div style="font-size:9px;color:#76b900;letter-spacing:2px;margin-bottom:10px;text-transform:uppercase;">游戏赛道推荐</div>
+        <div style="display:flex;gap:16px;">
+          <div style="flex:1;background:#111;border:1px solid rgba(118,185,0,.3);border-radius:4px;padding:16px 20px;">
+            <div style="font-size:10px;color:#76b900;letter-spacing:2px;margin-bottom:8px;">FPS 方向</div>
+            <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:4px;">${r.fps.icon} ${r.fps.role}</div>
+            <div style="font-size:11px;color:#76b900;margin-bottom:8px;">匹配度 ${r.fps.fit}</div>
+            <div style="font-size:12px;color:#a7a7a7;line-height:1.6;">${r.fps.reason}</div>
+          </div>
+          <div style="flex:1;background:#111;border:1px solid rgba(167,139,250,.3);border-radius:4px;padding:16px 20px;">
+            <div style="font-size:10px;color:#a78bfa;letter-spacing:2px;margin-bottom:8px;">MOBA 方向</div>
+            <div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:4px;">${r.moba.icon} ${r.moba.role}</div>
+            <div style="font-size:11px;color:#a78bfa;margin-bottom:8px;">匹配度 ${r.moba.fit}</div>
+            <div style="font-size:12px;color:#a7a7a7;line-height:1.6;">${r.moba.reason}</div>
+          </div>
+        </div>
+      </div>
       <!-- 页脚 -->
-      <div style="text-align:center;padding-top:20px;border-top:1px solid #2a2a2a;">
-        <div style="font-size:11px;color:#757575;">© ${new Date().getFullYear()} VE天赋雷达 · ESPORTS TALENT RADAR · 本报告由AI系统生成，仅供参考</div>
+      <div style="text-align:center;padding-top:16px;border-top:1px solid #1a1a1a;">
+        <div style="font-size:10px;color:#333;">© ${new Date().getFullYear()} VE天赋雷达 · ESPORTS TALENT RADAR · 本报告由AI系统生成，仅供参考</div>
       </div>
-
     </div>`;
+  }
+
+  // ════════════════════════════════════════════════
+  //  进阶版 PDF（目标 ~5 页）
+  // ════════════════════════════════════════════════
+  // 七大维度详解卡片
+  const dimDetailCards = DIM_KEYS.map(k => {
+    const s = scores[k] || 0;
+    const rawLine = getPDFDimRaw(k, raw);
+    return `<div style="background:#0d0d0d;border:1px solid #222;border-left:3px solid ${s>=80?'#76b900':s>=60?'#F8B73C':'#a78bfa'};border-radius:4px;padding:22px 26px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+        <div>
+          <div style="font-size:16px;font-weight:700;color:#fff;">${PDF_DIM_ICON[k]} ${DIM_NAMES[k]}</div>
+          <div style="font-size:12px;color:#555;margin-top:4px;line-height:1.5;">${PDF_DIM_DESC[k]}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;margin-left:16px;">
+          <div style="font-size:28px;font-weight:900;color:${s>=80?'#76b900':s>=60?'#F8B73C':'#a78bfa'};">${s}</div>
+          <div style="font-size:10px;color:#444;">/ 100</div>
+        </div>
+      </div>
+      ${dimBar(k)}
+      <div style="margin-top:12px;display:flex;gap:0;">
+        <div style="flex:1;border-right:1px solid #1a1a1a;padding-right:16px;">
+          <div style="font-size:10px;color:#444;letter-spacing:1px;margin-bottom:5px;text-transform:uppercase;">实测原始数据</div>
+          <div style="font-size:12px;color:#888;line-height:1.6;">${rawLine}</div>
+        </div>
+        <div style="flex:1;padding-left:16px;">
+          <div style="font-size:10px;color:#444;letter-spacing:1px;margin-bottom:5px;text-transform:uppercase;">行业基准参考</div>
+          <div style="font-size:11px;color:#555;line-height:1.6;">${PDF_DIM_BENCH_LABEL[k]}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // 角色推荐卡
+  const rolePrimary = r.primaryTrack === 'fps' ? 'FPS / 射击类' : r.primaryTrack === 'moba' ? 'MOBA / 策略对抗类' : '双赛道并行';
+  const roleCards = `
+    <div style="background:#0d0d0d;border:1px solid rgba(118,185,0,.25);border-radius:4px;padding:22px 26px;margin-bottom:14px;">
+      <div style="font-size:10px;color:#76b900;letter-spacing:2px;margin-bottom:6px;text-transform:uppercase;">FPS / 射击类方向</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:4px;">${r.fps.icon} ${r.fps.role}</div>
+          <div style="font-size:12px;color:#76b900;margin-bottom:10px;">推荐游戏：${r.fps.gameName} &nbsp;·&nbsp; 匹配度 ${r.fps.fit}</div>
+          <div style="font-size:13px;color:#a7a7a7;line-height:1.7;">${r.fps.reason}</div>
+        </div>
+      </div>
+    </div>
+    <div style="background:#0d0d0d;border:1px solid rgba(167,139,250,.25);border-radius:4px;padding:22px 26px;margin-bottom:14px;">
+      <div style="font-size:10px;color:#a78bfa;letter-spacing:2px;margin-bottom:6px;text-transform:uppercase;">MOBA / 策略对抗类方向</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:4px;">${r.moba.icon} ${r.moba.role}</div>
+          <div style="font-size:12px;color:#a78bfa;margin-bottom:10px;">推荐游戏：${r.moba.gameName} &nbsp;·&nbsp; 匹配度 ${r.moba.fit}</div>
+          <div style="font-size:13px;color:#a7a7a7;line-height:1.7;">${r.moba.reason}</div>
+        </div>
+      </div>
+    </div>
+    <div style="background:#0a0a0a;border:1px solid #1a1a1a;border-radius:4px;padding:14px 18px;margin-bottom:0;">
+      <div style="font-size:12px;color:#555;line-height:1.6;">📌 综合判断：当前能力结构更适合优先发展 <strong style="color:#fff;">${rolePrimary}</strong>。${r.profileText}</div>
+    </div>`;
+
+  // 训练计划
+  const trainingSection = `
+    <div style="background:#0d0d0d;border:1px solid #222;border-radius:4px;padding:22px 26px;margin-bottom:14px;">
+      <div style="margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:4px;">📍 重点强化：${p.worstDim}（当前 ${p.worstScore} 分）</div>
+        <div style="font-size:12px;color:#555;margin-top:4px;">辅助方向：${p.secDim}</div>
+      </div>
+      <div style="display:flex;gap:16px;margin-bottom:16px;">
+        <div style="flex:1;background:#111;border:1px solid #222;border-radius:4px;padding:14px 16px;">
+          <div style="font-size:10px;color:#76b900;letter-spacing:1px;margin-bottom:8px;text-transform:uppercase;">主训练工具</div>
+          <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:4px;">${p.main.tool}</div>
+          <div style="font-size:12px;color:#a7a7a7;margin-bottom:4px;">${p.main.task}</div>
+          <div style="font-size:11px;color:#555;">${p.main.freq}</div>
+          ${p.main.site ? `<div style="font-size:10px;color:#333;margin-top:4px;">${p.main.site}</div>` : ''}
+        </div>
+        <div style="flex:1;background:#111;border:1px solid #222;border-radius:4px;padding:14px 16px;">
+          <div style="font-size:10px;color:#a78bfa;letter-spacing:1px;margin-bottom:8px;text-transform:uppercase;">辅助训练工具</div>
+          <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:4px;">${p.sec.tool}</div>
+          <div style="font-size:12px;color:#a7a7a7;">${p.sec.freq}</div>
+        </div>
+      </div>
+      <div style="border-top:1px solid #1a1a1a;padding-top:14px;">
+        <div style="font-size:10px;color:#444;letter-spacing:2px;margin-bottom:10px;text-transform:uppercase;">四周训练路径</div>
+        <div style="display:flex;gap:0;">
+          <div style="flex:1;padding:10px 12px;background:#111;border-radius:3px;margin-right:8px;">
+            <div style="font-size:10px;color:#76b900;font-weight:700;margin-bottom:4px;">第1周</div>
+            <div style="font-size:11px;color:#666;line-height:1.5;">使用 ${p.main.tool} 建立基线数据，专注单项训练</div>
+          </div>
+          <div style="flex:1;padding:10px 12px;background:#111;border-radius:3px;margin-right:8px;">
+            <div style="font-size:10px;color:#76b900;font-weight:700;margin-bottom:4px;">第2-3周</div>
+            <div style="font-size:11px;color:#666;line-height:1.5;">主训练保持，加入 ${p.sec.tool} 交替练习</div>
+          </div>
+          <div style="flex:1;padding:10px 12px;background:#111;border-radius:3px;">
+            <div style="font-size:10px;color:#76b900;font-weight:700;margin-bottom:4px;">第4周</div>
+            <div style="font-size:11px;color:#666;line-height:1.5;">结合实战，有意识针对弱项，对比初始测评验证进步</div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:10px;padding:10px 14px;background:#111;border-radius:3px;">
+        <div style="font-size:12px;color:#76b900;">🎯 ${p.main.target}</div>
+      </div>
+    </div>`;
+
+  return `<div style="background:#000;color:#fff;padding:44px 44px 56px;font-family:sans-serif;width:800px;">
+
+    ${pdfHeader}
+
+    <!-- ① 雷达图 + 评分表 -->
+    <div style="display:flex;gap:28px;margin-bottom:36px;align-items:flex-start;">
+      <div style="flex:0 0 260px;">
+        <div style="font-size:9px;color:#76b900;letter-spacing:2px;margin-bottom:10px;text-transform:uppercase;">天赋雷达图</div>
+        <img src="${radarImg}" style="width:260px;height:260px;object-fit:contain;" />
+        <div style="margin-top:12px;background:#0d0d0d;border:1px solid #1a1a1a;border-radius:4px;padding:10px 14px;">
+          <div style="font-size:11px;color:#a7a7a7;line-height:1.6;">${cfg.subtitle}</div>
+        </div>
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:9px;color:#76b900;letter-spacing:2px;margin-bottom:10px;text-transform:uppercase;">七维度评分详情 <span style="color:#F8B73C;font-size:9px;">▌ = 普通人均分</span></div>
+        <table style="width:100%;border-collapse:collapse;">
+          <thead><tr style="border-bottom:1px solid #222;">
+            <th style="padding:5px 10px;text-align:left;font-size:10px;color:#555;font-weight:400;">维度</th>
+            <th style="padding:5px 10px;font-size:10px;color:#555;font-weight:400;min-width:130px;">得分条</th>
+            <th style="padding:5px 10px;text-align:center;font-size:10px;color:#555;font-weight:400;">分数</th>
+            <th style="padding:5px 10px;text-align:center;font-size:10px;color:#555;font-weight:400;">vs均值</th>
+          </tr></thead>
+          <tbody>${dimRows}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ② 维度对比柱状图 -->
+    <div style="margin-bottom:36px;">
+      <div style="font-size:9px;color:#76b900;letter-spacing:2px;margin-bottom:10px;text-transform:uppercase;">维度得分对比（你 vs 普通人均值）</div>
+      <div style="background:#111;border:1px solid #2a2a2a;border-radius:4px;padding:16px;">
+        <img src="${barImg}" style="width:100%;height:auto;" />
+      </div>
+    </div>
+
+    ${lineImg ? `<!-- ③ 反应时间折线图 -->
+    <div style="margin-bottom:36px;">
+      <div style="font-size:9px;color:#76b900;letter-spacing:2px;margin-bottom:10px;text-transform:uppercase;">反应速度趋势（各轮次）</div>
+      <div style="background:#111;border:1px solid #2a2a2a;border-radius:4px;padding:16px;">
+        <img src="${lineImg}" style="width:100%;height:auto;" />
+      </div>
+    </div>` : ''}
+
+    <!-- ④ 七大维度详解 -->
+    <div style="margin-bottom:36px;">
+      <div style="font-size:9px;color:#76b900;letter-spacing:2px;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid #1a1a1a;text-transform:uppercase;">七大维度深度解读</div>
+      ${dimDetailCards}
+    </div>
+
+    <!-- ⑤ AI 专业分析 -->
+    <div style="margin-bottom:36px;">
+      <div style="font-size:9px;color:#76b900;letter-spacing:2px;margin-bottom:10px;text-transform:uppercase;">AI 专业分析报告 · ADVANCED</div>
+      <div style="background:#0d0d0d;border:1px solid #2a2a2a;border-left:3px solid #76b900;border-radius:4px;padding:24px 28px;">
+        <div style="font-size:13.5px;color:#b0b0b0;line-height:2.0;white-space:pre-wrap;">${reportTextContent || fallbackText()}</div>
+      </div>
+    </div>
+
+    <!-- ⑥ 角色推荐 -->
+    <div style="margin-bottom:36px;">
+      <div style="font-size:9px;color:#76b900;letter-spacing:2px;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid #1a1a1a;text-transform:uppercase;">游戏角色方向分析</div>
+      ${roleCards}
+    </div>
+
+    <!-- ⑦ 专属训练计划 -->
+    <div style="margin-bottom:36px;">
+      <div style="font-size:9px;color:#a78bfa;letter-spacing:2px;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid #1a1a1a;text-transform:uppercase;">专属训练计划</div>
+      ${trainingSection}
+    </div>
+
+    <!-- ⑧ 数据来源说明 -->
+    <div style="margin-bottom:36px;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:4px;padding:18px 22px;">
+      <div style="font-size:10px;color:#76b900;letter-spacing:2px;margin-bottom:10px;text-transform:uppercase;">Scientific Basis · 数据基准说明</div>
+      <div style="font-size:11px;color:#444;line-height:1.8;">
+        反应时基准（260ms）：Kosinski 2008 · Laming 1968 · HumanBenchmark N=3,000+ 汇总<br>
+        瞄准控制基准：Fitts 1954 速度-精度模型 · AimLab 内部数据<br>
+        认知追踪基准：Bediou et al. 2018 动作游戏元分析 · N-back 工作记忆研究<br>
+        专注稳定性基准：Nature SR 2022 IIV 研究 · RT 方差 &lt;25ms 为职业级标准<br>
+        <span style="color:#333;">色觉感知维度为原创设计，基于 FPS 色觉识别机制，无直接学术验证</span>
+      </div>
+    </div>
+
+    <!-- 页脚 -->
+    <div style="text-align:center;padding-top:16px;border-top:1px solid #1a1a1a;">
+      <div style="font-size:10px;color:#333;">© ${new Date().getFullYear()} VE天赋雷达 · ESPORTS TALENT RADAR · 本报告基于万人用户数据统计生成，仅供参考</div>
+    </div>
+
+  </div>`;
 }
 
 // ── 分享图生成 ────────────────────────────────

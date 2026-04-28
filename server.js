@@ -22,7 +22,8 @@ const adminRouter = require('./routes/admin');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const MINIMAX_API_URL = 'https://api.minimaxi.com/anthropic/v1/messages';
+// MiniMax OpenAI-compatible endpoint（/anthropic/v1/messages 是错误路径，MiniMax 不支持）
+const MINIMAX_API_URL = 'https://api.minimaxi.com/v1/chat/completions';
 const MINIMAX_REPORT_CONFIG = Object.freeze({
   advanced: {
     model: process.env.MINIMAX_MODEL_ADVANCED || 'MiniMax-M2.7',
@@ -450,6 +451,13 @@ function sanitizeReportText(text) {
 }
 
 function extractMiniMaxText(data) {
+  // 优先 OpenAI-compatible 格式（choices[0].message.content）
+  const openaiText = data?.choices?.[0]?.message?.content;
+  if (typeof openaiText === 'string' && openaiText.trim()) {
+    return sanitizeReportText(openaiText);
+  }
+
+  // 兼容 Anthropic 格式（content 数组）
   const textBlocks = Array.isArray(data?.content)
     ? data.content
         .filter((block) => block?.type === 'text' && typeof block.text === 'string')
@@ -458,17 +466,16 @@ function extractMiniMaxText(data) {
     : [];
   if (textBlocks.length) return sanitizeReportText(textBlocks.join('\n'));
 
-  const fallbackText = data?.choices?.[0]?.message?.content;
-  if (typeof fallbackText === 'string' && fallbackText.trim()) {
-    return sanitizeReportText(fallbackText);
-  }
-
   throw new Error('MiniMax 返回为空');
 }
 
 function toFallbackReason(err) {
   if (!err) return 'unknown_error';
-  const apiStatus = err.response?.data?.base_resp?.status_msg || err.response?.data?.error?.message;
+  // OpenAI-compatible error format
+  const apiMsg = err.response?.data?.error?.message;
+  // MiniMax native format fallback
+  const nativeMsg = err.response?.data?.base_resp?.status_msg;
+  const apiStatus = apiMsg || nativeMsg;
   const statusCode = err.response?.status;
   if (apiStatus && statusCode) return `http_${statusCode}: ${apiStatus}`;
   if (apiStatus) return apiStatus;
@@ -489,12 +496,15 @@ async function callMiniMaxReport({ scores, rating, device, rawData, mode = 'adva
     ? buildBasicPrompt({ scores, rating, facts })
     : buildAdvancedPrompt({ scores, rating, facts });
 
+  // OpenAI-compatible format：system 放入 messages 数组首位，不单独传 system 字段
   const response = await axios.post(
     MINIMAX_API_URL,
     {
       model: config.model,
-      system: prompt.system,
-      messages: [{ role: 'user', content: prompt.user }],
+      messages: [
+        { role: 'system', content: prompt.system },
+        { role: 'user', content: prompt.user }
+      ],
       max_tokens: config.maxTokens,
       temperature: config.temperature,
       top_p: config.topP
@@ -508,8 +518,9 @@ async function callMiniMaxReport({ scores, rating, device, rawData, mode = 'adva
     }
   );
 
-  if (response.data?.base_resp?.status_code && response.data.base_resp.status_code !== 0) {
-    throw new Error(response.data.base_resp.status_msg || `MiniMax status ${response.data.base_resp.status_code}`);
+  // OpenAI-compatible format 错误通过 HTTP 状态码或 error 字段返回
+  if (response.data?.error?.message) {
+    throw new Error(response.data.error.message);
   }
 
   return {

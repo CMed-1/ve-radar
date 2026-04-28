@@ -252,21 +252,27 @@
     overflow:hidden;
     animation:none;
   }
-  .mobile-device #s-aim-test.active{justify-content:flex-start;}
+  /* 手机 aim 测试激活状态：居中小框，不铺满全屏 */
+  .mobile-device #s-aim-test.active{justify-content:flex-start;align-items:center;}
   .mobile-device #s-aim-test.active #aim-test-index{
     flex:0 0 auto;
+    width:100%;
     margin:0 0 6px;
     padding-right:112px;
     font-size:10px;
     line-height:1.4;
   }
   .mobile-device #s-aim-test.active #aim-arena{
-    flex:1 1 auto;
-    width:100%;
-    height:auto;
-    min-height:0;
-    max-height:none;
-    border-radius:10px;
+    /* 宽度：不超过屏幕宽66%，且不超过可用高度×4/3（4:3比例） */
+    width: min(66vw, calc((var(--vvh,100dvh) - 120px) * 4 / 3));
+    height: auto;
+    aspect-ratio: 4/3;
+    max-height: calc(var(--vvh,100dvh) - 120px);
+    flex: 0 0 auto;
+    margin: auto;   /* 垂直居中在剩余空间内 */
+    min-height: 0;
+    border-radius: 12px;
+    border: 1px solid rgba(118,185,0,0.35);
   }
   .mobile-device #s-aim-test.active .aim-hud{
     position:fixed;
