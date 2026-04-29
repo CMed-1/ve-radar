@@ -534,7 +534,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',s
       <!-- 基础版 -->
       <div class="plan-card">
         <div class="plan-name">BASIC</div>
-        <div class="plan-price">¥6.98</div>
+        <div class="plan-price">¥4.98</div>
         <div class="plan-price-sub">基础版报告</div>
         <ul class="plan-features">
           <li>综合评级 + 七维评分</li>
@@ -545,14 +545,14 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',s
           <li>基础 PDF 报告（2页）</li>
         </ul>
         <div class="plan-actions">
-          <button class="plan-btn basic" onclick="startPayment('basic','alipay', this)">支付宝支付 · ¥6.98</button>
-          <button class="plan-btn wechat" onclick="startPayment('basic','wxpay', this)">微信支付 · ¥6.98</button>
+          <button class="plan-btn basic" onclick="startPayment('basic','alipay', this)">支付宝支付 · ¥4.98</button>
+          <button class="plan-btn wechat" onclick="startPayment('basic','wxpay', this)">微信支付 · ¥4.98</button>
         </div>
       </div>
       <!-- 进阶版 -->
       <div class="plan-card featured">
         <div class="plan-name">ADVANCED</div>
-        <div class="plan-price">¥19.98</div>
+        <div class="plan-price">¥14.98</div>
         <div class="plan-price-sub">进阶版报告</div>
         <ul class="plan-features">
           <li>基础版全部内容</li>
@@ -565,8 +565,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter','Noto Sans SC',s
           <li class="extra">进阶 PDF 报告（4-5页）</li>
         </ul>
         <div class="plan-actions">
-          <button class="plan-btn advanced" onclick="startPayment('advanced','alipay', this)">支付宝支付 · ¥19.98</button>
-          <button class="plan-btn wechat" onclick="startPayment('advanced','wxpay', this)">微信支付 · ¥19.98</button>
+          <button class="plan-btn advanced" onclick="startPayment('advanced','alipay', this)">支付宝支付 · ¥14.98</button>
+          <button class="plan-btn wechat" onclick="startPayment('advanced','wxpay', this)">微信支付 · ¥14.98</button>
         </div>
       </div>
     </div>
@@ -741,8 +741,8 @@ async function startPayment(mode, channel, buttonEl) {
       group.querySelectorAll('.plan-btn').forEach(btn => {
         if (btn.textContent.includes('正在创建订单')) {
           btn.textContent = btn.classList.contains('advanced')
-            ? (btn.classList.contains('wechat') ? '微信支付 · ¥19.98' : '支付宝支付 · ¥19.98')
-            : (btn.classList.contains('wechat') ? '微信支付 · ¥6.98' : '支付宝支付 · ¥6.98');
+            ? (btn.classList.contains('wechat') ? '微信支付 · ¥14.98' : '支付宝支付 · ¥14.98')
+            : (btn.classList.contains('wechat') ? '微信支付 · ¥4.98' : '支付宝支付 · ¥4.98');
         }
       });
     });

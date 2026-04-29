@@ -18,8 +18,8 @@ const APP_BASE_URL = String(process.env.APP_BASE_URL || '').replace(/\/+$/, '');
 const EASYPAY_API_BASE = String(process.env.EASYPAY_API_BASE || 'https://www.liuhao.net').replace(/\/+$/, '');
 const EASYPAY_PID = String(process.env.EASYPAY_PID || '').trim();
 const EASYPAY_KEY = String(process.env.EASYPAY_KEY || '').trim();
-const PAY_BASIC_PRICE = (parseFloat(process.env.PAY_BASIC_PRICE || '6.98') || 6.98).toFixed(2);
-const PAY_ADVANCED_PRICE = (parseFloat(process.env.PAY_ADVANCED_PRICE || '19.98') || 19.98).toFixed(2);
+const PAY_BASIC_PRICE = (parseFloat(process.env.PAY_BASIC_PRICE || '4.98') || 4.98).toFixed(2);
+const PAY_ADVANCED_PRICE = (parseFloat(process.env.PAY_ADVANCED_PRICE || '14.98') || 14.98).toFixed(2);
 const PAY_BASIC_NAME = process.env.PAY_BASIC_NAME || 'VE天赋雷达基础版报告';
 const PAY_ADVANCED_NAME = process.env.PAY_ADVANCED_NAME || 'VE天赋雷达进阶版报告';
 
